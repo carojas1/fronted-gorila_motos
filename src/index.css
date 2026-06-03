@@ -1,0 +1,1004 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Base reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #F5F4F2;
+  color: #16161A;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+#root { min-height: 100vh; }
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CFCBC4; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #B0ACA4; }
+
+/* ─── Focus ─── */
+:focus-visible {
+  outline: 2px solid #E11428;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Skeleton shimmer ─── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #E8E5DE 25%, #F2EFEA 50%, #E8E5DE 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: 8px;
+}
+
+/* ─── GSAP helpers ─── */
+.reveal-up    { opacity: 0; transform: translateY(28px); }
+.reveal-fade  { opacity: 0; }
+.auth-item    { opacity: 0; transform: translateY(22px); }
+.parallax-img { will-change: transform; }
+
+/* ─── 3D scene utilities ─── */
+.scene-3d         { perspective: 1500px; perspective-origin: 50% 50%; }
+.preserve-3d      { transform-style: preserve-3d; }
+.tilt-target      { will-change: transform; transform-style: preserve-3d; }
+.depth-layer      { will-change: transform; }
+
+/* ─── Sidebar active indicator ─── */
+.sidebar-item { position: relative; }
+.sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 3px; height: 56%;
+  background: #E11428;
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 12px rgba(225, 20, 40, 0.6);
+}
+
+/* ─── Red button shimmer on hover ─── */
+.btn-red { position: relative; overflow: hidden; }
+.btn-red::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.20) 50%, transparent 60%);
+  transform: translateX(-120%);
+  transition: transform 0.55s ease;
+}
+.btn-red:hover::after { transform: translateX(120%); }
+
+/* ─── Input focus glow ─── */
+.gm-input {
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.gm-input:focus {
+  border-color: #E11428 !important;
+  box-shadow: 0 0 0 3px rgba(225, 20, 40, 0.14);
+  outline: none;
+}
+
+/* ─── Table rows ─── */
+.gm-table tbody tr {
+  transition: background-color 120ms ease;
+}
+.gm-table tbody tr:hover { background-color: #FAF9F5; }
+
+/* ─── Card hover ─── */
+.gm-card {
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.gm-card:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.09), 0 2px 8px rgba(0,0,0,0.05);
+  transform: translateY(-2px);
+}
+
+/* ─── Hide scrollbar utility ─── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─── Helmet hero — blend mode hides pure-black background ─── */
+.helmet-hero {
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 30px 60px rgba(225, 20, 40, 0.35))
+          drop-shadow(0 0 80px rgba(225, 20, 40, 0.20));
+  will-change: transform, filter;
+}
+
+/* ─── Idle float for hero pieces ─── */
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.float-y { animation: floatY 5.5s ease-in-out infinite; }
+
+@keyframes floatY-soft {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.float-y-soft { animation: floatY-soft 4s ease-in-out infinite; }
+
+/* ─── Continuous slow rotation (pistones, gear) ─── */
+@keyframes rotateSlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.rotate-slow         { animation: rotateSlow 28s linear infinite; }
+.rotate-slow-reverse { animation: rotateSlow 38s linear infinite reverse; }
+
+/* ─── Neon red pulse (for accents) ─── */
+@keyframes neonPulse {
+  0%, 100% { opacity: 0.45; filter: blur(20px); }
+  50%      { opacity: 0.75; filter: blur(28px); }
+}
+.neon-pulse { animation: neonPulse 4.5s ease-in-out infinite; }
+
+/* ─── Scanline / grid texture overlay ─── */
+.grid-overlay {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* ─── Text gradient (brand) ─── */
+.text-gradient-red {
+  background: linear-gradient(135deg, #FF3B47 0%, #E11428 50%, #9E0E1B 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ─── Noise overlay (subtle film grain) ─── */
+.noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  mix-blend-mode: overlay;
+}
+
+/* ══════════════════════════════════════════════
+   DARK APP THEME — Post-login pages
+   ══════════════════════════════════════════════ */
+
+/* ─── GSAP initial states ─── */
+.card-enter   { opacity: 0; transform: translateY(36px) scale(0.97); }
+.header-enter { opacity: 0; transform: translateY(-18px); }
+.section-enter{ opacity: 0; transform: translateY(24px); }
+.row-enter    { opacity: 0; transform: translateX(-12px); }
+
+/* ─── Dark card ─── */
+.gm-card-d {
+  background: linear-gradient(150deg, #17171E 0%, #131318 50%, #111115 100%);
+  border: 1px solid rgba(255,255,255,0.055);
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+  position: relative;
+}
+.gm-card-d::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.025) 0%, transparent 60%);
+  pointer-events: none;
+}
+.gm-card-d:hover {
+  border-color: rgba(225,20,40,0.25);
+  box-shadow:
+    0 0 0 1px rgba(225,20,40,0.10),
+    0 8px 32px rgba(0,0,0,0.45),
+    0 0 48px rgba(225,20,40,0.07),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+  transform: translateY(-3px);
+}
+
+/* ─── Dark input ─── */
+.gm-input-d {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #F0EEE8;
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 40px;
+  font-size: 14px;
+  width: 100%;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.gm-input-d:focus {
+  border-color: #E11428;
+  box-shadow: 0 0 0 3px rgba(225,20,40,0.14);
+  outline: none;
+}
+.gm-input-d::placeholder { color: rgba(255,255,255,0.25); }
+
+/* ─── Dark select ─── */
+.gm-select-d {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #F0EEE8;
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 40px;
+  font-size: 14px;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.gm-select-d:focus {
+  border-color: #E11428;
+  box-shadow: 0 0 0 3px rgba(225,20,40,0.14);
+  outline: none;
+}
+.gm-select-d option {
+  background: #141418;
+  color: #F0EEE8;
+}
+
+/* ─── Dark table ─── */
+.gm-table-d { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gm-table-d thead tr { border-bottom: 1px solid rgba(255,255,255,0.05); }
+.gm-table-d th {
+  padding: 12px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  text-align: left;
+  white-space: nowrap;
+  background: rgba(255,255,255,0.02);
+}
+.gm-table-d td { padding: 13px 16px; }
+.gm-table-d tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 120ms ease; }
+.gm-table-d tbody tr:last-child { border-bottom: none; }
+.gm-table-d tbody tr:hover td { background: rgba(255,255,255,0.025); }
+
+/* ─── Dark skeleton ─── */
+.skeleton-d {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.05) 25%,
+    rgba(255,255,255,0.09) 50%,
+    rgba(255,255,255,0.05) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+  border-radius: 8px;
+}
+
+/* ─── Filter chip ─── */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.45);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+.filter-chip:hover {
+  border-color: rgba(225,20,40,0.3);
+  color: rgba(255,255,255,0.75);
+  background: rgba(225,20,40,0.06);
+}
+.filter-chip.active {
+  background: rgba(225,20,40,0.15);
+  border-color: rgba(225,20,40,0.45);
+  color: #E11428;
+  box-shadow: 0 0 16px rgba(225,20,40,0.15);
+}
+
+/* ─── Search wrapper ─── */
+.search-d {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.search-d svg {
+  position: absolute;
+  left: 12px;
+  color: rgba(255,255,255,0.3);
+  pointer-events: none;
+}
+.search-d input { padding-left: 38px; }
+
+/* ─── Dark scrollbar ─── */
+.dark-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+.dark-scroll::-webkit-scrollbar-track { background: transparent; }
+.dark-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+.dark-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ─── Stat progress bar ─── */
+.prog-bar {
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.prog-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 1.2s cubic-bezier(.25,.8,.25,1);
+}
+
+/* ─── Tab nav ─── */
+.tab-nav {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 3px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  transition: all 150ms ease;
+  border: none;
+  background: transparent;
+  text-align: center;
+}
+.tab-btn:hover { color: rgba(255,255,255,0.7); }
+.tab-btn.active {
+  background: rgba(225,20,40,0.15);
+  color: #E11428;
+  box-shadow: 0 0 20px rgba(225,20,40,0.12);
+}
+
+/* ─── Glow text ─── */
+.glow-red { text-shadow: 0 0 20px rgba(225,20,40,0.5), 0 0 40px rgba(225,20,40,0.25); }
+
+/* ─── Plate tag ─── */
+.plate-tag {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  background: rgba(225,20,40,0.08);
+  border: 1px solid rgba(225,20,40,0.2);
+  color: #E11428;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+/* ─── Action button (icon) ─── */
+.icon-btn {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.35);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.icon-btn:hover {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.8);
+  border-color: rgba(255,255,255,0.12);
+}
+.icon-btn.danger:hover {
+  background: rgba(225,20,40,0.12);
+  color: #E11428;
+  border-color: rgba(225,20,40,0.25);
+}
+
+/* ═══════════════════════════════════════════════
+   BRAND TYPOGRAPHY — Bebas Neue (único, profesional)
+   Sistema unificado: Inter para UI, Bebas Neue para marca
+   ═══════════════════════════════════════════════ */
+
+/* Marca principal GORILA MOTOS */
+.brand-heavy {
+  font-family: 'Bebas Neue', 'Inter', sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  text-shadow:
+    0 0 40px rgba(225, 20, 40, 0.35),
+    0 2px 0 rgba(0, 0, 0, 0.5);
+  line-height: 1;
+}
+
+/* Acento de la marca (MOTOS) — degradado rojo */
+.brand-script {
+  font-family: 'Dancing Script', 'Inter', cursive;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: none; /* Las fuentes cursivas se ven mejor sin all-caps, pero la dejamos minúscula o capitalizada */
+  background: linear-gradient(135deg, #FF3B47 0%, #E11428 50%, #C00018 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 2px 20px rgba(225, 20, 40, 0.5));
+  line-height: 1;
+}
+
+/* Full brand combo container */
+.brand-combo {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  line-height: 1;
+}
+.brand-combo .brand-heavy {
+  font-size: 3rem;
+  line-height: 1;
+}
+.brand-combo .brand-script {
+  font-size: 3.5rem;
+  margin-top: -12px;
+  margin-left: 5px;
+}
+
+/* Smaller brand combo */
+.brand-combo-sm .brand-heavy {
+  font-size: 2rem;
+}
+.brand-combo-sm .brand-script {
+  font-size: 2rem;
+}
+
+/* ─── Sketchfab embed ─── */
+.bike-sketchfab-wrap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border-radius: 0;
+  overflow: hidden;
+  background: transparent;
+}
+.bike-sketchfab-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  background: transparent;
+}
+
+/* ─── SVG Bike wrap (fallback) ─── */
+.bike-svg-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.bike-svg {
+  width: 100%;
+  height: 100%;
+  max-height: 420px;
+  object-fit: contain;
+}
+
+/* ═══════════════════════════════════════════════
+   FLOATING TOOL ICONS — Corner animations
+   ═══════════════════════════════════════════════ */
+
+/* Orbit animation — top left */
+@keyframes floatOrbitTL {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(12px, -8px) rotate(15deg); }
+  50%  { transform: translate(6px, -14px) rotate(0deg); }
+  75%  { transform: translate(-6px, -6px) rotate(-10deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+/* Orbit animation — top right */
+@keyframes floatOrbitTR {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(-10px, -10px) rotate(-12deg); }
+  50%  { transform: translate(-6px, -16px) rotate(0deg); }
+  75%  { transform: translate(8px, -4px) rotate(8deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+/* Orbit animation — bottom left */
+@keyframes floatOrbitBL {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(8px, 10px) rotate(10deg); }
+  50%  { transform: translate(14px, 4px) rotate(0deg); }
+  75%  { transform: translate(4px, -6px) rotate(-8deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+/* Orbit animation — bottom right */
+@keyframes floatOrbitBR {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(-8px, 8px) rotate(-10deg); }
+  50%  { transform: translate(-14px, 2px) rotate(0deg); }
+  75%  { transform: translate(-4px, -8px) rotate(12deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.float-orbit-tl { animation: floatOrbitTL 6s ease-in-out infinite; }
+.float-orbit-tr { animation: floatOrbitTR 7s ease-in-out infinite; }
+.float-orbit-bl { animation: floatOrbitBL 5.5s ease-in-out infinite; }
+.float-orbit-br { animation: floatOrbitBR 6.5s ease-in-out infinite; }
+
+/* Icon glow pulse */
+@keyframes iconGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(225,20,40,0.2), 0 0 20px rgba(225,20,40,0.1); }
+  50%      { box-shadow: 0 0 16px rgba(225,20,40,0.4), 0 0 40px rgba(225,20,40,0.2); }
+}
+.tool-icon-glow {
+  animation: iconGlow 3s ease-in-out infinite;
+}
+
+/* 3D scene container for dashboard */
+.dash-3d-scene {
+  position: relative;
+  min-height: 420px;
+  border-radius: 20px;
+  background: radial-gradient(ellipse at 50% 120%, rgba(225,20,40,0.08) 0%, transparent 60%),
+              linear-gradient(180deg, rgba(22,22,28,0.6) 0%, rgba(11,11,13,0.95) 100%);
+  border: 1px solid rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+
+/* Subtle inner glow border */
+.dash-3d-scene::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 0%, rgba(225,20,40,0.12) 0%, transparent 50%);
+  z-index: 1;
+}
+
+/* Spinning gear icon (decorative) */
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.spin-slow { animation: spinSlow 20s linear infinite; }
+.spin-slow-r { animation: spinSlow 25s linear infinite reverse; }
+
+/* Brand underline decoration */
+.brand-underline {
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #E11428 30%, #FF3B47 50%, #E11428 70%, transparent 100%);
+  border-radius: 2px;
+  opacity: 0.6;
+}
+
+
+/* ════════════════════════════════════════════════
+   MOTOS PAGE — Premium Card System
+   ════════════════════════════════════════════════ */
+
+/* Page root */
+.mp-root {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 40px;
+}
+
+/* ─── Header ─── */
+.mp-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.mp-header-left { display: flex; flex-direction: column; gap: 6px; }
+.mp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+.mp-bc-icon { color: #E11428; }
+.mp-bc-sep { opacity: 0.4; }
+.mp-bc-active { color: rgba(255,255,255,0.5); }
+.mp-title {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.mp-title-accent {
+  background: linear-gradient(135deg, #FF3B47 0%, #E11428 60%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ─── KPI Strip ─── */
+.mp-kpi-strip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 14px 24px;
+  width: fit-content;
+}
+.mp-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0 20px;
+}
+.mp-kpi-num {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.mp-kpi-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.mp-kpi-sep {
+  width: 1px;
+  height: 32px;
+  background: rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+
+/* ─── Controls bar ─── */
+.mp-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.mp-search-input { width: 280px; }
+.mp-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.mp-filter-icon { color: rgba(255,255,255,0.25); flex-shrink: 0; }
+
+/* ─── Grid ─── */
+.mp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+/* ─── MOTO CARD ─── */
+.moto-card {
+  position: relative;
+  background: linear-gradient(155deg, #18181F 0%, #141418 60%, #111115 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: default;
+  transition: border-color 250ms ease, box-shadow 250ms ease;
+  will-change: transform;
+}
+.moto-card:hover {
+  border-color: color-mix(in srgb, var(--tc, #E11428) 28%, transparent);
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.04);
+}
+
+/* Radial mouse glow */
+.moto-card-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms ease;
+  z-index: 0;
+  border-radius: 20px;
+}
+
+/* Top color accent bar */
+.moto-card-accent {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  z-index: 2;
+  opacity: 0.9;
+}
+
+/* Header */
+.moto-card-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 0;
+}
+
+.moto-tipo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 99px;
+  border: 1px solid;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.moto-tipo-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.moto-card-actions {
+  display: flex;
+  gap: 6px;
+}
+.moto-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.3);
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+.moto-action-btn:hover {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.85);
+  border-color: rgba(255,255,255,0.14);
+}
+.moto-action-btn.danger:hover {
+  background: rgba(225,20,40,0.14);
+  color: #E11428;
+  border-color: rgba(225,20,40,0.3);
+}
+
+/* Body */
+.moto-card-body {
+  position: relative;
+  z-index: 1;
+  padding: 14px 16px 12px;
+}
+.moto-plate-wrap { margin-bottom: 8px; }
+.moto-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.92);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+.moto-modelo {
+  color: rgba(255,255,255,0.55);
+  font-weight: 600;
+}
+.moto-alias {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--tc, #E11428);
+  opacity: 0.8;
+}
+.moto-alias-quote { opacity: 0.6; font-style: normal; }
+
+/* Stats row */
+.moto-stats {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: rgba(0,0,0,0.15);
+}
+.moto-stat-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.moto-stat-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.moto-stat-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.82);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.moto-stat-lbl {
+  font-size: 9.5px;
+  color: rgba(255,255,255,0.28);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.moto-stat-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255,255,255,0.06);
+  flex-shrink: 0;
+  margin: 0 8px;
+}
+
+/* Footer */
+.moto-card-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 14px;
+}
+.moto-owner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.moto-owner-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(225,20,40,0.12);
+  border: 1px solid rgba(225,20,40,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #E11428;
+  flex-shrink: 0;
+}
+.moto-owner-name {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.5);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+.moto-chevron {
+  color: rgba(255,255,255,0.15);
+  transition: color 200ms ease, transform 200ms ease;
+}
+.moto-card:hover .moto-chevron {
+  color: rgba(255,255,255,0.4);
+  transform: translateX(3px);
+}
+
+/* ─── Empty state ─── */
+.mp-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 10px;
+  text-align: center;
+}
+.mp-empty-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.12);
+  margin-bottom: 4px;
+}
+.mp-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.4);
+}
+.mp-empty-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.2);
+}
+.mp-empty-cta {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 10px;
+  background: rgba(225,20,40,0.12);
+  border: 1px solid rgba(225,20,40,0.25);
+  color: #E11428;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+.mp-empty-cta:hover {
+  background: rgba(225,20,40,0.2);
+  border-color: rgba(225,20,40,0.4);
+}
+
+/* ─── Skeleton ─── */
+.moto-card-skeleton {
+  background: linear-gradient(155deg, #18181F 0%, #141418 100%);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 20px;
+  overflow: hidden;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.moto-card-sk-header { display: flex; justify-content: space-between; }
+.sk-pill { height: 24px; width: 80px; border-radius: 99px; }
+.sk-actions { height: 24px; width: 60px; border-radius: 8px; }
+.moto-card-sk-body { display: flex; flex-direction: column; gap: 6px; }
+.sk-title { height: 18px; width: 60%; border-radius: 6px; }
+.sk-sub   { height: 13px; width: 40%; border-radius: 6px; }
+.moto-card-sk-stats { display: flex; gap: 8px; }
+.sk-stat { flex: 1; height: 40px; border-radius: 10px; }
+.moto-card-sk-footer { height: 16px; width: 50%; border-radius: 6px; }
+.sk-pill, .sk-actions, .sk-title, .sk-sub, .sk-stat, .moto-card-sk-footer {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.05) 25%,
+    rgba(255,255,255,0.09) 50%,
+    rgba(255,255,255,0.05) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
