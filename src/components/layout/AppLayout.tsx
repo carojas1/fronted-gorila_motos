@@ -5,14 +5,19 @@
 
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, ChevronDown, Circle } from 'lucide-react';
+import { LogOut, ChevronDown } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { initials } from '../../lib/utils';
+import { NotificationBell, NotificationPanel } from '../ui/NotificationCenter';
+import { useNotifications } from '../../hooks/useNotifications';
 
 export default function AppLayout() {
-  const { user, isAdmin, isMecanico, logout } = useAuth();
+  const { user, isAdmin, isMecanico, isCliente, logout } = useAuth();
   const location  = useLocation();
   const navigate  = useNavigate();
+  const { unread } = useNotifications();
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const menuRef   = useRef<HTMLDivElement>(null);
 
@@ -31,7 +36,8 @@ export default function AppLayout() {
     ...((isAdmin || isMecanico) ? [{ label: 'Alertas',    to: '/alertas'    }] : []),
     { label: 'Puntos',      to: '/puntos'      },
     { label: 'Combustible', to: '/combustible' },
-    ...(isAdmin             ? [{ label: 'Perfiles',   to: '/perfiles'   }] : []),
+    ...(isCliente             ? [{ label: 'Mi Portal',  to: '/portal'     }] : []),
+    ...(isAdmin               ? [{ label: 'Perfiles',   to: '/perfiles'   }] : []),
   ];
 
   const handleLogout = () => { logout(); navigate('/login'); };
@@ -123,8 +129,13 @@ export default function AppLayout() {
             })}
           </nav>
 
-          {/* Derecha: saludo + avatar */}
-          <div className="flex items-center gap-4 shrink-0" ref={menuRef}>
+          {/* Derecha: notif + saludo + avatar */}
+          <div className="flex items-center gap-3 shrink-0" ref={menuRef}>
+            {/* Bell de notificaciones */}
+            <div className="relative" ref={notifRef}>
+              <NotificationBell onClick={() => setNotifOpen(v => !v)} unread={unread} />
+              <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
+            </div>
             <div className="hidden lg:block text-right">
               <p className="text-[12px] font-semibold leading-snug" style={{ color:'rgba(255,255,255,0.55)' }}>
                 {greeting}, <span style={{ color:'rgba(255,255,255,0.92)', fontWeight:700 }}>{firstName}</span>

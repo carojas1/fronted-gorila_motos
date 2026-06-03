@@ -38,7 +38,7 @@ api.interceptors.response.use(
   }
 );
 
-/* ── Endpoints de usuarios ── */
+/* ── Endpoints de autenticación ── */
 export const authApi = {
   login:    (correo: string, contrasena: string) =>
     api.post('/usuarios/login', { correo, contrasena }),
@@ -50,6 +50,7 @@ export const authApi = {
     api.post('/usuarios/recuperacion/restablecer', { token, nueva_contrasena }),
 };
 
+/* ── Usuarios ── */
 export const usuariosApi = {
   list:    ()             => api.get('/usuarios'),
   get:     (id: number)  => api.get(`/usuarios/${id}`),
@@ -59,6 +60,7 @@ export const usuariosApi = {
     api.post('/usuarios/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
+/* ── Motos ── */
 export const motosApi = {
   list:      ()            => api.get('/motos'),
   get:       (id: number)  => api.get(`/motos/${id}`),
@@ -68,6 +70,7 @@ export const motosApi = {
   remove:    (id: number)  => api.delete(`/motos/${id}`),
 };
 
+/* ── Registros ── */
 export const registrosApi = {
   list:    ()            => api.get('/registros'),
   get:     (id: number)  => api.get(`/registros/${id}`),
@@ -77,6 +80,7 @@ export const registrosApi = {
   remove:  (id: number)  => api.delete(`/registros/${id}`),
 };
 
+/* ── Productos ── */
 export const productosApi = {
   list:   ()            => api.get('/productos'),
   get:    (id: number)  => api.get(`/productos/${id}`),
@@ -87,6 +91,7 @@ export const productosApi = {
     api.post('/productos/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
+/* ── Categorías ── */
 export const categoriasApi = {
   list:   ()            => api.get('/categorias'),
   create: (data: Record<string, unknown>) => api.post('/categorias', data),
@@ -94,6 +99,7 @@ export const categoriasApi = {
   remove: (id: number)  => api.delete(`/categorias/${id}`),
 };
 
+/* ── Roles ── */
 export const rolesApi = {
   list:   () => api.get('/rol'),
   assign: (usuarioId: number, rolId: number, adminId: number) =>
@@ -102,10 +108,39 @@ export const rolesApi = {
     api.delete('/usuario_rol/revocar', { data: { usuarioId, rolId, adminId } }),
 };
 
+/* ── Tipos de servicio ── */
 export const tiposApi = {
   list:   ()            => api.get('/tipos'),
   get:    (id: number)  => api.get(`/tipos/${id}`),
   create: (data: Record<string, unknown>) => api.post('/tipos', data),
   update: (id: number, data: Record<string, unknown>) => api.put(`/tipos/${id}`, data),
   remove: (id: number)  => api.delete(`/tipos/${id}`),
+};
+
+/* ── Facturas ── */
+export const facturasApi = {
+  list:   ()            => api.get('/facturas'),
+  get:    (id: number)  => api.get(`/facturas/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/facturas', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/facturas/${id}`, data),
+};
+
+/* ── Detalles de factura ── */
+export const detallesFacturaApi = {
+  byFactura: (id: number) => api.get(`/detalles-factura/factura/${id}`),
+  create:    (data: Record<string, unknown>) => api.post('/detalles-factura', data),
+  remove:    (id: number) => api.delete(`/detalles-factura/${id}`),
+};
+
+/* ── Rutas GPS ── */
+export const rutasApi = {
+  list:   ()            => api.get('/rutas'),
+  get:    (id: number)  => api.get(`/rutas/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/rutas', data),
+  remove: (id: number)  => api.delete(`/rutas/${id}`),
+};
+
+/* ── Health check ── */
+export const healthApi = {
+  check: () => api.get('/actuator/health'),
 };

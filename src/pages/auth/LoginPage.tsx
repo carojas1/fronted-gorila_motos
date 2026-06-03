@@ -1,34 +1,32 @@
 /* ─────────────────────────────────────────────
-   GORILA MOTOS — Pantalla de acceso
-   Layout cinematográfico con moto 3D real (R3F)
+   GORILA MOTOS — Login Enterprise Premium
+   Split layout: hero izquierdo + formulario derecho
    ───────────────────────────────────────────── */
 
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Mail, Lock, ArrowRight, Cpu, Wifi, ShieldCheck, Shield,
-  Zap, Wrench, GaugeCircle, Cog,
+  Mail, Lock, ArrowRight, Wifi, Shield,
+  Wrench, CheckCircle2, BarChart3, Users, Zap, Clock,
 } from 'lucide-react';
+import gsap from 'gsap';
 import { useAuth } from '../../contexts/AuthContext';
-import { useAuthEntrance } from '../../hooks/useGsap';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 
-/* Lazy: la moto 3D se carga solo cuando se necesita (no bloquea login) */
-const Bike3D = lazy(() => import('../../components/3d/Bike3D'));
-
+/* ─── Schema de validación ─── */
 const schema = z.object({
   correo:     z.string().email('Correo no válido'),
   contrasena: z.string().min(1, 'Ingresa tu contraseña'),
 });
 type Form = z.infer<typeof schema>;
 
-/* ─── Hora viva (HH:mm:ss) ─── */
+/* ─── Reloj vivo ─── */
 function useClock() {
   const [t, setT] = useState(() => new Date());
   useEffect(() => {
@@ -38,13 +36,144 @@ function useClock() {
   return t;
 }
 
+/* ─── Features del sistema ─── */
+const FEATURES = [
+  { icon: Wrench,       label: 'Gestión de órdenes de taller',       desc: 'Control total del flujo de trabajo' },
+  { icon: Users,        label: 'CRM de clientes y mecánicos',         desc: 'Base de datos unificada' },
+  { icon: BarChart3,    label: 'Reportes y analíticas en tiempo real', desc: 'Métricas accionables' },
+  { icon: CheckCircle2, label: 'Inventario y productos',               desc: 'Stock automatizado' },
+  { icon: Zap,          label: 'Facturación electrónica',              desc: 'Integración SRI Ecuador' },
+];
+
+/* ─── Estadísticas dummy ─── */
+const STATS = [
+  { value: '500+', label: 'Talleres activos' },
+  { value: '98%',  label: 'Uptime garantizado' },
+  { value: '24/7', label: 'Soporte técnico' },
+  { value: '12k+', label: 'Órdenes procesadas' },
+];
+
+/* ─── Formas decorativas (CSS puro, sin deps) ─── */
+const SHAPES = [
+  { size: 320, top: '-8%',  left: '-6%',  delay: '0s',    opacity: 0.06, type: 'circle' },
+  { size: 200, top: '60%',  left: '-10%', delay: '3s',    opacity: 0.04, type: 'circle' },
+  { size: 160, top: '10%',  left: '72%',  delay: '1.5s',  opacity: 0.05, type: 'hexagon' },
+  { size: 100, top: '78%',  left: '80%',  delay: '2.5s',  opacity: 0.04, type: 'hexagon' },
+  { size: 240, top: '38%',  left: '40%',  delay: '4s',    opacity: 0.03, type: 'circle' },
+];
+
+function DecorativeShapes() {
+  return (
+    <>
+      {SHAPES.map((s, i) => (
+        <div
+          key={i}
+          aria-hidden
+          className="absolute pointer-events-none select-none"
+          style={{
+            width:  s.size,
+            height: s.size,
+            top:    s.top,
+            left:   s.left,
+            opacity: s.opacity,
+            animation: `floatShape 8s ease-in-out infinite`,
+            animationDelay: s.delay,
+            ...(s.type === 'circle'
+              ? {
+                  borderRadius: '50%',
+                  border: '1.5px solid rgba(225,20,40,0.9)',
+                }
+              : {
+                  clipPath: 'polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)',
+                  background: 'rgba(225,20,40,0.15)',
+                }),
+          }}
+        />
+      ))}
+      {/* Keyframe inline para la animación de flotación */}
+      <style>{`
+        @keyframes floatShape {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          33%       { transform: translateY(-14px) rotate(3deg); }
+          66%       { transform: translateY(8px) rotate(-2deg); }
+        }
+        @keyframes shimmer {
+          0%   { background-position: -200% center; }
+          100% { background-position:  200% center; }
+        }
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(225,20,40,0); }
+          50%       { box-shadow: 0 0 0 8px rgba(225,20,40,0.12); }
+        }
+        .btn-shimmer {
+          background: linear-gradient(
+            90deg,
+            #E11428 0%, #FF2E43 40%, #fff3 50%, #FF2E43 60%, #E11428 100%
+          );
+          background-size: 200% auto;
+          animation: shimmer 2.8s linear infinite;
+        }
+        .btn-shimmer:disabled { animation: none; }
+      `}</style>
+    </>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   COMPONENTE PRINCIPAL
+   ══════════════════════════════════════════════ */
 export default function LoginPage() {
   const { login, loading } = useAuth();
   const navigate = useNavigate();
-  const toast = useToast();
-  const { leftRef, rightRef } = useAuthEntrance();
-  const clock = useClock();
+  const toast    = useToast();
+  const clock    = useClock();
 
+  /* ─ Refs para GSAP ─ */
+  const leftRef  = useRef<HTMLElement>(null);
+  const rightRef = useRef<HTMLElement>(null);
+
+  /* ─ GSAP entrance animation ─ */
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+      /* Lado izquierdo: fade in desde la izquierda */
+      if (leftRef.current) {
+        tl.fromTo(
+          leftRef.current,
+          { x: -50, opacity: 0 },
+          { x: 0,   opacity: 1, duration: 0.9 },
+        );
+        /* Elementos internos en cascada */
+        tl.fromTo(
+          leftRef.current.querySelectorAll('.hero-item'),
+          { y: 28, opacity: 0 },
+          { y: 0,  opacity: 1, duration: 0.55, stagger: 0.09 },
+          '-=0.55',
+        );
+      }
+
+      /* Lado derecho: slide desde la derecha */
+      if (rightRef.current) {
+        tl.fromTo(
+          rightRef.current,
+          { x: 60, opacity: 0 },
+          { x: 0,  opacity: 1, duration: 0.85 },
+          '-=0.7',
+        );
+        tl.fromTo(
+          rightRef.current.querySelectorAll('.auth-item'),
+          { y: 22, opacity: 0 },
+          { y: 0,  opacity: 1, duration: 0.5, stagger: 0.08 },
+          '-=0.55',
+        );
+      }
+    });
+
+    return () => ctx.revert();
+  }, []);
+
+  /* ─ React Hook Form ─ */
   const { register, handleSubmit, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
   });
@@ -64,282 +193,251 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-gm-dark text-white">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row overflow-hidden" style={{ background: '#0B0B0D' }}>
 
       {/* ════════════════════════════════════════════════════
-          PANEL IZQUIERDO — Garage cinematográfico con moto 3D
+          PANEL IZQUIERDO — Hero oscuro con formas y marca
+          Oculto en mobile (< lg)
          ════════════════════════════════════════════════════ */}
       <section
         ref={leftRef}
-        className="
-          relative overflow-hidden noise
-          lg:w-[62%] xl:w-[64%]
-          min-h-[58vh] lg:min-h-screen
-          flex flex-col
-        "
+        className="hidden lg:flex relative overflow-hidden flex-col lg:w-[60%] xl:w-[62%] min-h-screen"
+        style={{
+          background: 'radial-gradient(ellipse 100% 90% at 20% -5%, #1a0306 0%, #0B0B0D 55%), radial-gradient(ellipse 70% 60% at 80% 110%, #1f0407 0%, transparent 55%)',
+        }}
       >
-        {/* ─ Fondo: gradiente + glow ambiente ─ */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-[radial-gradient(120%_85%_at_20%_-10%,#1c0408_0%,#0B0B0D_55%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(70%_60%_at_85%_115%,#220609_0%,transparent_60%)]" />
-          <div className="absolute inset-0 grid-overlay opacity-50" />
-          <div
-            className="absolute top-1/3 -right-32 w-[560px] h-[560px] rounded-full neon-pulse"
-            style={{ background: 'radial-gradient(circle, rgba(225,20,40,0.30) 0%, transparent 65%)' }}
-          />
-          <div
-            className="absolute -bottom-40 left-1/4 w-[480px] h-[480px] rounded-full neon-pulse"
-            style={{ background: 'radial-gradient(circle, rgba(255,46,67,0.20) 0%, transparent 65%)', animationDelay: '2s' }}
-          />
-        </div>
-
-        {/* Decoración: pistones rotando */}
-        <img
-          src="/brand/pistones.png" alt="" aria-hidden
-          className="absolute top-[6%] right-[12%] w-24 opacity-[0.10] invert rotate-slow hidden lg:block"
+        {/* Capa de ruido/grid sutil */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.015) 40px), repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.015) 40px)',
+          }}
         />
 
-        {/* ═══════════ TOP BAR ═══════════ */}
-        <header className="auth-item relative z-10 flex items-start justify-between px-6 lg:px-12 pt-6 lg:pt-8">
-          {/* Brand — Letra amarrada profesional */}
+        {/* Glow ambient rojo */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            top: '15%', right: '-5%',
+            width: 480, height: 480,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(225,20,40,0.18) 0%, transparent 65%)',
+            filter: 'blur(8px)',
+          }}
+        />
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            bottom: '-10%', left: '20%',
+            width: 360, height: 360,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(225,20,40,0.10) 0%, transparent 65%)',
+            filter: 'blur(12px)',
+          }}
+        />
+
+        {/* Formas geométricas decorativas */}
+        <DecorativeShapes />
+
+        {/* ─── TOP BAR ─── */}
+        <header className="hero-item relative z-10 flex items-center justify-between px-10 xl:px-14 pt-8">
+          {/* Logo + marca */}
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <img
-                src="/brand/gorila-logo.png"
-                alt="Gorila Motos"
-                className="w-14 h-14 rounded-xl object-cover ring-1 ring-white/10 shadow-lg shadow-black/40"
-              />
-              <span className="absolute inset-0 rounded-xl ring-1 ring-gm-red/40" />
+            <div
+              className="relative w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #E11428, #8B0010)', boxShadow: '0 0 20px rgba(225,20,40,0.4)' }}
+            >
+              <Wrench size={22} className="text-white" />
             </div>
             <div className="leading-none">
-              <p style={{ fontFamily: "'Dancing Script', cursive", fontSize: '36px', fontWeight: 700 }} className="text-white drop-shadow-lg">
-                Gorila <span className="text-gm-red">Motos</span>
+              <p className="text-white font-black text-xl tracking-tight">
+                Gorila <span style={{ color: '#E11428' }}>Motos</span>
               </p>
-              <p className="text-white/40 text-[10px] tracking-[0.32em] uppercase mt-1">
-                Sistema interno · Taller
+              <p className="text-white/35 text-[10px] tracking-[0.3em] uppercase mt-0.5">
+                Sistema Enterprise
               </p>
             </div>
           </div>
 
-          {/* Status panel (derecha) */}
-          <div className="hidden md:flex flex-col items-end gap-1.5">
-            <div className="flex items-center gap-2 text-[10px] tracking-[0.28em] uppercase text-white/55">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
+          {/* Clock / status */}
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2 text-[10px] tracking-[0.25em] uppercase text-white/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: '0 0 6px rgba(52,211,153,0.8)' }} />
               Sistema operativo
             </div>
-            <p className="font-mono text-xs text-white/70 tabular-nums">{hhmmss} <span className="text-white/30">·</span> Quito-EC</p>
+            <p className="font-mono text-xs text-white/60 tabular-nums">{hhmmss} · Quito EC</p>
             <p className="text-[10px] text-white/30 capitalize">{fecha}</p>
           </div>
         </header>
 
-        {/* ═══════════ ESCENA 3D ═══════════ */}
-        <div className="relative flex-1 flex flex-col min-h-[300px]">
-          {/* ════════════════════════════════════════════════════
-              HUD / ETIQUETAS DE LA MOTO (Izquierda y Derecha)
-             ════════════════════════════════════════════════════ */}
-          
-          {/* ── MARCAS DE MOTOS (Lado Izquierdo) ── */}
-          <div className="hidden lg:flex absolute top-1/2 left-6 -translate-y-1/2 flex-col gap-8 z-10 pointer-events-none">
-
-            {/* YAMAHA */}
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-[9px] tracking-[0.35em] text-white/30 uppercase font-semibold">Japón</p>
-                <p className="text-[16px] font-black tracking-widest text-white leading-tight">YAMAHA</p>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-gm-red animate-pulse shadow-[0_0_6px_#E11428]" />
-                <div className="w-12 h-px" style={{background:'linear-gradient(to right, #E11428, transparent)'}} />
-              </div>
-            </div>
-
-            {/* DUCATI */}
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-[9px] tracking-[0.35em] text-white/30 uppercase font-semibold">Italia</p>
-                <p className="text-[16px] font-black tracking-widest text-white leading-tight">DUCATI</p>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-white/50" />
-                <div className="w-8 h-px bg-white/25" />
-              </div>
-            </div>
-
-            {/* KAWASAKI */}
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-[9px] tracking-[0.35em] text-white/30 uppercase font-semibold">Japón</p>
-                <p className="text-[16px] font-black tracking-widest text-white leading-tight">KAWASAKI</p>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-white/50" />
-                <div className="w-10 h-px bg-white/25" />
-              </div>
-            </div>
-
-          </div>
-
-          {/* ── MARCAS DE MOTOS (Lado Derecho) ── */}
-          <div className="hidden lg:flex absolute top-1/2 right-6 -translate-y-1/2 flex-col gap-8 z-10 pointer-events-none items-end">
-
-            {/* HONDA */}
-            <div className="flex items-center gap-3 flex-row-reverse">
-              <div className="text-left">
-                <p className="text-[9px] tracking-[0.35em] text-white/30 uppercase font-semibold">Japón</p>
-                <p className="text-[16px] font-black tracking-widest text-white leading-tight">HONDA</p>
-              </div>
-              <div className="flex items-center gap-1 flex-row-reverse">
-                <div className="w-1.5 h-1.5 rounded-full bg-gm-red animate-pulse shadow-[0_0_6px_#E11428]" />
-                <div className="w-12 h-px" style={{background:'linear-gradient(to left, #E11428, transparent)'}} />
-              </div>
-            </div>
-
-            {/* BMW */}
-            <div className="flex items-center gap-3 flex-row-reverse">
-              <div className="text-left">
-                <p className="text-[9px] tracking-[0.35em] text-white/30 uppercase font-semibold">Alemania</p>
-                <p className="text-[16px] font-black tracking-widest text-white leading-tight">BMW</p>
-              </div>
-              <div className="flex items-center gap-1 flex-row-reverse">
-                <div className="w-1.5 h-1.5 rounded-full bg-white/50" />
-                <div className="w-8 h-px bg-white/25" />
-              </div>
-            </div>
-
-            {/* SUZUKI */}
-            <div className="flex items-center gap-3 flex-row-reverse">
-              <div className="text-left">
-                <p className="text-[9px] tracking-[0.35em] text-white/30 uppercase font-semibold">Japón</p>
-                <p className="text-[16px] font-black tracking-widest text-white leading-tight">SUZUKI</p>
-              </div>
-              <div className="flex items-center gap-1 flex-row-reverse">
-                <div className="w-1.5 h-1.5 rounded-full bg-white/50" />
-                <div className="w-10 h-px bg-white/25" />
-              </div>
-            </div>
-
-          </div>
-
-          {/* Canvas 3D — filtro para virar azul → rojo */}
-          <div className="relative w-full h-full flex-1 min-h-[300px] lg:min-h-[450px]">
-            <Suspense
-              fallback={
-                <div className="absolute inset-0 grid place-items-center">
-                  <div className="flex flex-col items-center gap-3 text-white/40">
-                    <Cog size={22} className="animate-spin" />
-                    <p className="text-[10px] tracking-[0.3em] uppercase">Cargando modelo 3D</p>
-                  </div>
-                </div>
-              }
+        {/* ─── MARCA PRINCIPAL ─── */}
+        <div className="hero-item relative z-10 flex-1 flex flex-col justify-center px-10 xl:px-14 py-10">
+          {/* Badge versión */}
+          <div className="inline-flex items-center gap-2 mb-6 self-start">
+            <span
+              className="px-3 py-1 rounded-full text-[10px] font-bold tracking-[0.25em] uppercase"
+              style={{ background: 'rgba(225,20,40,0.12)', border: '1px solid rgba(225,20,40,0.3)', color: '#FF4D5E' }}
             >
-              {/* hue-rotate(125deg): azul(240°) → rojo(≈5°) */}
-              <div className="absolute inset-0" style={{ filter: 'hue-rotate(125deg) saturate(1.6) brightness(1.05)' }}>
-                <Bike3D className="absolute inset-0 w-full h-full" autoRotateSpeed={1.2} />
+              Enterprise v2.0
+            </span>
+            <Wifi size={11} className="text-emerald-400" />
+          </div>
+
+          {/* Título enorme */}
+          <div className="mb-2">
+            <h1
+              className="font-black leading-none text-white"
+              style={{ fontSize: 'clamp(56px, 7vw, 92px)', letterSpacing: '-0.02em', lineHeight: 1 }}
+            >
+              GORILA
+            </h1>
+            <h1
+              className="font-black leading-none"
+              style={{
+                fontSize: 'clamp(56px, 7vw, 92px)',
+                letterSpacing: '-0.02em',
+                lineHeight: 1,
+                background: 'linear-gradient(90deg, #E11428 0%, #FF2E43 50%, #FF6B7A 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              MOTOS
+            </h1>
+          </div>
+          <p className="text-white/40 text-base font-light tracking-wide mb-10 max-w-xs">
+            Plataforma enterprise para talleres de motocicletas en Ecuador
+          </p>
+
+          {/* ─── FEATURES ─── */}
+          <ul className="space-y-4 mb-10">
+            {FEATURES.map(({ icon: Icon, label, desc }, i) => (
+              <li key={i} className="flex items-start gap-3 group">
+                <div
+                  className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5 transition-all duration-200 group-hover:scale-105"
+                  style={{ background: 'rgba(225,20,40,0.10)', border: '1px solid rgba(225,20,40,0.2)' }}
+                >
+                  <Icon size={14} style={{ color: '#E11428' }} />
+                </div>
+                <div>
+                  <p className="text-white/85 text-sm font-semibold leading-tight">{label}</p>
+                  <p className="text-white/35 text-xs mt-0.5">{desc}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {/* ─── ESTADÍSTICAS ─── */}
+          <div className="grid grid-cols-4 gap-4">
+            {STATS.map(({ value, label }, i) => (
+              <div
+                key={i}
+                className="rounded-xl p-3 text-center"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <p className="text-white font-black text-lg leading-none mb-1" style={{ color: '#E11428' }}>{value}</p>
+                <p className="text-white/35 text-[10px] leading-tight">{label}</p>
               </div>
-            </Suspense>
-
-            {/* Glow rojo bajo la moto */}
-            <div
-              className="absolute left-1/2 bottom-[14%] -translate-x-1/2 w-[55%] h-16 blur-3xl pointer-events-none"
-              style={{ background: 'radial-gradient(ellipse, rgba(225,20,40,0.5) 0%, transparent 70%)' }}
-            />
-          </div>
-
-        </div>
-
-        {/* ═══════════ FRASE MOTIVACIONAL — DEBAJO DE LA MOTO ═══════════ */}
-        <div className="relative z-10 text-center px-8 lg:px-16 py-6 lg:py-8">
-          <p
-            style={{ fontFamily: "'Dancing Script', cursive", fontWeight: 700 }}
-            className="text-[22px] sm:text-[30px] lg:text-[38px] text-black leading-tight"
-          >
-            La única forma de hacer
-          </p>
-          <p
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.06em' }}
-            className="text-[52px] sm:text-[72px] lg:text-[90px] text-black font-black leading-none uppercase"
-          >
-            UN GRAN TRABAJO
-          </p>
-          <p
-            style={{ fontFamily: "'Dancing Script', cursive", fontWeight: 700 }}
-            className="text-[20px] sm:text-[28px] lg:text-[34px] text-black leading-tight mt-1"
-          >
-            es amar lo que haces
-          </p>
-        </div>
-
-        {/* ═══════════ FOOTER ═══════════ */}
-        <div className="auth-item relative z-10 px-6 lg:px-12 pb-5 pt-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-white/35">
-              <span className="w-6 h-px bg-gm-red/60" />
-              © Gorila Motos · {new Date().getFullYear()}
-            </div>
-            <div className="hidden lg:flex items-center gap-1.5 text-[10px] tracking-[0.3em] uppercase text-white/30">
-              <Wifi size={11} className="text-emerald-400" />
-              Sistema operativo · {import.meta.env.MODE}
-            </div>
+            ))}
           </div>
         </div>
+
+        {/* ─── FOOTER ─── */}
+        <footer className="hero-item relative z-10 flex items-center justify-between px-10 xl:px-14 pb-6">
+          <p className="text-white/25 text-[10px] tracking-[0.3em] uppercase">
+            © {new Date().getFullYear()} Gorila Motos · Ecuador
+          </p>
+          <div className="flex items-center gap-1.5 text-[10px] tracking-[0.25em] uppercase text-white/25">
+            <Clock size={10} />
+            Talleres activos 24/7
+          </div>
+        </footer>
       </section>
 
       {/* ════════════════════════════════════════════════════
-          PANEL DERECHO — Formulario (Dark Mode)
+          PANEL DERECHO — Formulario minimalista premium
          ════════════════════════════════════════════════════ */}
       <section
         ref={rightRef}
-        className="
-          relative flex-1 flex flex-col
-          bg-gm-dark2 text-white
-          px-6 sm:px-10 lg:px-14
-          py-8 lg:py-10
-          border-l border-white/[0.04]
-        "
+        className="relative flex-1 flex flex-col lg:w-[40%] xl:w-[38%] min-h-screen"
+        style={{ background: '#0F0F14', borderLeft: '1px solid rgba(255,255,255,0.04)' }}
       >
-        {/* Marca esquina */}
-        <div className="auth-item flex items-center justify-between">
-          <span className="inline-flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-gm-red font-bold">
-            <Wrench size={12} />
-            Acceso · Taller
+        {/* Glow sutil en la esquina superior */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            top: '-60px', right: '-60px',
+            width: 240, height: 240,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(225,20,40,0.08) 0%, transparent 65%)',
+          }}
+        />
+
+        {/* ─── TOP ─── */}
+        <div className="auth-item relative z-10 flex items-center justify-between px-8 xl:px-12 pt-8">
+          {/* Logo mobile (solo visible en < lg) */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #E11428, #8B0010)' }}
+            >
+              <Wrench size={16} className="text-white" />
+            </div>
+            <span className="text-white font-black text-lg">
+              Gorila <span style={{ color: '#E11428' }}>Motos</span>
+            </span>
+          </div>
+
+          {/* Badge acceso en desktop */}
+          <span className="hidden lg:inline-flex items-center gap-2 text-[10px] tracking-[0.28em] uppercase font-bold" style={{ color: '#E11428' }}>
+            <Lock size={11} />
+            Acceso seguro
           </span>
+
           <Link
             to="/registro"
-            className="text-[11px] tracking-[0.2em] uppercase text-white/50 hover:text-gm-red transition-colors font-semibold"
+            className="text-[11px] tracking-[0.2em] uppercase text-white/40 hover:text-white/75 transition-colors font-semibold"
           >
             Crear cuenta
           </Link>
         </div>
 
-        {/* Bloque central */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-full max-w-sm">
+        {/* ─── FORMULARIO CENTRADO ─── */}
+        <div className="flex-1 flex items-center justify-center px-8 xl:px-12 py-8">
+          <div className="w-full max-w-[340px]">
 
-            {/* ─── MARCA: GORILA (heavy) + Motos (script) ─── */}
-            <div className="auth-item mb-10">
-              <div className="brand-combo">
-                <span className="brand-heavy">Gorila</span>
-                <span className="brand-script">Motos</span>
-              </div>
-              <div className="brand-underline w-36 mt-3 mb-4" />
-              <p className="text-white/55 text-base font-light tracking-wide italic">
-                Forjando la excelencia en cada ruta, todos los días.
+            {/* Título del panel */}
+            <div className="auth-item mb-8">
+              <h2 className="text-white font-black text-3xl leading-tight mb-2">
+                Bienvenido<br />
+                <span style={{ color: '#E11428' }}>de vuelta</span>
+              </h2>
+              <p className="text-white/40 text-sm font-light">
+                Ingresa tus credenciales para acceder al sistema
               </p>
             </div>
 
-            {/* Advertencia de Admin solicitada por el usuario */}
+            {/* Aviso de acceso admin */}
             <div className="auth-item mb-6">
-              <div className="flex flex-col p-3.5 rounded-xl bg-gm-red/5 border border-gm-red/20 shadow-[0_0_15px_rgba(225,20,40,0.05)]">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Shield size={13} className="text-gm-red animate-pulse" />
-                  <span className="text-[10px] tracking-[0.25em] uppercase text-gm-red font-black">Acceso de Administrador</span>
+              <div
+                className="flex items-start gap-3 rounded-xl px-4 py-3"
+                style={{ background: 'rgba(225,20,40,0.05)', border: '1px solid rgba(225,20,40,0.15)' }}
+              >
+                <Shield size={14} className="mt-0.5 flex-shrink-0" style={{ color: '#E11428' }} />
+                <div>
+                  <p className="text-[10px] font-black tracking-[0.22em] uppercase mb-1" style={{ color: '#E11428' }}>
+                    Acceso de Administrador
+                  </p>
+                  <p className="text-[11px] text-white/45 leading-relaxed">
+                    Solo el <strong className="text-white/70">correo corporativo autorizado</strong> tiene privilegios de administrador.
+                  </p>
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed font-medium">
-                  Solo el <strong className="text-white/80 font-bold">correo corporativo autorizado</strong> tiene privilegios para entrar como Admin.
-                </p>
               </div>
             </div>
 
+            {/* ─── FORM ─── */}
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
               <div className="auth-item">
                 <Input
@@ -368,46 +466,55 @@ export default function LoginPage() {
               <div className="auth-item flex justify-end">
                 <Link
                   to="/recuperar"
-                  className="text-xs text-white/40 hover:text-gm-red transition-colors font-medium"
+                  className="text-xs text-white/35 hover:text-white/65 transition-colors font-medium"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
 
               <div className="auth-item pt-2">
-                <Button
+                <button
                   type="submit"
-                  size="lg"
-                  loading={loading}
-                  className="w-full group !bg-gm-red hover:!bg-gm-red-lt text-white"
-                  iconRight={
-                    <ArrowRight
-                      size={16}
-                      className="transition-transform group-hover:translate-x-1"
-                    />
-                  }
+                  disabled={loading}
+                  className="btn-shimmer w-full h-12 rounded-xl font-bold text-white flex items-center justify-center gap-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                  style={loading ? { background: '#E11428' } : {}}
                 >
-                  Iniciar sesión
-                </Button>
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                      </svg>
+                      Verificando...
+                    </span>
+                  ) : (
+                    <>
+                      Iniciar sesión
+                      <ArrowRight size={16} />
+                    </>
+                  )}
+                </button>
               </div>
             </form>
 
-            {/* Demo creds */}
-            <div className="auth-item mt-6 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
-              <p className="text-[10px] tracking-[0.25em] uppercase text-white/40 font-semibold mb-1">
+            {/* Demo credentials */}
+            <div className="auth-item mt-6 rounded-xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <p className="text-[10px] tracking-[0.25em] uppercase text-white/30 font-semibold mb-1.5">
                 Acceso de prueba
               </p>
-              <p className="text-xs text-white/80 font-mono tabular-nums">
-                andres@gmotors.com <span className="text-white/30">·</span> 123
+              <p className="text-xs text-white/65 font-mono tabular-nums">
+                andres@gmotors.com <span className="text-white/25">·</span> 123
               </p>
             </div>
           </div>
         </div>
 
-        {/* Footer mobile */}
-        <p className="auth-item lg:hidden mt-6 text-center text-[10px] tracking-[0.3em] uppercase text-white/30">
-          © Gorila Motos · {new Date().getFullYear()}
-        </p>
+        {/* ─── FOOTER ─── */}
+        <footer className="auth-item relative z-10 px-8 xl:px-12 pb-6">
+          <p className="text-center text-[10px] tracking-[0.25em] uppercase text-white/20">
+            © 2025 Gorila Motos · Sistema Enterprise
+          </p>
+        </footer>
       </section>
     </div>
   );

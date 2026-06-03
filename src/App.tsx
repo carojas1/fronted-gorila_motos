@@ -23,9 +23,11 @@ import RecordsPage         from './pages/records/RecordsPage';
 import ClientesPage        from './pages/clientes/ClientesPage';
 
 /* Nuevos módulos */
-import AlertasPage     from './pages/alertas/AlertasPage';
-import PuntosPage      from './pages/puntos/PuntosPage';
-import CombustiblePage from './pages/combustible/CombustiblePage';
+import AlertasPage       from './pages/alertas/AlertasPage';
+import PuntosPage        from './pages/puntos/PuntosPage';
+import CombustiblePage   from './pages/combustible/CombustiblePage';
+import InvoicePage       from './pages/invoice/InvoicePage';
+import PortalClientePage from './pages/portal/PortalClientePage';
 
 export default function App() {
   return (
@@ -47,10 +49,12 @@ export default function App() {
                 <Route path="/clientes"       element={<ClientesPage />}       />
                 <Route path="/perfiles"       element={<ProfilesPage />}       />
                 <Route path="/perfiles/:id"   element={<EmpleadoDetailPage />} />
-                <Route path="/alertas"        element={<AlertasPage />}        />
-                <Route path="/puntos"         element={<PuntosPage />}         />
-                <Route path="/combustible"    element={<CombustiblePage />}    />
-                <Route path="/ajustes"        element={<DashboardPage />}      />
+                <Route path="/alertas"          element={<AlertasPage />}        />
+                <Route path="/puntos"           element={<PuntosPage />}         />
+                <Route path="/combustible"      element={<CombustiblePage />}    />
+                <Route path="/invoice/:id"      element={<InvoicePage />}        />
+                <Route path="/portal"           element={<PortalClientePage />}  />
+                <Route path="/ajustes"          element={<DashboardPage />}      />
               </Route>
             </Route>
 
