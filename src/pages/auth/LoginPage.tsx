@@ -1,179 +1,75 @@
 /* ─────────────────────────────────────────────
-   GORILA MOTOS — Login Enterprise Premium
-   Split layout: hero izquierdo + formulario derecho
+   GORILA MOTOS — Login v3
+   Moto 3D real · Sin estadísticas falsas
+   Responsive para web y APK mobile
    ───────────────────────────────────────────── */
 
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Mail, Lock, ArrowRight, Wifi, Shield,
-  Wrench, CheckCircle2, BarChart3, Users, Zap, Clock,
+  Mail, Lock, ArrowRight, Shield, Wrench, Package,
+  Bike, Star, Fuel, Bell, FileText, Users,
 } from 'lucide-react';
 import gsap from 'gsap';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
-import Button from '../../components/ui/Button';
 
-/* ─── Schema de validación ─── */
+/* Moto 3D lazy — no bloquea el form */
+const Bike3D = lazy(() => import('../../components/3d/Bike3D'));
+
 const schema = z.object({
   correo:     z.string().email('Correo no válido'),
   contrasena: z.string().min(1, 'Ingresa tu contraseña'),
 });
 type Form = z.infer<typeof schema>;
 
-/* ─── Reloj vivo ─── */
-function useClock() {
-  const [t, setT] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setT(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return t;
-}
-
-/* ─── Features del sistema ─── */
-const FEATURES = [
-  { icon: Wrench,       label: 'Gestión de órdenes de taller',       desc: 'Control total del flujo de trabajo' },
-  { icon: Users,        label: 'CRM de clientes y mecánicos',         desc: 'Base de datos unificada' },
-  { icon: BarChart3,    label: 'Reportes y analíticas en tiempo real', desc: 'Métricas accionables' },
-  { icon: CheckCircle2, label: 'Inventario y productos',               desc: 'Stock automatizado' },
-  { icon: Zap,          label: 'Facturación electrónica',              desc: 'Integración SRI Ecuador' },
+/* ── Módulos del sistema ── */
+const MODULES = [
+  { icon: Wrench,   color: '#E11428', label: 'Órdenes de servicio',     desc: 'Gestiona el flujo completo del taller' },
+  { icon: Bike,     color: '#3B82F6', label: 'Registro de motos',        desc: 'Ficha técnica, fotos y diagnóstico' },
+  { icon: Package,  color: '#10B981', label: 'Inventario inteligente',   desc: 'Stock con alertas automáticas' },
+  { icon: FileText, color: '#8B5CF6', label: 'Facturación SRI Ecuador',  desc: 'Cumple normativa 2024 (IVA 15%)' },
+  { icon: Star,     color: '#F59E0B', label: 'Puntos y gamificación',    desc: 'Fideliza a tus clientes' },
+  { icon: Fuel,     color: '#14B8A6', label: 'Rastreador combustible',   desc: 'Control de consumo y costos' },
+  { icon: Bell,     color: '#EF4444', label: 'Alertas de mantenimiento', desc: 'Cambio de aceite por kilómetros' },
+  { icon: Users,    color: '#6366F1', label: 'Portal del cliente',       desc: 'Historial y puntos desde el celular' },
 ];
 
-/* ─── Estadísticas dummy ─── */
-const STATS = [
-  { value: '500+', label: 'Talleres activos' },
-  { value: '98%',  label: 'Uptime garantizado' },
-  { value: '24/7', label: 'Soporte técnico' },
-  { value: '12k+', label: 'Órdenes procesadas' },
-];
-
-/* ─── Formas decorativas (CSS puro, sin deps) ─── */
-const SHAPES = [
-  { size: 320, top: '-8%',  left: '-6%',  delay: '0s',    opacity: 0.06, type: 'circle' },
-  { size: 200, top: '60%',  left: '-10%', delay: '3s',    opacity: 0.04, type: 'circle' },
-  { size: 160, top: '10%',  left: '72%',  delay: '1.5s',  opacity: 0.05, type: 'hexagon' },
-  { size: 100, top: '78%',  left: '80%',  delay: '2.5s',  opacity: 0.04, type: 'hexagon' },
-  { size: 240, top: '38%',  left: '40%',  delay: '4s',    opacity: 0.03, type: 'circle' },
-];
-
-function DecorativeShapes() {
-  return (
-    <>
-      {SHAPES.map((s, i) => (
-        <div
-          key={i}
-          aria-hidden
-          className="absolute pointer-events-none select-none"
-          style={{
-            width:  s.size,
-            height: s.size,
-            top:    s.top,
-            left:   s.left,
-            opacity: s.opacity,
-            animation: `floatShape 8s ease-in-out infinite`,
-            animationDelay: s.delay,
-            ...(s.type === 'circle'
-              ? {
-                  borderRadius: '50%',
-                  border: '1.5px solid rgba(225,20,40,0.9)',
-                }
-              : {
-                  clipPath: 'polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)',
-                  background: 'rgba(225,20,40,0.15)',
-                }),
-          }}
-        />
-      ))}
-      {/* Keyframe inline para la animación de flotación */}
-      <style>{`
-        @keyframes floatShape {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          33%       { transform: translateY(-14px) rotate(3deg); }
-          66%       { transform: translateY(8px) rotate(-2deg); }
-        }
-        @keyframes shimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position:  200% center; }
-        }
-        @keyframes pulseGlow {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(225,20,40,0); }
-          50%       { box-shadow: 0 0 0 8px rgba(225,20,40,0.12); }
-        }
-        .btn-shimmer {
-          background: linear-gradient(
-            90deg,
-            #E11428 0%, #FF2E43 40%, #fff3 50%, #FF2E43 60%, #E11428 100%
-          );
-          background-size: 200% auto;
-          animation: shimmer 2.8s linear infinite;
-        }
-        .btn-shimmer:disabled { animation: none; }
-      `}</style>
-    </>
-  );
-}
-
-/* ══════════════════════════════════════════════
-   COMPONENTE PRINCIPAL
-   ══════════════════════════════════════════════ */
 export default function LoginPage() {
   const { login, loading } = useAuth();
   const navigate = useNavigate();
   const toast    = useToast();
-  const clock    = useClock();
+  const formRef  = useRef<HTMLDivElement>(null);
+  const modsRef  = useRef<HTMLDivElement>(null);
 
-  /* ─ Refs para GSAP ─ */
-  const leftRef  = useRef<HTMLElement>(null);
-  const rightRef = useRef<HTMLElement>(null);
-
-  /* ─ GSAP entrance animation ─ */
+  /* GSAP entrance */
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-
-      /* Lado izquierdo: fade in desde la izquierda */
-      if (leftRef.current) {
-        tl.fromTo(
-          leftRef.current,
-          { x: -50, opacity: 0 },
-          { x: 0,   opacity: 1, duration: 0.9 },
-        );
-        /* Elementos internos en cascada */
-        tl.fromTo(
-          leftRef.current.querySelectorAll('.hero-item'),
-          { y: 28, opacity: 0 },
-          { y: 0,  opacity: 1, duration: 0.55, stagger: 0.09 },
-          '-=0.55',
-        );
-      }
-
-      /* Lado derecho: slide desde la derecha */
-      if (rightRef.current) {
-        tl.fromTo(
-          rightRef.current,
-          { x: 60, opacity: 0 },
-          { x: 0,  opacity: 1, duration: 0.85 },
-          '-=0.7',
-        );
-        tl.fromTo(
-          rightRef.current.querySelectorAll('.auth-item'),
-          { y: 22, opacity: 0 },
-          { y: 0,  opacity: 1, duration: 0.5, stagger: 0.08 },
-          '-=0.55',
+      gsap.fromTo(formRef.current,
+        { y: 40, opacity: 0 },
+        { y: 0,  opacity: 1, duration: 0.8, ease: 'power3.out' },
+      );
+      gsap.fromTo(
+        formRef.current?.querySelectorAll('.auth-item') ?? [],
+        { y: 20, opacity: 0 },
+        { y: 0,  opacity: 1, duration: 0.5, stagger: 0.07, ease: 'power2.out', delay: 0.25 },
+      );
+      if (modsRef.current) {
+        gsap.fromTo(
+          modsRef.current.querySelectorAll('.mod-card'),
+          { y: 30, opacity: 0 },
+          { y: 0,  opacity: 1, duration: 0.45, stagger: 0.06, ease: 'power2.out', delay: 0.5 },
         );
       }
     });
-
     return () => ctx.revert();
   }, []);
 
-  /* ─ React Hook Form ─ */
   const { register, handleSubmit, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
   });
@@ -187,264 +83,134 @@ export default function LoginPage() {
     }
   };
 
-  const hhmmss = clock.toLocaleTimeString('es-EC', { hour12: false });
-  const fecha  = clock.toLocaleDateString('es-EC', {
-    weekday: 'long', day: '2-digit', month: 'long',
-  });
+  const [showDemo, setShowDemo] = useState(false);
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row overflow-hidden" style={{ background: '#0B0B0D' }}>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: '#0B0B0D' }}
+    >
 
-      {/* ════════════════════════════════════════════════════
-          PANEL IZQUIERDO — Hero oscuro con formas y marca
-          Oculto en mobile (< lg)
-         ════════════════════════════════════════════════════ */}
-      <section
-        ref={leftRef}
-        className="hidden lg:flex relative overflow-hidden flex-col lg:w-[60%] xl:w-[62%] min-h-screen"
-        style={{
-          background: 'radial-gradient(ellipse 100% 90% at 20% -5%, #1a0306 0%, #0B0B0D 55%), radial-gradient(ellipse 70% 60% at 80% 110%, #1f0407 0%, transparent 55%)',
-        }}
-      >
-        {/* Capa de ruido/grid sutil */}
+      {/* ════════════════════════════════════════════
+          SECCIÓN PRINCIPAL — Hero + Form
+          ════════════════════════════════════════════ */}
+      <div className="flex flex-col lg:flex-row flex-1 min-h-screen">
+
+        {/* ── IZQUIERDA: Moto 3D (oculta en mobile pequeño) ── */}
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="relative hidden sm:flex lg:w-[58%] items-center justify-center overflow-hidden"
           style={{
-            backgroundImage:
-              'repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.015) 40px), repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.015) 40px)',
+            background: 'radial-gradient(ellipse 90% 80% at 50% 50%, #12050a 0%, #0B0B0D 70%)',
+            minHeight: '100vh',
           }}
-        />
+        >
+          {/* Glow ambiental rojo */}
+          <div className="absolute inset-0 pointer-events-none"
+               style={{
+                 background: 'radial-gradient(ellipse 70% 50% at 50% 55%, rgba(225,20,40,0.12) 0%, transparent 65%)',
+               }} />
 
-        {/* Glow ambient rojo */}
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            top: '15%', right: '-5%',
-            width: 480, height: 480,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(225,20,40,0.18) 0%, transparent 65%)',
-            filter: 'blur(8px)',
-          }}
-        />
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            bottom: '-10%', left: '20%',
-            width: 360, height: 360,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(225,20,40,0.10) 0%, transparent 65%)',
-            filter: 'blur(12px)',
-          }}
-        />
+          {/* Grid decorativo */}
+          <div className="absolute inset-0 pointer-events-none"
+               style={{
+                 backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,0.012) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,0.012) 40px)',
+               }} />
 
-        {/* Formas geométricas decorativas */}
-        <DecorativeShapes />
-
-        {/* ─── TOP BAR ─── */}
-        <header className="hero-item relative z-10 flex items-center justify-between px-10 xl:px-14 pt-8">
-          {/* Logo + marca */}
-          <div className="flex items-center gap-4">
-            <div
-              className="relative w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #E11428, #8B0010)', boxShadow: '0 0 20px rgba(225,20,40,0.4)' }}
-            >
-              <Wrench size={22} className="text-white" />
+          {/* Logo top-left */}
+          <div className="absolute top-7 left-8 flex items-center gap-3 z-10">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                 style={{ background: 'linear-gradient(135deg,#E11428,#8B0010)', boxShadow:'0 0 20px rgba(225,20,40,0.4)' }}>
+              <Wrench size={18} className="text-white" />
             </div>
             <div className="leading-none">
-              <p className="text-white font-black text-xl tracking-tight">
-                Gorila <span style={{ color: '#E11428' }}>Motos</span>
+              <p className="text-white font-black text-base tracking-tight">
+                Gorila <span style={{ color:'#E11428' }}>Motos</span>
               </p>
-              <p className="text-white/35 text-[10px] tracking-[0.3em] uppercase mt-0.5">
-                Sistema Enterprise
-              </p>
+              <p className="text-white/30 text-[9px] tracking-[0.3em] uppercase mt-0.5">Sistema de gestión</p>
             </div>
           </div>
 
-          {/* Clock / status */}
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-2 text-[10px] tracking-[0.25em] uppercase text-white/50">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: '0 0 6px rgba(52,211,153,0.8)' }} />
-              Sistema operativo
+          {/* ── MOTO 3D ── */}
+          <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
+            <div className="w-full" style={{ height: 'min(520px, 60vh)' }}>
+              <Suspense fallback={
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-10 h-10 border-2 border-gm-red/30 border-t-gm-red rounded-full animate-spin" />
+                </div>
+              }>
+                <Bike3D />
+              </Suspense>
             </div>
-            <p className="font-mono text-xs text-white/60 tabular-nums">{hhmmss} · Quito EC</p>
-            <p className="text-[10px] text-white/30 capitalize">{fecha}</p>
-          </div>
-        </header>
 
-        {/* ─── MARCA PRINCIPAL ─── */}
-        <div className="hero-item relative z-10 flex-1 flex flex-col justify-center px-10 xl:px-14 py-10">
-          {/* Badge versión */}
-          <div className="inline-flex items-center gap-2 mb-6 self-start">
-            <span
-              className="px-3 py-1 rounded-full text-[10px] font-bold tracking-[0.25em] uppercase"
-              style={{ background: 'rgba(225,20,40,0.12)', border: '1px solid rgba(225,20,40,0.3)', color: '#FF4D5E' }}
-            >
-              Enterprise v2.0
-            </span>
-            <Wifi size={11} className="text-emerald-400" />
-          </div>
-
-          {/* Título enorme */}
-          <div className="mb-2">
-            <h1
-              className="font-black leading-none text-white"
-              style={{ fontSize: 'clamp(56px, 7vw, 92px)', letterSpacing: '-0.02em', lineHeight: 1 }}
-            >
-              GORILA
-            </h1>
-            <h1
-              className="font-black leading-none"
-              style={{
-                fontSize: 'clamp(56px, 7vw, 92px)',
-                letterSpacing: '-0.02em',
-                lineHeight: 1,
-                background: 'linear-gradient(90deg, #E11428 0%, #FF2E43 50%, #FF6B7A 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              MOTOS
-            </h1>
-          </div>
-          <p className="text-white/40 text-base font-light tracking-wide mb-10 max-w-xs">
-            Plataforma enterprise para talleres de motocicletas en Ecuador
-          </p>
-
-          {/* ─── FEATURES ─── */}
-          <ul className="space-y-4 mb-10">
-            {FEATURES.map(({ icon: Icon, label, desc }, i) => (
-              <li key={i} className="flex items-start gap-3 group">
-                <div
-                  className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5 transition-all duration-200 group-hover:scale-105"
-                  style={{ background: 'rgba(225,20,40,0.10)', border: '1px solid rgba(225,20,40,0.2)' }}
-                >
-                  <Icon size={14} style={{ color: '#E11428' }} />
-                </div>
-                <div>
-                  <p className="text-white/85 text-sm font-semibold leading-tight">{label}</p>
-                  <p className="text-white/35 text-xs mt-0.5">{desc}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          {/* ─── ESTADÍSTICAS ─── */}
-          <div className="grid grid-cols-4 gap-4">
-            {STATS.map(({ value, label }, i) => (
-              <div
-                key={i}
-                className="rounded-xl p-3 text-center"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-              >
-                <p className="text-white font-black text-lg leading-none mb-1" style={{ color: '#E11428' }}>{value}</p>
-                <p className="text-white/35 text-[10px] leading-tight">{label}</p>
-              </div>
-            ))}
+            {/* Tagline debajo de la moto */}
+            <div className="text-center mt-4 pb-8">
+              <h2 className="text-white font-black text-3xl xl:text-4xl leading-tight"
+                  style={{ letterSpacing:'-0.02em' }}>
+                Tu taller,
+              </h2>
+              <h2 className="font-black text-3xl xl:text-4xl leading-tight"
+                  style={{
+                    letterSpacing:'-0.02em',
+                    background:'linear-gradient(90deg,#E11428,#FF6B7A)',
+                    WebkitBackgroundClip:'text',
+                    WebkitTextFillColor:'transparent',
+                  }}>
+                bajo control.
+              </h2>
+              <p className="text-white/35 text-sm mt-2 font-light">
+                Gestión profesional para talleres de motos en Ecuador
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* ─── FOOTER ─── */}
-        <footer className="hero-item relative z-10 flex items-center justify-between px-10 xl:px-14 pb-6">
-          <p className="text-white/25 text-[10px] tracking-[0.3em] uppercase">
-            © {new Date().getFullYear()} Gorila Motos · Ecuador
-          </p>
-          <div className="flex items-center gap-1.5 text-[10px] tracking-[0.25em] uppercase text-white/25">
-            <Clock size={10} />
-            Talleres activos 24/7
-          </div>
-        </footer>
-      </section>
-
-      {/* ════════════════════════════════════════════════════
-          PANEL DERECHO — Formulario minimalista premium
-         ════════════════════════════════════════════════════ */}
-      <section
-        ref={rightRef}
-        className="relative flex-1 flex flex-col lg:w-[40%] xl:w-[38%] min-h-screen"
-        style={{ background: '#0F0F14', borderLeft: '1px solid rgba(255,255,255,0.04)' }}
-      >
-        {/* Glow sutil en la esquina superior */}
+        {/* ── DERECHA: Formulario ── */}
         <div
-          className="absolute pointer-events-none"
-          style={{
-            top: '-60px', right: '-60px',
-            width: 240, height: 240,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(225,20,40,0.08) 0%, transparent 65%)',
-          }}
-        />
+          className="flex-1 flex flex-col justify-center px-6 sm:px-10 lg:px-14 py-10 lg:w-[42%] relative"
+          style={{ background:'#0F0F14', borderLeft:'1px solid rgba(255,255,255,0.04)' }}
+        >
+          {/* Glow top-right */}
+          <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none"
+               style={{ background:'radial-gradient(circle,rgba(225,20,40,0.07) 0%,transparent 65%)' }} />
 
-        {/* ─── TOP ─── */}
-        <div className="auth-item relative z-10 flex items-center justify-between px-8 xl:px-12 pt-8">
-          {/* Logo mobile (solo visible en < lg) */}
-          <div className="flex items-center gap-3 lg:hidden">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #E11428, #8B0010)' }}
-            >
+          {/* Logo mobile (solo en sm sin hero) */}
+          <div className="flex sm:hidden items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                 style={{ background:'linear-gradient(135deg,#E11428,#8B0010)' }}>
               <Wrench size={16} className="text-white" />
             </div>
-            <span className="text-white font-black text-lg">
-              Gorila <span style={{ color: '#E11428' }}>Motos</span>
-            </span>
+            <p className="text-white font-black text-lg">
+              Gorila <span style={{ color:'#E11428' }}>Motos</span>
+            </p>
           </div>
 
-          {/* Badge acceso en desktop */}
-          <span className="hidden lg:inline-flex items-center gap-2 text-[10px] tracking-[0.28em] uppercase font-bold" style={{ color: '#E11428' }}>
-            <Lock size={11} />
-            Acceso seguro
-          </span>
+          <div ref={formRef} className="w-full max-w-[360px] mx-auto">
 
-          <Link
-            to="/registro"
-            className="text-[11px] tracking-[0.2em] uppercase text-white/40 hover:text-white/75 transition-colors font-semibold"
-          >
-            Crear cuenta
-          </Link>
-        </div>
+            {/* Título */}
+            <div className="auth-item mb-7">
+              <h1 className="text-white font-black text-2xl lg:text-3xl leading-tight">
+                Bienvenido
+              </h1>
+              <p className="text-white/40 text-sm mt-1">Ingresa al panel de control</p>
+            </div>
 
-        {/* ─── FORMULARIO CENTRADO ─── */}
-        <div className="flex-1 flex items-center justify-center px-8 xl:px-12 py-8">
-          <div className="w-full max-w-[340px]">
-
-            {/* Título del panel */}
-            <div className="auth-item mb-8">
-              <h2 className="text-white font-black text-3xl leading-tight mb-2">
-                Bienvenido<br />
-                <span style={{ color: '#E11428' }}>de vuelta</span>
-              </h2>
-              <p className="text-white/40 text-sm font-light">
-                Ingresa tus credenciales para acceder al sistema
+            {/* Badge seguridad */}
+            <div className="auth-item mb-5 flex items-center gap-2 px-3 py-2 rounded-xl"
+                 style={{ background:'rgba(225,20,40,0.04)', border:'1px solid rgba(225,20,40,0.12)' }}>
+              <Shield size={12} style={{ color:'#E11428' }} className="shrink-0" />
+              <p className="text-[11px] text-white/40">
+                Conexión segura · <span className="text-white/55">SSL cifrado</span>
               </p>
             </div>
 
-            {/* Aviso de acceso admin */}
-            <div className="auth-item mb-6">
-              <div
-                className="flex items-start gap-3 rounded-xl px-4 py-3"
-                style={{ background: 'rgba(225,20,40,0.05)', border: '1px solid rgba(225,20,40,0.15)' }}
-              >
-                <Shield size={14} className="mt-0.5 flex-shrink-0" style={{ color: '#E11428' }} />
-                <div>
-                  <p className="text-[10px] font-black tracking-[0.22em] uppercase mb-1" style={{ color: '#E11428' }}>
-                    Acceso de Administrador
-                  </p>
-                  <p className="text-[11px] text-white/45 leading-relaxed">
-                    Solo el <strong className="text-white/70">correo corporativo autorizado</strong> tiene privilegios de administrador.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* ─── FORM ─── */}
+            {/* Form */}
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
               <div className="auth-item">
                 <Input
                   label="Correo electrónico"
                   type="email"
                   placeholder="tu@correo.com"
-                  prefix={<Mail size={15} />}
+                  prefix={<Mail size={14} />}
                   error={errors.correo?.message}
                   autoComplete="email"
                   {...register('correo')}
@@ -456,65 +222,137 @@ export default function LoginPage() {
                   label="Contraseña"
                   type="password"
                   placeholder="••••••••"
-                  prefix={<Lock size={15} />}
+                  prefix={<Lock size={14} />}
                   error={errors.contrasena?.message}
                   autoComplete="current-password"
                   {...register('contrasena')}
                 />
               </div>
 
-              <div className="auth-item flex justify-end">
-                <Link
-                  to="/recuperar"
-                  className="text-xs text-white/35 hover:text-white/65 transition-colors font-medium"
-                >
+              <div className="auth-item flex items-center justify-between">
+                <Link to="/registro"
+                      className="text-[11px] text-white/35 hover:text-white/65 transition-colors">
+                  ¿No tienes cuenta?
+                </Link>
+                <Link to="/recuperar"
+                      className="text-[11px] text-white/35 hover:text-white/65 transition-colors">
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
 
-              <div className="auth-item pt-2">
+              <div className="auth-item pt-1">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="btn-shimmer w-full h-12 rounded-xl font-bold text-white flex items-center justify-center gap-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-                  style={loading ? { background: '#E11428' } : {}}
+                  className="w-full h-12 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+                  style={{
+                    background: loading
+                      ? '#9E0E1B'
+                      : 'linear-gradient(90deg,#E11428 0%,#FF2E43 50%,#E11428 100%)',
+                    backgroundSize: '200% auto',
+                    boxShadow: loading ? 'none' : '0 0 24px rgba(225,20,40,0.35)',
+                  }}
                 >
                   {loading ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3" />
-                        <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
-                      </svg>
-                      Verificando...
-                    </span>
-                  ) : (
                     <>
-                      Iniciar sesión
-                      <ArrowRight size={16} />
+                      <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3"/>
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+                      </svg>
+                      Verificando…
                     </>
+                  ) : (
+                    <>Iniciar sesión <ArrowRight size={15} /></>
                   )}
                 </button>
               </div>
             </form>
 
-            {/* Demo credentials */}
-            <div className="auth-item mt-6 rounded-xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="text-[10px] tracking-[0.25em] uppercase text-white/30 font-semibold mb-1.5">
-                Acceso de prueba
-              </p>
-              <p className="text-xs text-white/65 font-mono tabular-nums">
-                andres@gmotors.com <span className="text-white/25">·</span> 123
-              </p>
+            {/* Demo credentials toggle */}
+            <div className="auth-item mt-5">
+              <button
+                type="button"
+                onClick={() => setShowDemo(v => !v)}
+                className="w-full text-[11px] text-white/25 hover:text-white/45 transition-colors text-center"
+              >
+                {showDemo ? 'Ocultar credenciales de prueba ↑' : '¿Necesitas credenciales de demo? →'}
+              </button>
+              {showDemo && (
+                <div className="mt-2 px-4 py-3 rounded-xl"
+                     style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.06)' }}>
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-1.5">Demo</p>
+                  <p className="text-xs font-mono text-white/55">andres@gmotors.com</p>
+                  <p className="text-xs font-mono text-white/35">contraseña: 123</p>
+                </div>
+              )}
             </div>
+
+            <p className="auth-item mt-8 text-center text-[10px] text-white/18 tracking-widest uppercase">
+              © {new Date().getFullYear()} Gorila Motos · Ecuador
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* ─── FOOTER ─── */}
-        <footer className="auth-item relative z-10 px-8 xl:px-12 pb-6">
-          <p className="text-center text-[10px] tracking-[0.25em] uppercase text-white/20">
-            © 2025 Gorila Motos · Sistema Enterprise
+      {/* ════════════════════════════════════════════
+          SECCIÓN INFERIOR — Qué hace el sistema
+          ════════════════════════════════════════════ */}
+      <section
+        ref={modsRef}
+        className="w-full px-6 sm:px-10 xl:px-20 py-12"
+        style={{
+          background: 'linear-gradient(180deg,#0F0F14 0%,#0B0B0D 100%)',
+          borderTop: '1px solid rgba(255,255,255,0.04)',
+        }}
+      >
+        {/* Header sección */}
+        <div className="text-center mb-10">
+          <p className="text-[10px] tracking-[0.35em] uppercase text-gm-red/60 font-bold mb-2">
+            Módulos del sistema
           </p>
-        </footer>
+          <h2 className="text-white font-black text-2xl sm:text-3xl tracking-tight">
+            Todo lo que necesita tu taller
+          </h2>
+          <p className="text-white/30 text-sm mt-2 max-w-xl mx-auto">
+            Plataforma integral para talleres de motos — web y app móvil.
+            Diseñado para el mercado ecuatoriano.
+          </p>
+        </div>
+
+        {/* Grid de módulos */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-5xl mx-auto mb-12">
+          {MODULES.map(({ icon: Icon, color, label, desc }) => (
+            <div
+              key={label}
+              className="mod-card gm-card-d rounded-2xl p-4 flex flex-col gap-2 group hover:scale-[1.02] transition-transform"
+              style={{ '--metric-color': color } as React.CSSProperties}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                   style={{ background:`${color}15`, border:`1px solid ${color}25` }}>
+                <Icon size={16} style={{ color }} />
+              </div>
+              <p className="text-white/80 font-bold text-sm leading-tight">{label}</p>
+              <p className="text-white/30 text-[11px] leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Especificaciones técnicas */}
+        <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { label: 'Tecnología',      val: 'React + Spring Boot' },
+            { label: 'Base de datos',   val: 'PostgreSQL · Supabase' },
+            { label: 'App móvil',       val: 'Android · iOS (Capacitor)' },
+            { label: 'Facturación',     val: 'SRI Ecuador · IVA 15%' },
+          ].map(({ label, val }) => (
+            <div key={label}
+                 className="px-4 py-3 rounded-xl text-center"
+                 style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.05)' }}>
+              <p className="text-[10px] text-white/28 uppercase tracking-wider font-bold mb-1">{label}</p>
+              <p className="text-white/60 text-xs font-semibold">{val}</p>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );

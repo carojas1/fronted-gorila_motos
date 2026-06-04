@@ -36,3 +36,5 @@ ios/
 
 # TypeScript build info
 *.tsbuildinfo
+
+.vercel
