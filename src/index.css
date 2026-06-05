@@ -12,11 +12,14 @@ html {
 }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-feature-settings: 'cv02','cv03','cv04','cv11';
+  font-variation-settings: normal;
   background-color: #F5F4F2;
   color: #16161A;
   line-height: 1.5;
   overflow-x: hidden;
+  text-rendering: optimizeLegibility;
 }
 
 #root { min-height: 100vh; }
