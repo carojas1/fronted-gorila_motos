@@ -28,13 +28,28 @@ const firebaseConfig = {
   measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID     ?? '',
 };
 
-/* ── Inicializar solo una vez ── */
-const app  = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+/* ── Inicializar solo una vez y de forma segura ── */
+let app;
+let authInstance = null;
+let providerInstance = null;
+let isEnabled = false;
 
-/** ¿Está Firebase configurado con credenciales reales? */
-export const firebaseEnabled = !!firebaseConfig.apiKey;
+try {
+  if (firebaseConfig.apiKey) {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+    authInstance = getAuth(app);
+    providerInstance = new GoogleAuthProvider();
+    isEnabled = true;
+  }
+} catch (error) {
+  console.warn("⚠️ No se pudo inicializar Firebase. Revisa las variables de entorno.", error);
+}
+
+export const auth = authInstance as ReturnType<typeof getAuth>;
+export const googleProvider = providerInstance as GoogleAuthProvider;
+
+/** ¿Está Firebase configurado y funcionando? */
+export const firebaseEnabled = isEnabled;
 
 /* ─────────────────────────────────────────────
    Helpers de autenticación
