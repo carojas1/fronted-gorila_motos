@@ -10,8 +10,11 @@ import ProtectedRoute     from './components/layout/ProtectedRoute';
 import AppLayout          from './components/layout/AppLayout';
 
 /* Auth pages */
-import LoginPage    from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
+import LoginPage      from './pages/auth/LoginPage';
+import RegisterPage   from './pages/auth/RegisterPage';
+import RecuperarPage  from './pages/auth/RecuperarPage';
+import PrivacidadPage from './pages/legal/PrivacidadPage';
+import TerminosPage   from './pages/legal/TerminosPage';
 
 /* App pages */
 import DashboardPage       from './pages/dashboard/DashboardPage';
@@ -36,8 +39,11 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             {/* Rutas públicas */}
-            <Route path="/login"    element={<LoginPage />}    />
-            <Route path="/registro" element={<RegisterPage />} />
+            <Route path="/login"      element={<LoginPage />}      />
+            <Route path="/registro"   element={<RegisterPage />}   />
+            <Route path="/recuperar"  element={<RecuperarPage />}  />
+            <Route path="/privacidad" element={<PrivacidadPage />} />
+            <Route path="/terminos"   element={<TerminosPage />}   />
 
             {/* Rutas protegidas */}
             <Route element={<ProtectedRoute />}>

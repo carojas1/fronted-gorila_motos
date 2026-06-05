@@ -10,8 +10,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  User, Mail, Lock, MapPin, Wrench, ChevronRight,
-  Store, CheckCircle, Phone, ArrowLeft,
+  User, Mail, Lock, MapPin, Wrench,
+  Store, CheckCircle, Phone, ArrowLeft, ChevronRight,
 } from 'lucide-react';
 import { authApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
@@ -127,26 +127,62 @@ export default function RegisterPage() {
         }}>
 
           {/* Pasos indicador */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
-            {[1, 2].map(n => (
-              <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: step >= n ? '#E11428' : 'rgba(255,255,255,0.06)',
-                  border: `1.5px solid ${step >= n ? '#E11428' : 'rgba(255,255,255,0.1)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 800,
-                  color: step >= n ? '#fff' : 'rgba(255,255,255,0.3)',
-                  transition: 'all 200ms',
-                }}>
-                  {step > n ? <CheckCircle size={13} /> : n}
-                </div>
-                <span style={{ fontSize: 12, color: step >= n ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)', fontWeight: 600 }}>
-                  {n === 1 ? 'Tu cuenta' : 'Tu taller'}
-                </span>
-                {n < 2 && <ChevronRight size={12} color="rgba(255,255,255,0.15)" />}
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 28 }}>
+
+            {/* Paso 1 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <div style={{
+                width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                background: step > 1 ? 'rgba(16,185,129,0.1)' : 'rgba(225,20,40,0.1)',
+                border: `1.5px solid ${step > 1 ? '#10B981' : '#E11428'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 300ms',
+              }}>
+                {step > 1
+                  ? <CheckCircle size={13} color="#10B981" />
+                  : <span style={{ fontSize: 11, fontWeight: 800, color: '#E11428' }}>1</span>
+                }
               </div>
-            ))}
+              <div>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: step === 1 ? 700 : 500, color: step === 1 ? '#fff' : 'rgba(255,255,255,0.5)', lineHeight: 1.2 }}>
+                  Tu cuenta
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: step > 1 ? 'rgba(16,185,129,0.7)' : 'rgba(255,255,255,0.25)' }}>
+                  {step > 1 ? 'Completado' : 'Datos de acceso'}
+                </p>
+              </div>
+            </div>
+
+            {/* Línea conectora */}
+            <div style={{
+              flex: 1, height: 1, margin: '0 14px',
+              background: step > 1
+                ? 'linear-gradient(90deg, rgba(16,185,129,0.5), rgba(225,20,40,0.3))'
+                : 'rgba(255,255,255,0.06)',
+              transition: 'background 500ms',
+            }} />
+
+            {/* Paso 2 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <div style={{
+                width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                background: step === 2 ? 'rgba(225,20,40,0.1)' : 'rgba(255,255,255,0.03)',
+                border: `1.5px solid ${step === 2 ? '#E11428' : 'rgba(255,255,255,0.08)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 300ms',
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: step === 2 ? '#E11428' : 'rgba(255,255,255,0.18)' }}>2</span>
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: step === 2 ? 700 : 400, color: step === 2 ? '#fff' : 'rgba(255,255,255,0.3)', lineHeight: 1.2 }}>
+                  Tu taller
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.22)' }}>
+                  Datos del negocio
+                </p>
+              </div>
+            </div>
+
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate>

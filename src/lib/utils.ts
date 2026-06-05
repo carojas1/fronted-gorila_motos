@@ -80,7 +80,34 @@ export function debounce<T extends (...args: unknown[]) => void>(fn: T, ms = 300
 /** Extrae mensaje de error de Axios */
 export function getErrorMsg(err: unknown): string {
   if (typeof err === 'object' && err !== null) {
-    const e = err as { response?: { data?: { message?: string } }; message?: string };
+    const e = err as {
+      response?: { status?: number; data?: { message?: string } };
+      message?: string;
+      code?: string;
+    };
+
+    if (!e.response) {
+      return 'Sin conexión. Verifica tu internet e intenta de nuevo.';
+    }
+
+    const status = e.response.status;
+
+    if (status === 502 || status === 503 || status === 504) {
+      return 'El servidor está iniciando (plan gratuito). Espera unos segundos e intenta de nuevo.';
+    }
+    if (status === 401) {
+      return 'Correo o contraseña incorrectos.';
+    }
+    if (status === 403) {
+      return 'No tienes permiso para realizar esta acción.';
+    }
+    if (status === 404) {
+      return 'Recurso no encontrado.';
+    }
+    if (status && status >= 500) {
+      return 'Error interno del servidor. Por favor intenta más tarde.';
+    }
+
     return e.response?.data?.message ?? e.message ?? 'Error inesperado';
   }
   return 'Error inesperado';
