@@ -10,6 +10,7 @@ import { useState, useRef, useEffect } from 'react';
 import { initials } from '../../lib/utils';
 import { NotificationBell, NotificationPanel } from '../ui/NotificationCenter';
 import { useNotifications } from '../../hooks/useNotifications';
+import TermsModal, { useTermsAccepted } from '../ui/TermsModal';
 
 export default function AppLayout() {
   const { user, isAdmin, isMecanico, isCliente, logout } = useAuth();
@@ -20,6 +21,7 @@ export default function AppLayout() {
   const notifRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const menuRef   = useRef<HTMLDivElement>(null);
+  const [showTerms, setShowTerms] = useState(!useTermsAccepted());
 
   const hour      = new Date().getHours();
   const greeting  = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches';
@@ -52,6 +54,9 @@ export default function AppLayout() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: '#0C0C10' }}>
+
+      {/* Modal términos — solo primera vez */}
+      {showTerms && <TermsModal onAccept={() => setShowTerms(false)} />}
 
       {/* ══ TOPBAR ══════════════════════════════════════════════════ */}
       <header

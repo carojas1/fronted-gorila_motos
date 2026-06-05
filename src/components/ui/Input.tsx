@@ -32,7 +32,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
 
         <div className="relative flex items-center">
           {prefix && (
-            <span className="absolute left-3 text-white/35 pointer-events-none">{prefix}</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35 pointer-events-none">{prefix}</span>
           )}
 
           <input
@@ -40,8 +40,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             type={inputType}
             className={cn(
-              'gm-input-d w-full h-11',
-              prefix  && 'pl-10',
+              'gm-input-d w-full h-11 pl-[14px]',   // padding-left base
+              prefix  && '!pl-10',                    // con ícono: forzado con !important
               (suffix || isPass) && 'pr-10',
               error   && '!border-gm-red/60 !bg-gm-red/[0.04]',
               className,
@@ -53,14 +53,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={() => setShow((v) => !v)}
-              className="absolute right-3 text-white/30 hover:text-white/60 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
               tabIndex={-1}
             >
               {show ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           )}
           {!isPass && suffix && (
-            <span className="absolute right-3 text-white/35">{suffix}</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/35">{suffix}</span>
           )}
         </div>
 

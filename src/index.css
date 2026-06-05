@@ -222,7 +222,7 @@ body {
   padding-top: 0;
   padding-bottom: 0;
   padding-right: 14px;
-  padding-left: 14px;
+  /* padding-left: manejado por Tailwind pl-[14px] / !pl-10 en Input.tsx */
   height: 44px;
   font-size: 14px;
   width: 100%;
@@ -234,6 +234,14 @@ body {
   outline: none;
 }
 .gm-input-d::placeholder { color: rgba(255,255,255,0.25); }
+/* Autofill oscuro — evita fondo blanco en Chrome/mobile */
+.gm-input-d:-webkit-autofill,
+.gm-input-d:-webkit-autofill:hover,
+.gm-input-d:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #16161e inset !important;
+  -webkit-text-fill-color: #F0EEE8 !important;
+  caret-color: #F0EEE8;
+}
 
 /* ─── Dark select ─── */
 .gm-select-d {
