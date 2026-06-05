@@ -1,96 +1,50 @@
-/* ─────────────────────────────────────────────
-   GORILA MOTOS — Registro
-   Flujo 2 pasos: cuenta → datos del taller
-   Elegante, dark, mobile-first
-   ───────────────────────────────────────────── */
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  User, Mail, Lock, MapPin, Wrench,
-  Store, CheckCircle, Phone, ArrowLeft, ChevronRight,
-} from 'lucide-react';
+import { User, Mail, Lock, Phone, Wrench, ArrowRight, Shield } from 'lucide-react';
 import { authApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
 
-/* ── Esquema completo ── */
 const schema = z.object({
-  /* Paso 1 — Cuenta personal */
   nombre_completo: z.string().min(3, 'Mínimo 3 caracteres'),
   correo:          z.string().email('Correo no válido'),
+  telefono:        z.string().min(7, 'Ingresa un teléfono válido'),
   contrasena:      z.string().min(6, 'Mínimo 6 caracteres'),
-  telefono:        z.string().min(7, 'Teléfono requerido'),
-  /* Paso 2 — Datos del negocio */
-  nombre_taller:   z.string().min(2, 'Nombre del taller requerido'),
-  ciudad:          z.string().min(2, 'Ciudad requerida'),
-  pais:            z.string().default('Ecuador'),
-  especialidades:  z.string().min(3, 'Indica al menos una especialidad'),
-  tipo_negocio:    z.string().min(1, 'Selecciona el tipo'),
+  confirmar:       z.string().min(1, 'Confirma tu contraseña'),
+}).refine(d => d.contrasena === d.confirmar, {
+  message: 'Las contraseñas no coinciden',
+  path: ['confirmar'],
 });
+
 type Form = z.infer<typeof schema>;
 
-const TIPOS = [
-  'Taller multimarca',
-  'Taller especializado (motos sport)',
-  'Taller especializado (motos trail)',
-  'Taller especializado (motos clásicas)',
-  'Taller servicio rápido',
-  'Concesionario con taller',
-  'Taller a domicilio',
-  'Otro',
-];
-
-const ESPECIALIDADES_SUGERIDAS = [
-  'Cambio de aceite', 'Frenos', 'Sistema eléctrico',
-  'Motor', 'Suspensión', 'Carburación / Inyección',
-  'Carrocería', 'Llantas', 'Diagnóstico electrónico',
-];
-
 export default function RegisterPage() {
-  const navigate = useNavigate();
-  const toast    = useToast();
-  const [step, setStep]     = useState<1 | 2>(1);
+  const navigate  = useNavigate();
+  const toast     = useToast();
   const [loading, setLoading] = useState(false);
-  const [chips, setChips]   = useState<string[]>([]);
 
-  const { register, handleSubmit, trigger, watch, setValue, formState: { errors } } = useForm<Form>({
+  const { register, handleSubmit, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
-    defaultValues: { pais: 'Ecuador' },
   });
-
-  const toggleChip = (esp: string) => {
-    const next = chips.includes(esp)
-      ? chips.filter(c => c !== esp)
-      : [...chips, esp];
-    setChips(next);
-    setValue('especialidades', next.join(', '), { shouldValidate: true });
-  };
-
-  const goStep2 = async () => {
-    const ok = await trigger(['nombre_completo', 'correo', 'contrasena', 'telefono']);
-    if (ok) setStep(2);
-  };
 
   const onSubmit = async (data: Form) => {
     setLoading(true);
     try {
-      const desc = `TALLER: ${data.nombre_taller} | TIPO: ${data.tipo_negocio} | ESPECIALIDADES: ${data.especialidades} | TEL: ${data.telefono}`;
       await authApi.register({
         nombre_completo: data.nombre_completo,
         nombre_usuario:  data.correo.split('@')[0],
         correo:          data.correo,
         contrasena:      data.contrasena,
-        pais:            data.pais,
-        ciudad:          data.ciudad,
-        descripcion:     desc,
+        pais:            'Ecuador',
+        ciudad:          'Ecuador',
+        descripcion:     `CEDULA: N/A | TELEFONO: ${data.telefono}`,
         ruta_imagen:     null,
       });
-      toast.success('Cuenta creada exitosamente. Inicia sesión.', '¡Bienvenido!');
+      toast.success('Cuenta creada. Ahora inicia sesión.', '¡Listo!');
       navigate('/login');
     } catch (err) {
       toast.error(getErrorMsg(err), 'Error al registrar');
@@ -100,261 +54,190 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0B0B0D', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: '#09090C',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px 16px',
+      fontFamily: "'Inter', -apple-system, sans-serif",
+    }}>
 
-      {/* Glow */}
-      <div style={{ position: 'fixed', top: -100, left: '50%', transform: 'translateX(-50%)', width: 600, height: 400, borderRadius: '50%', background: 'radial-gradient(circle,rgba(225,20,40,0.07) 0%,transparent 65%)', pointerEvents: 'none' }} />
+      {/* Glow ambiental */}
+      <div style={{
+        position: 'fixed', top: -120, left: '50%', transform: 'translateX(-50%)',
+        width: 700, height: 500, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(225,20,40,0.07) 0%, transparent 65%)',
+        pointerEvents: 'none',
+      }} />
 
-      <div style={{ width: '100%', maxWidth: 480, position: 'relative', zIndex: 1 }}>
+      <div style={{ width: '100%', maxWidth: 440, position: 'relative', zIndex: 1 }}>
 
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#E11428,#8B0010)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Wrench size={16} color="white" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 28 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 11,
+            background: 'linear-gradient(135deg, #E11428, #7a000e)',
+            boxShadow: '0 0 22px rgba(225,20,40,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Wrench size={18} color="white" />
           </div>
-          <p style={{ color: '#fff', fontWeight: 900, fontSize: 17, margin: 0 }}>
-            Gorila <span style={{ color: '#E11428' }}>Motos</span>
-          </p>
+          <div>
+            <p style={{ color: '#fff', fontWeight: 900, fontSize: 17, margin: 0, letterSpacing: '-0.02em', lineHeight: 1 }}>
+              Gorila <span style={{ color: '#E11428' }}>Motos</span>
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, margin: '3px 0 0' }}>
+              Gestión de talleres · Ecuador
+            </p>
+          </div>
         </div>
 
         {/* Card */}
         <div style={{
-          background: 'linear-gradient(150deg,#17171E 0%,#111115 100%)',
+          background: '#0F0F14',
           border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: 20,
+          borderRadius: 18,
           padding: '32px 28px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
         }}>
 
-          {/* Pasos indicador */}
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 28 }}>
-
-            {/* Paso 1 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <div style={{
-                width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                background: step > 1 ? 'rgba(16,185,129,0.1)' : 'rgba(225,20,40,0.1)',
-                border: `1.5px solid ${step > 1 ? '#10B981' : '#E11428'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 300ms',
-              }}>
-                {step > 1
-                  ? <CheckCircle size={13} color="#10B981" />
-                  : <span style={{ fontSize: 11, fontWeight: 800, color: '#E11428' }}>1</span>
-                }
-              </div>
-              <div>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: step === 1 ? 700 : 500, color: step === 1 ? '#fff' : 'rgba(255,255,255,0.5)', lineHeight: 1.2 }}>
-                  Tu cuenta
-                </p>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: step > 1 ? 'rgba(16,185,129,0.7)' : 'rgba(255,255,255,0.25)' }}>
-                  {step > 1 ? 'Completado' : 'Datos de acceso'}
-                </p>
-              </div>
-            </div>
-
-            {/* Línea conectora */}
-            <div style={{
-              flex: 1, height: 1, margin: '0 14px',
-              background: step > 1
-                ? 'linear-gradient(90deg, rgba(16,185,129,0.5), rgba(225,20,40,0.3))'
-                : 'rgba(255,255,255,0.06)',
-              transition: 'background 500ms',
-            }} />
-
-            {/* Paso 2 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <div style={{
-                width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                background: step === 2 ? 'rgba(225,20,40,0.1)' : 'rgba(255,255,255,0.03)',
-                border: `1.5px solid ${step === 2 ? '#E11428' : 'rgba(255,255,255,0.08)'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 300ms',
-              }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: step === 2 ? '#E11428' : 'rgba(255,255,255,0.18)' }}>2</span>
-              </div>
-              <div>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: step === 2 ? 700 : 400, color: step === 2 ? '#fff' : 'rgba(255,255,255,0.3)', lineHeight: 1.2 }}>
-                  Tu taller
-                </p>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.22)' }}>
-                  Datos del negocio
-                </p>
-              </div>
-            </div>
-
+          {/* Encabezado */}
+          <div style={{ marginBottom: 26 }}>
+            <h1 style={{
+              color: '#fff', fontWeight: 900, fontSize: 24,
+              margin: '0 0 7px', letterSpacing: '-0.03em', lineHeight: 1.1,
+            }}>
+              Crear cuenta
+            </h1>
+            <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: 13, margin: 0, lineHeight: 1.6 }}>
+              Completa tus datos para acceder al sistema de gestión.
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          {/* Formulario */}
+          <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-            {/* ══ PASO 1: Datos personales ══ */}
-            {step === 1 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <h2 style={{ color: '#fff', fontWeight: 900, fontSize: 20, margin: '0 0 4px', letterSpacing: '-0.01em' }}>
-                    Crea tu cuenta
-                  </h2>
-                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, margin: 0 }}>
-                    Datos de acceso al sistema
-                  </p>
-                </div>
+            <Input
+              label="Nombre completo"
+              type="text"
+              placeholder="Ej. Carlos Andrade"
+              prefix={<User size={14} />}
+              error={errors.nombre_completo?.message}
+              autoComplete="name"
+              {...register('nombre_completo')}
+            />
 
-                <Input label="Nombre completo *" type="text" placeholder="Ej. Carlos Andrade"
-                  prefix={<User size={14} />} error={errors.nombre_completo?.message}
-                  {...register('nombre_completo')} />
+            <Input
+              label="Correo electrónico"
+              type="email"
+              placeholder="tu@correo.com"
+              prefix={<Mail size={14} />}
+              error={errors.correo?.message}
+              autoComplete="email"
+              {...register('correo')}
+            />
 
-                <Input label="Correo electrónico *" type="email" placeholder="tu@correo.com"
-                  prefix={<Mail size={14} />} error={errors.correo?.message}
-                  {...register('correo')} />
+            <Input
+              label="Teléfono / WhatsApp"
+              type="tel"
+              placeholder="0987 654 321"
+              prefix={<Phone size={14} />}
+              error={errors.telefono?.message}
+              autoComplete="tel"
+              {...register('telefono')}
+            />
 
-                <Input label="Teléfono / WhatsApp *" type="tel" placeholder="0987654321"
-                  prefix={<Phone size={14} />} error={errors.telefono?.message}
-                  {...register('telefono')} />
+            <Input
+              label="Contraseña"
+              type="password"
+              placeholder="Mínimo 6 caracteres"
+              prefix={<Lock size={14} />}
+              error={errors.contrasena?.message}
+              autoComplete="new-password"
+              {...register('contrasena')}
+            />
 
-                <Input label="Contraseña *" type="password" placeholder="Mínimo 6 caracteres"
-                  prefix={<Lock size={14} />} error={errors.contrasena?.message}
-                  {...register('contrasena')} />
+            <Input
+              label="Confirmar contraseña"
+              type="password"
+              placeholder="Repite tu contraseña"
+              prefix={<Lock size={14} />}
+              error={errors.confirmar?.message}
+              autoComplete="new-password"
+              {...register('confirmar')}
+            />
 
-                <button
-                  type="button"
-                  onClick={goStep2}
-                  style={{
-                    height: 46, borderRadius: 12, background: '#E11428',
-                    color: '#fff', fontWeight: 700, fontSize: 14,
-                    border: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    boxShadow: '0 0 24px rgba(225,20,40,0.3)',
-                    marginTop: 4,
-                  }}
-                >
-                  Continuar <ChevronRight size={16} />
-                </button>
-              </div>
-            )}
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                height: 50, borderRadius: 12, marginTop: 6,
+                background: loading
+                  ? 'rgba(225,20,40,0.4)'
+                  : 'linear-gradient(135deg, #E11428, #c0101e)',
+                color: '#fff', fontWeight: 700, fontSize: 15,
+                border: 'none',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                boxShadow: loading ? 'none' : '0 6px 28px rgba(225,20,40,0.4)',
+                transition: 'all 220ms ease',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {loading ? (
+                <>
+                  <svg style={{ animation: 'spin 0.8s linear infinite' }} width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                  Creando cuenta…
+                </>
+              ) : (
+                <>Crear cuenta <ArrowRight size={16} /></>
+              )}
+            </button>
 
-            {/* ══ PASO 2: Datos del taller ══ */}
-            {step === 2 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <h2 style={{ color: '#fff', fontWeight: 900, fontSize: 20, margin: '0 0 4px', letterSpacing: '-0.01em' }}>
-                    Cuéntanos de tu taller
-                  </h2>
-                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, margin: 0 }}>
-                    Esta información aparece en tus facturas y portal
-                  </p>
-                </div>
-
-                <Input label="Nombre del taller *" type="text" placeholder="Ej. Taller Los Ángeles"
-                  prefix={<Store size={14} />} error={errors.nombre_taller?.message}
-                  {...register('nombre_taller')} />
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <Input label="Ciudad *" type="text" placeholder="Quito"
-                    prefix={<MapPin size={14} />} error={errors.ciudad?.message}
-                    {...register('ciudad')} />
-                  <Input label="País" type="text" placeholder="Ecuador"
-                    prefix={<MapPin size={14} />} error={errors.pais?.message}
-                    {...register('pais')} />
-                </div>
-
-                {/* Tipo de negocio */}
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-                    Tipo de taller *
-                  </label>
-                  <select
-                    className="gm-select-d"
-                    style={{ width: '100%' }}
-                    {...register('tipo_negocio')}
-                  >
-                    <option value="">Selecciona el tipo…</option>
-                    {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                  {errors.tipo_negocio && <p style={{ color: '#E11428', fontSize: 11, marginTop: 4 }}>{errors.tipo_negocio.message}</p>}
-                </div>
-
-                {/* Especialidades con chips */}
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-                    Especialidades *
-                  </label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-                    {ESPECIALIDADES_SUGERIDAS.map(esp => (
-                      <button
-                        key={esp}
-                        type="button"
-                        onClick={() => toggleChip(esp)}
-                        style={{
-                          padding: '5px 12px',
-                          borderRadius: 99,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          border: `1px solid ${chips.includes(esp) ? 'rgba(225,20,40,0.45)' : 'rgba(255,255,255,0.1)'}`,
-                          background: chips.includes(esp) ? 'rgba(225,20,40,0.15)' : 'rgba(255,255,255,0.04)',
-                          color: chips.includes(esp) ? '#E11428' : 'rgba(255,255,255,0.45)',
-                          transition: 'all 140ms',
-                        }}
-                      >
-                        {esp}
-                      </button>
-                    ))}
-                  </div>
-                  {chips.length === 0 && errors.especialidades && (
-                    <p style={{ color: '#E11428', fontSize: 11 }}>{errors.especialidades.message}</p>
-                  )}
-                  {chips.length > 0 && (
-                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
-                      Seleccionadas: {chips.join(', ')}
-                    </p>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    style={{
-                      flex: 1, height: 46, borderRadius: 12,
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: 'rgba(255,255,255,0.5)',
-                      fontWeight: 700, fontSize: 13,
-                      cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    }}
-                  >
-                    <ArrowLeft size={14} /> Atrás
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      flex: 2, height: 46, borderRadius: 12,
-                      background: '#E11428',
-                      border: 'none',
-                      color: '#fff', fontWeight: 700, fontSize: 14,
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      opacity: loading ? 0.6 : 1,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      boxShadow: '0 0 24px rgba(225,20,40,0.3)',
-                    }}
-                  >
-                    {loading ? 'Creando cuenta…' : <><CheckCircle size={16} /> Crear mi cuenta</>}
-                  </button>
-                </div>
-              </div>
-            )}
           </form>
+
+          {/* Footer legal */}
+          <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}>
+            <Shield size={10} color="rgba(255,255,255,0.18)" />
+            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', margin: 0 }}>
+              Al registrarte aceptas nuestra{' '}
+              <Link to="/privacidad" style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>
+                política de privacidad
+              </Link>
+              {' '}y los{' '}
+              <Link to="/terminos" style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>
+                términos de uso
+              </Link>.
+            </p>
+          </div>
+
         </div>
 
-        <p style={{ textAlign: 'center', marginTop: 16, fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>
+        {/* Link login */}
+        <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'rgba(255,255,255,0.28)' }}>
           ¿Ya tienes cuenta?{' '}
           <Link to="/login" style={{ color: '#E11428', fontWeight: 700, textDecoration: 'none' }}>
-            Inicia sesión
+            Iniciar sesión
           </Link>
         </p>
+
+        <p style={{ textAlign: 'center', marginTop: 8, fontSize: 10, color: 'rgba(255,255,255,0.12)' }}>
+          © 2025 Gorila Motos · Ecuador
+        </p>
+
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
