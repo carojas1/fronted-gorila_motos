@@ -1,14 +1,21 @@
 /* ─────────────────────────────────────────────
    GMotors — Auth Context
-   JWT + usuario en localStorage
+   JWT + Firebase Auth + usuario en localStorage
    ───────────────────────────────────────────── */
 
 import {
   createContext, useContext, useState,
-  useEffect, useCallback, ReactNode,
+  useEffect, useCallback, type ReactNode,
 } from 'react';
 import { authApi } from '../lib/api';
 import type { Usuario } from '../types';
+import {
+  firebaseEnabled,
+  signInWithGoogle,
+  firebaseSignOut,
+  checkEmailVerified,
+  firebaseSignIn,
+} from '../lib/firebase';
 
 interface AuthState {
   user:    Usuario | null;
@@ -20,11 +27,12 @@ interface AuthState {
 export type RoleName = 'ADMIN' | 'MECANICO' | 'CLIENTE';
 
 interface AuthCtx extends AuthState {
-  login:  (correo: string, contrasena: string) => Promise<void>;
-  logout: () => void;
-  isAdmin:   boolean;
-  isMecanico: boolean;
-  isCliente:  boolean;
+  login:          (correo: string, contrasena: string) => Promise<void>;
+  loginWithGoogle?: () => Promise<void>;
+  logout:         () => void;
+  isAdmin:        boolean;
+  isMecanico:     boolean;
+  isCliente:      boolean;
   /** ¿El usuario actual tiene alguno de los roles indicados? */
   hasRole: (...roles: RoleName[]) => boolean;
 }
@@ -48,9 +56,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('gm:unauthorized', handler);
   }, []);
 
+  /* ── Login con email + contraseña ── */
   const login = useCallback(async (correo: string, contrasena: string) => {
     setState((s) => ({ ...s, loading: true }));
     try {
+      /* Si Firebase está activo, verificar que el email esté confirmado */
+      if (firebaseEnabled) {
+        try {
+          await firebaseSignIn(correo, contrasena);
+          const verified = await checkEmailVerified();
+          await firebaseSignOut();
+
+          if (!verified) {
+            throw new Error(
+              'Tu correo electrónico no ha sido verificado. Revisa tu bandeja de entrada y haz clic en el enlace de confirmación.'
+            );
+          }
+        } catch (fbErr: unknown) {
+          /* Si el error es de "correo no verificado", propagarlo */
+          if (fbErr instanceof Error && fbErr.message.includes('verificado')) {
+            setState((s) => ({ ...s, loading: false }));
+            throw fbErr;
+          }
+          /* Si Firebase falla por credenciales Firebase inválidas (usuario
+             creado antes de Firebase), continuar con el flujo JWT normal */
+        }
+      }
+
+      /* Login en el backend Spring Boot → devuelve JWT */
       const { data } = await authApi.login(correo, contrasena);
       const token: string  = data.token ?? data.jwt ?? data.accessToken;
       const user:  Usuario = data.usuario ?? data.user ?? data;
@@ -64,10 +97,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  /* ── Login con Google OAuth (Firebase) ── */
+  const loginWithGoogle = firebaseEnabled
+    ? useCallback(async () => {
+        setState((s) => ({ ...s, loading: true }));
+        try {
+          const fbUser = await signInWithGoogle();
+
+          /* Intentar login en el backend con el email de Google */
+          const { data } = await authApi.login(fbUser.email!, '__google_oauth__');
+          const token: string  = data.token ?? data.jwt ?? data.accessToken;
+          const user:  Usuario = data.usuario ?? data.user ?? data;
+
+          await firebaseSignOut();
+          localStorage.setItem(TOKEN_KEY, token);
+          localStorage.setItem(USER_KEY,  JSON.stringify(user));
+          setState({ user, token, loading: false });
+        } catch (err) {
+          await firebaseSignOut().catch(() => {});
+          setState((s) => ({ ...s, loading: false }));
+          throw err;
+        }
+      }, [])
+    : undefined;
+
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setState({ user: null, token: null, loading: false });
+    if (firebaseEnabled) firebaseSignOut().catch(() => {});
   }, []);
 
   /* Normaliza los roles del backend a un Set de nombres canónicos.
@@ -86,17 +144,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasRole = (...roles: RoleName[]) =>
     roles.some((r) => roleNames.has(r));
 
-  // Forzar Admin si el usuario tiene rol ADMIN, o si su nombre o correo coinciden con el jefe (Andres/Admin)
-  const isBoss = state.user?.nombre_completo?.toLowerCase().includes('andres') || 
-                 state.user?.correo?.toLowerCase().includes('admin');
-  
-  const isAdmin    = roleNames.has('ADMIN') || isBoss;
+  const isAdmin    = roleNames.has('ADMIN');
   const isMecanico = roleNames.has('MECANICO');
   const isCliente  = roleNames.has('CLIENTE');
 
   return (
     <AuthContext.Provider value={{
-      ...state, login, logout,
+      ...state, login, loginWithGoogle, logout,
       isAdmin, isMecanico, isCliente, hasRole,
     }}>
       {children}

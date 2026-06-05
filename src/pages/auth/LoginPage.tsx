@@ -1,13 +1,14 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Lock, ArrowRight, Shield, Wrench } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Shield, Globe } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
+import { firebaseEnabled } from '../../lib/firebase';
 
 const Bike3D = lazy(() => import('../../components/3d/Bike3D'));
 
@@ -27,25 +28,17 @@ function useServerStatus(): ServerStatus {
   useEffect(() => {
     const API = import.meta.env.VITE_API_URL ?? 'https://backend-gorila-motos.onrender.com/api';
     const controller = new AbortController();
-    const id = setTimeout(() => setStatus('starting'), 6000); // si tarda > 6s = iniciando
+    const id = setTimeout(() => setStatus('starting'), 6000);
 
-    fetch(`${API}/usuarios/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ correo: '__ping__', contrasena: '__ping__' }),
-      signal: controller.signal,
-    })
-      .then(() => { clearTimeout(id); setStatus('online'); })
+    fetch(`${API}/actuator/health`, { signal: controller.signal })
+      .then(r => {
+        clearTimeout(id);
+        setStatus(r.ok ? 'online' : 'starting');
+      })
       .catch((err: Error) => {
         clearTimeout(id);
         if (err.name === 'AbortError') return;
-        const msg = err.message ?? '';
-        if (msg.includes('502') || msg.includes('503') || msg.includes('504')) {
-          setStatus('starting');
-        } else {
-          // Cualquier otra respuesta (401, CORS, etc.) significa que el server respondió
-          setStatus('online');
-        }
+        setStatus('starting');
       });
 
     return () => { clearTimeout(id); controller.abort(); };
@@ -61,12 +54,69 @@ const STATUS_CONFIG: Record<ServerStatus, { label: string; color: string; pulse:
   offline:  { label: 'Sin conexión al servidor', color: '#EF4444', pulse: false },
 };
 
+/* ─── Logo Gorila Motos ─── */
+function GorilaLogo({ size = 52 }: { size?: number }) {
+  const [imgOk, setImgOk] = useState(true);
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size * 0.25,
+      background: 'linear-gradient(135deg,#E11428,#8B0010)',
+      boxShadow: '0 0 32px rgba(225,20,40,0.55)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      overflow: 'hidden', flexShrink: 0,
+    }}>
+      {imgOk ? (
+        <img
+          src="/brand/gorila-logo.png"
+          alt="Gorila Motos"
+          onError={() => setImgOk(false)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      ) : (
+        <span style={{ fontSize: size * 0.48, lineHeight: 1 }}>🦍</span>
+      )}
+    </div>
+  );
+}
+
+/* ─── Nombre de marca en amarillo ─── */
+function BrandName({ size = 20 }: { size?: number }) {
+  return (
+    <div style={{ lineHeight: 1.1 }}>
+      <p style={{
+        fontFamily: "'Dancing Script', cursive",
+        fontWeight: 700,
+        fontSize: size,
+        margin: 0,
+        lineHeight: 1,
+        color: '#FFD700',
+        textShadow: '0 0 20px rgba(255,215,0,0.4)',
+        letterSpacing: '0.01em',
+      }}>
+        Gorila Motos
+      </p>
+      <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: size * 0.55, margin: '3px 0 0', fontWeight: 500 }}>
+        Gestión de talleres · Ecuador
+      </p>
+    </div>
+  );
+}
+
 /* ─── Componente principal ─── */
 export default function LoginPage() {
-  const { login, loading } = useAuth();
-  const navigate = useNavigate();
-  const toast    = useToast();
-  const serverStatus = useServerStatus();
+  const { login, loginWithGoogle, loading } = useAuth();
+  const navigate        = useNavigate();
+  const toast           = useToast();
+  const [params]        = useSearchParams();
+  const serverStatus    = useServerStatus();
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  /* Si viene de verificar el correo, mostrar toast de bienvenida */
+  useEffect(() => {
+    if (params.get('verified') === '1') {
+      toast.success('¡Correo verificado! Ya puedes iniciar sesión.', 'Email confirmado');
+    }
+  }, []);
 
   const { register, handleSubmit, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -78,6 +128,19 @@ export default function LoginPage() {
       navigate('/dashboard', { replace: true });
     } catch (err) {
       toast.error(getErrorMsg(err), 'Error de acceso');
+    }
+  };
+
+  const handleGoogle = async () => {
+    if (!loginWithGoogle) return;
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      toast.error(getErrorMsg(err), 'Error con Google');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -110,6 +173,12 @@ export default function LoginPage() {
           position: 'absolute', inset: 0, pointerEvents: 'none',
           background: 'radial-gradient(ellipse 65% 55% at 40% 52%, rgba(225,20,40,0.12) 0%, transparent 60%)',
         }} />
+        {/* Glow amarillo sutil */}
+        <div style={{
+          position: 'absolute', bottom: 60, left: 40, pointerEvents: 'none',
+          width: 300, height: 120,
+          background: 'radial-gradient(ellipse, rgba(255,215,0,0.06) 0%, transparent 70%)',
+        }} />
         {/* Grid */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
@@ -126,26 +195,12 @@ export default function LoginPage() {
         }} />
 
         {/* Logo */}
-        <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            background: 'linear-gradient(135deg,#E11428,#8B0010)',
-            boxShadow: '0 0 26px rgba(225,20,40,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <Wrench size={20} color="white" />
-          </div>
-          <div>
-            <p style={{ color:'#fff', fontWeight:900, fontSize:18, margin:0, letterSpacing:'-0.02em', lineHeight:1 }}>
-              Gorila <span style={{ color:'#E11428' }}>Motos</span>
-            </p>
-            <p style={{ color:'rgba(255,255,255,0.28)', fontSize:10, margin:'4px 0 0', fontWeight:500 }}>
-              Gestión de talleres · Ecuador
-            </p>
-          </div>
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <GorilaLogo size={52} />
+          <BrandName size={26} />
         </div>
 
-        {/* Moto 3D — tamaño controlado */}
+        {/* Moto 3D */}
         <div style={{ position:'relative', zIndex:2, flex:1, display:'flex', alignItems:'center', padding:'8px 0', minHeight:0 }}>
           <div style={{ width:'100%', height:'min(420px, 56vh)', position:'relative' }}>
             <Suspense fallback={
@@ -200,22 +255,20 @@ export default function LoginPage() {
           width:280, height:280, borderRadius:'50%',
           background:'radial-gradient(circle,rgba(225,20,40,0.05) 0%,transparent 65%)',
         }} />
+        {/* Glow amarillo esquina */}
+        <div style={{
+          position:'absolute', bottom:-60, left:-60, pointerEvents:'none',
+          width:220, height:220, borderRadius:'50%',
+          background:'radial-gradient(circle,rgba(255,215,0,0.04) 0%,transparent 65%)',
+        }} />
 
         {/* Logo mobile */}
         <div className="flex lg:hidden" style={{
-          alignItems:'center', gap:10, marginBottom:32,
+          alignItems:'center', gap:12, marginBottom:32,
           alignSelf:'flex-start', width:'100%', maxWidth:410,
         }}>
-          <div style={{
-            width:38, height:38, borderRadius:10,
-            background:'linear-gradient(135deg,#E11428,#8B0010)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-          }}>
-            <Wrench size={16} color="white" />
-          </div>
-          <p style={{ color:'#fff', fontWeight:900, fontSize:17, margin:0, letterSpacing:'-0.02em' }}>
-            Gorila <span style={{ color:'#E11428' }}>Motos</span>
-          </p>
+          <GorilaLogo size={44} />
+          <BrandName size={22} />
         </div>
 
         <div style={{ width:'100%', maxWidth:410 }}>
@@ -250,6 +303,50 @@ export default function LoginPage() {
               Ingresa tus credenciales para gestionar tu taller de motos.
             </p>
           </div>
+
+          {/* Botón Google (si Firebase está activo) */}
+          {firebaseEnabled && (
+            <button
+              type="button"
+              onClick={handleGoogle}
+              disabled={googleLoading || loading}
+              style={{
+                width:'100%', height:46, borderRadius:12, marginBottom:16,
+                background:'rgba(255,255,255,0.04)',
+                border:'1px solid rgba(255,255,255,0.10)',
+                color:'rgba(255,255,255,0.85)', fontWeight:600, fontSize:14,
+                cursor: googleLoading ? 'not-allowed' : 'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center', gap:10,
+                transition:'all 200ms ease',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.18)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.10)';
+              }}
+            >
+              {googleLoading ? (
+                <svg style={{ animation:'spin 0.8s linear infinite' }} width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3"/>
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+                </svg>
+              ) : (
+                <Globe size={16} style={{ color:'#4285F4' }} />
+              )}
+              Continuar con Google
+            </button>
+          )}
+
+          {firebaseEnabled && (
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+              <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.07)' }} />
+              <span style={{ fontSize:11, color:'rgba(255,255,255,0.2)', fontWeight:500 }}>o con correo</span>
+              <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.07)' }} />
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -314,7 +411,7 @@ export default function LoginPage() {
           {/* Link crear cuenta */}
           <p style={{ textAlign:'center', marginTop:18, fontSize:13, color:'rgba(255,255,255,0.28)' }}>
             ¿Primera vez?{' '}
-            <Link to="/registro" style={{ color:'#E11428', fontWeight:700, textDecoration:'none' }}>
+            <Link to="/registro" style={{ color:'#FFD700', fontWeight:700, textDecoration:'none' }}>
               Crear cuenta
             </Link>
           </p>

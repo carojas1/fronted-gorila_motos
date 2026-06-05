@@ -5,7 +5,7 @@
       "name": "gmotors-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 4200
+      "port": 5174
     }
   ]
 }
