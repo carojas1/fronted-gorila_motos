@@ -432,6 +432,33 @@ export default function MotosPage() {
         }
       >
         <form id="moto-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+
+          {/* Aviso de privacidad — solo al crear, no al editar */}
+          {!editTarget && (
+            <div style={{
+              display: 'flex', gap: 10, alignItems: 'flex-start',
+              background: 'rgba(59,130,246,0.06)',
+              border: '1px solid rgba(59,130,246,0.18)',
+              borderLeft: '3px solid #3B82F6',
+              borderRadius: 9, padding: '11px 14px',
+            }}>
+              <span style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>🔒</span>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.52)', margin: 0, lineHeight: 1.65 }}>
+                <strong style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 700 }}>Aviso de privacidad:</strong>{' '}
+                Los datos que ingreses (placa, marca, modelo, kilometraje y propietario) serán visibles para el
+                administrador y el personal autorizado del taller, conforme a la{' '}
+                <a
+                  href="/privacidad"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#3B82F6', textDecoration: 'none', fontWeight: 600 }}
+                >
+                  política de privacidad
+                </a>.
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <Input label="Placa" placeholder="ABC-1234" error={errors.placa?.message} {...register('placa')} />
             <Input label="Año" type="number" placeholder={String(new Date().getFullYear())} error={errors.anio?.message} {...register('anio')} />
