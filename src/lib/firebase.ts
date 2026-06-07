@@ -1,6 +1,6 @@
 /* ─────────────────────────────────────────────
    GMotors — Firebase Auth
-   Verificación de correo + Google OAuth
+   signInWithRedirect (evita errores COOP en Vercel)
    ───────────────────────────────────────────── */
 
 import { initializeApp, getApps } from 'firebase/app';
@@ -10,14 +10,14 @@ import {
   signInWithEmailAndPassword,
   sendEmailVerification,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
   type User as FirebaseUser,
   type ActionCodeSettings,
 } from 'firebase/auth';
 
-/* ── Config desde variables de entorno ── */
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            ?? '',
   authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        ?? '',
@@ -28,7 +28,6 @@ const firebaseConfig = {
   measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID     ?? '',
 };
 
-/* ── Inicializar solo una vez y de forma segura ── */
 let app;
 let authInstance = null;
 let providerInstance = null;
@@ -39,53 +38,37 @@ try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
     authInstance = getAuth(app);
     providerInstance = new GoogleAuthProvider();
+    providerInstance.setCustomParameters({ prompt: 'select_account' });
     isEnabled = true;
   }
 } catch (error) {
-  console.warn("⚠️ No se pudo inicializar Firebase. Revisa las variables de entorno.", error);
+  console.warn('⚠️ Firebase no disponible:', error);
 }
 
-export const auth = authInstance as ReturnType<typeof getAuth>;
+export const auth          = authInstance as ReturnType<typeof getAuth>;
 export const googleProvider = providerInstance as GoogleAuthProvider;
-
-/** ¿Está Firebase configurado y funcionando? */
 export const firebaseEnabled = isEnabled;
-
-/* ─────────────────────────────────────────────
-   Helpers de autenticación
-   ───────────────────────────────────────────── */
 
 const ACTION_CODE_SETTINGS: ActionCodeSettings = {
   url: `${window.location.origin}/login?verified=1`,
   handleCodeInApp: false,
 };
 
-/**
- * Registrar usuario en Firebase y enviar email de verificación.
- * Retorna el usuario Firebase (sin email verificado aún).
- */
-export async function firebaseRegister(
-  email: string,
-  password: string,
-): Promise<FirebaseUser> {
+/** Registrar en Firebase + enviar email de verificación. */
+export async function firebaseRegister(email: string, password: string): Promise<FirebaseUser> {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   await sendEmailVerification(cred.user, ACTION_CODE_SETTINGS);
   return cred.user;
 }
 
-/**
- * Reenviar email de verificación al usuario actualmente logueado en Firebase.
- */
+/** Reenviar email de verificación. */
 export async function resendVerificationEmail(): Promise<void> {
   const user = auth.currentUser;
   if (!user) throw new Error('No hay sesión Firebase activa');
   await sendEmailVerification(user, ACTION_CODE_SETTINGS);
 }
 
-/**
- * Verificar si el usuario tiene el email confirmado.
- * Recarga el estado desde Firebase primero.
- */
+/** Verificar si el email está confirmado. */
 export async function checkEmailVerified(): Promise<boolean> {
   const user = auth.currentUser;
   if (!user) return false;
@@ -94,33 +77,38 @@ export async function checkEmailVerified(): Promise<boolean> {
 }
 
 /**
- * Login con Google OAuth (popup).
- * Retorna { email, displayName, uid }.
+ * Iniciar Google Sign-In con REDIRECT (evita errores COOP en Vercel/hosting).
+ * La página redirige a Google → vuelve al mismo URL de origen.
+ * Después de volver, llama `getGoogleRedirectUser()` para obtener el usuario.
  */
-export async function signInWithGoogle(): Promise<FirebaseUser> {
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
+export async function startGoogleRedirect(): Promise<void> {
+  await signInWithRedirect(auth, googleProvider);
 }
 
 /**
- * Sign-in básico con email + password en Firebase (para verificar estado).
+ * Obtener el resultado de Google redirect.
+ * Llama esto en el useEffect del LoginPage después de volver del redirect.
+ * Devuelve null si no hay resultado pendiente.
  */
-export async function firebaseSignIn(
-  email: string,
-  password: string,
-): Promise<FirebaseUser> {
+export async function getGoogleRedirectUser(): Promise<FirebaseUser | null> {
+  try {
+    if (!auth) return null;
+    const result = await getRedirectResult(auth);
+    return result?.user ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Login básico Firebase (para verificar estado de email). */
+export async function firebaseSignIn(email: string, password: string): Promise<FirebaseUser> {
   const cred = await signInWithEmailAndPassword(auth, email, password);
   return cred.user;
 }
 
-/**
- * Cerrar sesión de Firebase.
- */
+/** Cerrar sesión Firebase. */
 export async function firebaseSignOut(): Promise<void> {
   await signOut(auth);
 }
 
-/**
- * Observer de estado Firebase (útil para sync).
- */
 export { onAuthStateChanged, type FirebaseUser };

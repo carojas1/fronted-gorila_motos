@@ -1,9 +1,9 @@
 /* ─────────────────────────────────────────────────────────────
-   GMotors — Login Page v4
-   · 3D moto de vuelta en el panel izquierdo
-   · Paleta: negro #03030A · naranja #FF6600 · rojo #E11428 · oro #FFD700
-   · Títulos: Bebas Neue  |  Cuerpo/UI: Inter
-   · Emil Kowalski: spring hover, glow focus, stagger entrance
+   GMotors — Login Page v5
+   Minimalista premium: negro · blanco · rojo de marca
+   Sin mezcla de colores — una paleta, un acento
+   Emil Kowalski: spring hover, stagger, purposeful motion
+   Google: signInWithRedirect (sin errores COOP)
    ───────────────────────────────────────────────────────────── */
 
 import { lazy, Suspense, useEffect, useState, useCallback } from 'react';
@@ -11,12 +11,12 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Lock, ArrowRight, Shield, Globe, Zap, Package, Receipt, Smartphone } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
-import { firebaseEnabled } from '../../lib/firebase';
+import { firebaseEnabled, startGoogleRedirect, getGoogleRedirectUser } from '../../lib/firebase';
 
 const Bike3D = lazy(() => import('../../components/3d/Bike3D'));
 
@@ -44,28 +44,14 @@ function useServerStatus(): ServerStatus {
   return status;
 }
 
-const STATUS: Record<ServerStatus, { label: string; color: string; pulse: boolean }> = {
-  checking: { label: 'Verificando…',        color: '#6B7280', pulse: true  },
-  online:   { label: 'Sistema en línea',    color: '#22C55E', pulse: false },
-  starting: { label: 'Servidor iniciando…', color: '#FF6600', pulse: true  },
-  offline:  { label: 'Sin conexión',        color: '#EF4444', pulse: false },
-};
-
-const FEATURES = [
-  { icon: Zap,        label: 'Órdenes en tiempo real',     color: '#FF6600' },
-  { icon: Package,    label: 'Inventario y stock crítico', color: '#FF8C40' },
-  { icon: Receipt,    label: 'Facturación SRI compatible', color: '#FFAC70' },
-  { icon: Smartphone, label: 'App Android e iOS',          color: '#FFD700' },
-];
-
 /* ─── Logo ─── */
-function Logo({ size = 52 }: { size?: number }) {
+function Logo({ size = 44 }: { size?: number }) {
   const [ok, setOk] = useState(true);
   return (
     <div style={{
-      width: size, height: size, borderRadius: size * 0.2,
-      background: 'linear-gradient(135deg,#E11428,#7a000e)',
-      boxShadow: '0 0 0 2px rgba(225,20,40,0.4), 0 8px 32px rgba(225,20,40,0.35)',
+      width: size, height: size, borderRadius: size * 0.22,
+      background: 'linear-gradient(135deg,#E11428,#8B0010)',
+      boxShadow: '0 0 0 1px rgba(225,20,40,0.3)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       overflow: 'hidden', flexShrink: 0,
     }}>
@@ -76,11 +62,23 @@ function Logo({ size = 52 }: { size?: number }) {
   );
 }
 
+/* ─── Google icon SVG ─── */
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    COMPONENTE PRINCIPAL
    ═══════════════════════════════════════════════════════════ */
 export default function LoginPage() {
-  const { login, loginWithGoogle, loading } = useAuth();
+  const { login, processGoogleUser, loading } = useAuth();
   const navigate     = useNavigate();
   const toast        = useToast();
   const [params]     = useSearchParams();
@@ -88,13 +86,33 @@ export default function LoginPage() {
   const [googleBusy, setGoogleBusy] = useState(false);
   const [entered,    setEntered]    = useState(false);
 
+  /* Entrada con spring */
   useEffect(() => {
-    const t = setTimeout(() => setEntered(true), 80);
+    const t = setTimeout(() => setEntered(true), 60);
     return () => clearTimeout(t);
   }, []);
 
+  /* Notificación de verificación */
   useEffect(() => {
-    if (params.get('verified') === '1') toast.success('¡Correo verificado!', 'Email confirmado');
+    if (params.get('verified') === '1') toast.success('¡Correo verificado! Ahora puedes iniciar sesión.', 'Email confirmado');
+  }, []);
+
+  /* ── Manejar resultado del Google redirect ── */
+  useEffect(() => {
+    if (!firebaseEnabled || !processGoogleUser) return;
+    setGoogleBusy(true);
+    getGoogleRedirectUser()
+      .then(async fbUser => {
+        if (!fbUser) return; // No hay redirect pendiente
+        try {
+          await processGoogleUser(fbUser);
+          navigate('/dashboard', { replace: true });
+        } catch (err) {
+          toast.error(getErrorMsg(err), 'Error con Google');
+        }
+      })
+      .catch(() => {})
+      .finally(() => setGoogleBusy(false));
   }, []);
 
   const { register, handleSubmit, formState: { errors } } = useForm<Form>({
@@ -110,307 +128,235 @@ export default function LoginPage() {
     }
   }, [login, navigate, toast]);
 
-  const handleGoogle = async () => {
-    if (!loginWithGoogle) return;
+  /* Google: iniciar redirect (no popup) */
+  const handleGoogle = () => {
     setGoogleBusy(true);
-    try {
-      await loginWithGoogle();
-      navigate('/dashboard', { replace: true });
-    } catch (err) {
-      toast.error(getErrorMsg(err), 'Error con Google');
-    } finally {
+    startGoogleRedirect().catch(err => {
+      toast.error(getErrorMsg(err), 'Error al iniciar Google');
       setGoogleBusy(false);
-    }
+    });
   };
 
-  const { label: stLabel, color: stColor, pulse: stPulse } = STATUS[serverStatus];
+  /* Status colors */
+  const statusMap = {
+    checking: { dot: '#555', text: 'Verificando servidor…',   pulse: true  },
+    online:   { dot: '#22C55E', text: 'Sistema en línea',     pulse: false },
+    starting: { dot: '#E11428', text: 'Servidor iniciando…',  pulse: true  },
+    offline:  { dot: '#555', text: 'Sin conexión',            pulse: false },
+  };
+  const st = statusMap[serverStatus];
 
-  /* Spring entrance: translateY + opacity con cubic-bezier spring */
+  /* Spring entrance */
   const enter = (delay: number): React.CSSProperties => ({
     opacity:   entered ? 1 : 0,
-    transform: entered ? 'translateY(0)' : 'translateY(18px)',
-    transition: `opacity 0.52s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms,
-                 transform 0.52s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms`,
+    transform: entered ? 'none' : 'translateY(14px)',
+    transition: `opacity 0.45s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms,
+                 transform 0.45s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms`,
   });
+
+  const isLoading = loading || googleBusy;
 
   return (
     <div style={{
       height: '100vh', overflow: 'hidden', display: 'flex',
-      background: '#03030A',
+      background: '#0A0A0A',
       fontFamily: "'Inter', system-ui, sans-serif",
     }}>
 
-      {/* ════════ PANEL IZQUIERDO — 3D moto + overlay ════════ */}
+      {/* ════ PANEL IZQUIERDO — 3D moto ════ */}
       <div
-        className="hidden lg:block"
-        style={{ width: '56%', position: 'relative', overflow: 'hidden', background: '#03030A' }}
+        className="hidden lg:flex"
+        style={{
+          width: '52%', position: 'relative', overflow: 'hidden',
+          flexDirection: 'column',
+          background: '#050507',
+          borderRight: '1px solid rgba(255,255,255,0.05)',
+        }}
       >
-        {/* Glow naranja ambiental detrás del 3D */}
+        {/* Logo top-left */}
         <div style={{
-          position:'absolute', top:'8%', left:'5%', pointerEvents:'none', zIndex:0,
-          width:540, height:540, borderRadius:'50%',
-          background:'radial-gradient(circle, rgba(255,102,0,0.13) 0%, transparent 62%)',
-          animation:'glowPulse 8s ease-in-out infinite',
-        }}/>
-        <div style={{
-          position:'absolute', bottom:'8%', right:'8%', pointerEvents:'none', zIndex:0,
-          width:300, height:300, borderRadius:'50%',
-          background:'radial-gradient(circle, rgba(225,20,40,0.07) 0%, transparent 65%)',
-        }}/>
+          position: 'absolute', top: 28, left: 28, zIndex: 4,
+          display: 'flex', alignItems: 'center', gap: 11,
+        }}>
+          <Logo size={40}/>
+          <div>
+            <p style={{
+              fontFamily: "'Dancing Script', cursive",
+              fontWeight: 700, fontSize: 22, margin: 0, lineHeight: 1,
+              color: '#EBEBEB',
+            }}>
+              Gorila Motos
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 10, margin: '2px 0 0', fontWeight: 500 }}>
+              Gestión de talleres
+            </p>
+          </div>
+        </div>
 
-        {/* Bike3D full height */}
-        <div style={{ position:'absolute', inset:0, zIndex:1 }}>
+        {/* 3D Bike — contenido en un frame, no full-bleed */}
+        <div style={{
+          position: 'absolute',
+          top: '12%', left: '6%', right: '6%', bottom: '30%',
+          borderRadius: 16,
+          overflow: 'hidden',
+          border: '1px solid rgba(255,255,255,0.05)',
+          background: '#030303',
+          zIndex: 1,
+        }}>
           <Suspense fallback={
-            <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#03030A' }}>
-              <div style={{ textAlign:'center' }}>
-                <div style={{
-                  width:52, height:52, borderRadius:'50%',
-                  border:'3px solid rgba(255,102,0,0.15)',
-                  borderTop:'3px solid #FF6600',
-                  animation:'spin 0.8s linear infinite',
-                  margin:'0 auto 14px',
-                }}/>
-                <p style={{ color:'rgba(255,255,255,0.2)', fontSize:12 }}>Cargando moto 3D…</p>
-              </div>
+            <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#030303' }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%',
+                border: '2px solid rgba(225,20,40,0.15)',
+                borderTop: '2px solid #E11428',
+                animation: 'spin 0.8s linear infinite',
+              }}/>
             </div>
           }>
             <Bike3D/>
           </Suspense>
         </div>
 
-        {/* Gradiente superior — zona logo legible */}
+        {/* Gradiente bottom para leer el texto */}
         <div style={{
-          position:'absolute', top:0, left:0, right:0, height:180,
-          background:'linear-gradient(to bottom, rgba(3,3,10,0.94) 0%, transparent 100%)',
-          zIndex:2, pointerEvents:'none',
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: '34%',
+          background: 'linear-gradient(to top, rgba(5,5,7,1) 0%, rgba(5,5,7,0.7) 60%, transparent 100%)',
+          zIndex: 2, pointerEvents: 'none',
         }}/>
 
-        {/* Gradiente inferior — zona texto legible */}
-        <div style={{
-          position:'absolute', bottom:0, left:0, right:0, height:'56%',
-          background:'linear-gradient(to top, rgba(3,3,10,0.99) 0%, rgba(3,3,10,0.82) 45%, transparent 100%)',
-          zIndex:2, pointerEvents:'none',
-        }}/>
-
-        {/* Borde derecho naranja sutil */}
-        <div style={{
-          position:'absolute', top:0, right:0, bottom:0, width:1,
-          background:'linear-gradient(to bottom, transparent 5%, rgba(255,102,0,0.22) 50%, transparent 95%)',
-          zIndex:4, pointerEvents:'none',
-        }}/>
-
-        {/* Logo — top-left */}
-        <div style={{ position:'absolute', top:30, left:34, zIndex:3 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:13 }}>
-            <Logo size={52}/>
-            <div style={{ lineHeight:1.1 }}>
-              <p style={{
-                fontFamily:"'Dancing Script', cursive",
-                fontWeight:700, fontSize:30, margin:0, lineHeight:1,
-                background:'linear-gradient(135deg,#FFD700,#FFA500)',
-                WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-                filter:'drop-shadow(0 0 22px rgba(255,165,0,0.55))',
-              }}>
-                Gorila Motos
-              </p>
-              <p style={{ color:'rgba(255,255,255,0.26)', fontSize:11, margin:'3px 0 0', fontWeight:500 }}>
-                Gestión de talleres · Ecuador
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Contenido bottom — Bebas Neue */}
-        <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'0 34px 34px', zIndex:3 }}>
-
+        {/* Texto bottom */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 28px 28px', zIndex: 3 }}>
           <p style={{
-            fontFamily:"'Bebas Neue', sans-serif",
-            fontSize:11, letterSpacing:'0.24em', color:'rgba(255,102,0,0.65)',
-            margin:'0 0 6px',
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase',
+            color: 'rgba(255,255,255,0.3)', margin: '0 0 6px',
           }}>
-            Sistema de gestión
+            Sistema profesional
           </p>
-
           <h1 style={{
-            fontFamily:"'Bebas Neue', sans-serif",
-            fontSize:'clamp(46px,5vw,72px)',
-            lineHeight:0.94, letterSpacing:'0.02em',
-            margin:'0 0 18px', color:'#fff',
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: 'clamp(38px,4vw,58px)',
+            lineHeight: 0.95, letterSpacing: '0.01em',
+            margin: '0 0 16px', color: '#EBEBEB',
           }}>
             Tu taller,{' '}
-            <span style={{
-              background:'linear-gradient(90deg, #FF8C40, #FF6600)',
-              WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-              filter:'drop-shadow(0 0 28px rgba(255,102,0,0.55))',
-            }}>
-              en control.
-            </span>
+            <span style={{ color: '#E11428' }}>en control.</span>
           </h1>
-
-          {/* Feature pills */}
-          <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginBottom:18 }}>
-            {FEATURES.map(({ icon: Icon, label, color }) => (
-              <div
-                key={label}
-                style={{
-                  display:'flex', alignItems:'center', gap:6,
-                  background:'rgba(255,255,255,0.04)',
-                  border:'1px solid rgba(255,255,255,0.07)',
-                  borderRadius:99, padding:'5px 11px',
-                  transition:'all 180ms cubic-bezier(0.34,1.56,0.64,1)',
-                  cursor:'default',
-                }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.background   = `${color}12`;
-                  el.style.borderColor  = `${color}30`;
-                  el.style.transform    = 'translateY(-2px)';
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.background  = 'rgba(255,255,255,0.04)';
-                  el.style.borderColor = 'rgba(255,255,255,0.07)';
-                  el.style.transform   = '';
-                }}
-              >
-                <Icon size={12} style={{ color, flexShrink:0 }}/>
-                <span style={{ fontSize:11.5, color:'rgba(255,255,255,0.58)', fontWeight:500 }}>{label}</span>
-              </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {['Órdenes', 'Inventario', 'Facturación SRI', 'App móvil'].map(f => (
+              <span key={f} style={{
+                fontSize: 11, color: 'rgba(255,255,255,0.38)', fontWeight: 500,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 99, padding: '4px 10px',
+              }}>
+                {f}
+              </span>
             ))}
-          </div>
-
-          {/* Badge Ecuador */}
-          <div style={{ display:'inline-flex', alignItems:'center', gap:7 }}>
-            <span style={{
-              width:6, height:6, borderRadius:'50%',
-              background:'#FF6600', boxShadow:'0 0 10px rgba(255,102,0,0.9)',
-              animation:'glowPulse 2s ease-in-out infinite',
-            }}/>
-            <span style={{ fontSize:11, color:'rgba(255,255,255,0.26)', fontWeight:600 }}>
-              Ecuador · SSL · LOPDP
-            </span>
           </div>
         </div>
       </div>
 
-      {/* ════════ PANEL DERECHO — Formulario ════════ */}
+      {/* ════ PANEL DERECHO — Formulario ════ */}
       <div style={{
-        flex:1, display:'flex', flexDirection:'column',
-        justifyContent:'center', alignItems:'center',
-        padding:'32px 28px', overflowY:'auto',
-        background:'linear-gradient(180deg, #060610 0%, #04040C 100%)',
-        position:'relative',
+        flex: 1, display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', alignItems: 'center',
+        padding: '32px 28px', overflowY: 'auto',
+        background: '#0A0A0A',
+        position: 'relative',
       }}>
-        {/* Orbs de fondo del panel derecho */}
-        <div style={{
-          position:'absolute', top:'-12%', right:'-22%', pointerEvents:'none', zIndex:0,
-          width:480, height:480, borderRadius:'50%',
-          background:'radial-gradient(circle, rgba(255,102,0,0.045) 0%, transparent 60%)',
-        }}/>
-        <div style={{
-          position:'absolute', bottom:'-10%', left:'-15%', pointerEvents:'none', zIndex:0,
-          width:380, height:380, borderRadius:'50%',
-          background:'radial-gradient(circle, rgba(225,20,40,0.035) 0%, transparent 60%)',
-        }}/>
-
         {/* Logo mobile */}
         <div className="flex lg:hidden" style={{
-          alignItems:'center', gap:12, marginBottom:28,
-          alignSelf:'flex-start', width:'100%', maxWidth:380,
+          alignItems: 'center', gap: 10, marginBottom: 28,
+          alignSelf: 'flex-start', width: '100%', maxWidth: 380,
         }}>
-          <Logo size={44}/>
-          <p style={{
-            fontFamily:"'Dancing Script', cursive",
-            fontWeight:700, fontSize:22, margin:0,
-            background:'linear-gradient(135deg,#FFD700,#FFA500)',
-            WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-          }}>
+          <Logo size={38}/>
+          <p style={{ fontFamily:"'Dancing Script', cursive", fontWeight:700, fontSize:20, margin:0, color:'#EBEBEB' }}>
             Gorila Motos
           </p>
         </div>
 
-        <div style={{ width:'100%', maxWidth:380, position:'relative', zIndex:1 }}>
+        <div style={{ width: '100%', maxWidth: 360 }}>
 
           {/* Status */}
-          <div style={{ marginBottom:22, ...enter(0) }}>
-            <div style={{
-              display:'inline-flex', alignItems:'center', gap:7,
-              background:`${stColor}0D`, border:`1px solid ${stColor}28`,
-              borderRadius:99, padding:'5px 13px',
-            }}>
+          <div style={{ marginBottom: 24, ...enter(0) }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <span style={{
-                width:6, height:6, borderRadius:'50%',
-                background:stColor, boxShadow:`0 0 7px ${stColor}`,
-                animation:stPulse?'pulseDot 1.4s ease-in-out infinite':'none',
+                width: 6, height: 6, borderRadius: '50%', background: st.dot,
+                animation: st.pulse ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                boxShadow: st.pulse ? `0 0 6px ${st.dot}` : 'none',
               }}/>
-              <span style={{ fontSize:11, color:`${stColor}CC`, fontWeight:600 }}>{stLabel}</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontWeight: 500 }}>{st.text}</span>
             </div>
           </div>
 
-          {/* Heading — Inter 900 */}
-          <div style={{ marginBottom:26, ...enter(60) }}>
+          {/* Heading */}
+          <div style={{ marginBottom: 28, ...enter(60) }}>
             <h2 style={{
-              color:'#fff', fontWeight:900, fontSize:26,
-              margin:'0 0 8px', letterSpacing:'-0.04em', lineHeight:1.05,
+              color: '#EBEBEB', fontWeight: 800, fontSize: 26,
+              margin: '0 0 8px', letterSpacing: '-0.04em', lineHeight: 1.05,
             }}>
-              Bienvenido de vuelta
+              Accede al sistema
             </h2>
-            <p style={{ color:'rgba(255,255,255,0.3)', fontSize:13.5, margin:0, lineHeight:1.65, fontWeight:400 }}>
-              Ingresa tus credenciales para gestionar tu taller.
+            <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: 13.5, margin: 0, lineHeight: 1.65 }}>
+              Ingresa con tu cuenta de Google o con tu correo.
             </p>
           </div>
 
-          {/* Google */}
+          {/* ── Google Button — acción primaria ── */}
           {firebaseEnabled && (
-            <div style={enter(110)}>
+            <div style={{ marginBottom: 20, ...enter(110) }}>
               <button
                 type="button"
                 onClick={handleGoogle}
-                disabled={googleBusy || loading}
+                disabled={isLoading}
                 style={{
-                  width:'100%', height:48, borderRadius:12, marginBottom:16,
-                  background:'rgba(255,255,255,0.04)',
-                  border:'1px solid rgba(255,255,255,0.09)',
-                  color:'rgba(255,255,255,0.82)', fontWeight:600, fontSize:14,
-                  cursor:(googleBusy||loading)?'not-allowed':'pointer',
-                  display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-                  transition:'all 180ms cubic-bezier(0.34,1.56,0.64,1)',
+                  width: '100%', height: 48,
+                  background: isLoading ? 'rgba(255,255,255,0.7)' : '#FFFFFF',
+                  color: '#0A0A0A', fontWeight: 600, fontSize: 14,
+                  border: 'none', borderRadius: 10,
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                  transition: 'all 160ms cubic-bezier(0.34,1.56,0.64,1)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                  letterSpacing: '-0.01em',
                 }}
                 onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.background  = 'rgba(255,255,255,0.07)';
-                  el.style.borderColor = 'rgba(255,255,255,0.16)';
-                  el.style.transform   = 'translateY(-2px)';
-                  el.style.boxShadow   = '0 6px 22px rgba(0,0,0,0.35)';
+                  if (!isLoading) {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.transform = 'translateY(-1px)';
+                    el.style.boxShadow = '0 4px 16px rgba(0,0,0,0.5)';
+                  }
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement;
-                  el.style.background  = 'rgba(255,255,255,0.04)';
-                  el.style.borderColor = 'rgba(255,255,255,0.09)';
-                  el.style.transform   = '';
-                  el.style.boxShadow   = 'none';
+                  el.style.transform = '';
+                  el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.4)';
                 }}
-                onMouseDown={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(0.97)'; }}
-                onMouseUp={e   => { (e.currentTarget as HTMLElement).style.transform = ''; }}
+                onMouseDown={e => { if (!isLoading) (e.currentTarget as HTMLElement).style.transform = 'scale(0.98)'; }}
+                onMouseUp={e   => { if (!isLoading) (e.currentTarget as HTMLElement).style.transform = ''; }}
               >
-                {googleBusy
-                  ? <svg style={{ animation:'spin 0.8s linear infinite' }} width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/></svg>
-                  : <Globe size={16} style={{ color:'#FF8C40' }}/>}
+                {isLoading && googleBusy
+                  ? <svg style={{ animation:'spin 0.8s linear infinite' }} width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(10,10,10,0.2)" strokeWidth="3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="#0A0A0A" strokeWidth="3" strokeLinecap="round"/></svg>
+                  : <GoogleIcon/>}
                 Continuar con Google
               </button>
-
-              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:18 }}>
-                <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.055)' }}/>
-                <span style={{ fontSize:11, color:'rgba(255,255,255,0.2)', fontWeight:500 }}>o con tu correo</span>
-                <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.055)' }}/>
-              </div>
             </div>
           )}
 
-          {/* Formulario */}
-          <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display:'flex', flexDirection:'column', gap:13 }}>
+          {/* OR divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, ...enter(150) }}>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }}/>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', fontWeight: 500 }}>
+              {firebaseEnabled ? 'o con correo' : 'Ingresa con tu cuenta'}
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }}/>
+          </div>
 
-            <div style={enter(firebaseEnabled ? 170 : 110)}>
+          {/* Formulario */}
+          <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+            <div style={enter(180)}>
               <Input
                 label="Correo electrónico"
                 type="email"
@@ -422,7 +368,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div style={enter(firebaseEnabled ? 210 : 150)}>
+            <div style={enter(210)}>
               <Input
                 label="Contraseña"
                 type="password"
@@ -432,50 +378,50 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 {...register('contrasena')}
               />
-              <div style={{ textAlign:'right', marginTop:6 }}>
+              <div style={{ textAlign: 'right', marginTop: 6 }}>
                 <Link
                   to="/recuperar"
-                  style={{ fontSize:12, color:'rgba(255,255,255,0.24)', textDecoration:'none', fontWeight:500, transition:'color 150ms' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#FF8C40'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.24)'; }}
+                  style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', textDecoration: 'none', fontWeight: 500 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.25)'; }}
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
             </div>
 
-            {/* Botón submit */}
-            <div style={enter(firebaseEnabled ? 250 : 190)}>
+            <div style={{ marginTop: 4, ...enter(240) }}>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={isLoading}
                 style={{
-                  width:'100%', height:52, borderRadius:13, marginTop:4,
-                  background: loading
-                    ? 'rgba(225,20,40,0.38)'
-                    : 'linear-gradient(135deg, #E11428 0%, #C0001D 100%)',
-                  color:'#fff', fontWeight:700, fontSize:15, letterSpacing:'-0.01em',
-                  border:'none', cursor:loading?'not-allowed':'pointer',
-                  display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-                  boxShadow: loading ? 'none' : '0 4px 28px rgba(225,20,40,0.42), 0 0 0 1px rgba(225,20,40,0.15)',
-                  transition:'all 180ms cubic-bezier(0.34,1.56,0.64,1)',
+                  width: '100%', height: 50, borderRadius: 10,
+                  background: isLoading ? 'rgba(225,20,40,0.4)' : '#E11428',
+                  color: '#fff', fontWeight: 700, fontSize: 15,
+                  letterSpacing: '-0.01em', border: 'none',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  boxShadow: isLoading ? 'none' : '0 0 0 1px rgba(225,20,40,0.3)',
+                  transition: 'all 160ms cubic-bezier(0.34,1.56,0.64,1)',
                 }}
                 onMouseEnter={e => {
-                  if (!loading) {
+                  if (!isLoading) {
                     const el = e.currentTarget as HTMLElement;
-                    el.style.transform = 'translateY(-2px)';
-                    el.style.boxShadow = '0 8px 36px rgba(225,20,40,0.58), 0 0 0 1px rgba(225,20,40,0.25)';
+                    el.style.background   = '#FF1F37';
+                    el.style.transform    = 'translateY(-1px)';
+                    el.style.boxShadow    = '0 4px 20px rgba(225,20,40,0.5)';
                   }
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement;
-                  el.style.transform = '';
-                  el.style.boxShadow = loading ? 'none' : '0 4px 28px rgba(225,20,40,0.42), 0 0 0 1px rgba(225,20,40,0.15)';
+                  el.style.background = isLoading ? 'rgba(225,20,40,0.4)' : '#E11428';
+                  el.style.transform  = '';
+                  el.style.boxShadow  = isLoading ? 'none' : '0 0 0 1px rgba(225,20,40,0.3)';
                 }}
-                onMouseDown={e => { if (!loading) (e.currentTarget as HTMLElement).style.transform = 'scale(0.97)'; }}
-                onMouseUp={e =>   { if (!loading) (e.currentTarget as HTMLElement).style.transform = ''; }}
+                onMouseDown={e => { if (!isLoading) (e.currentTarget as HTMLElement).style.transform = 'scale(0.98)'; }}
+                onMouseUp={e =>   { if (!isLoading) (e.currentTarget as HTMLElement).style.transform = ''; }}
               >
-                {loading ? (
+                {loading && !googleBusy ? (
                   <>
                     <svg style={{ animation:'spin 0.8s linear infinite', flexShrink:0 }} width="16" height="16" viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3"/>
@@ -484,45 +430,44 @@ export default function LoginPage() {
                     Verificando…
                   </>
                 ) : (
-                  <>Iniciar sesión <ArrowRight size={16}/></>
+                  <>Iniciar sesión <ArrowRight size={15}/></>
                 )}
               </button>
             </div>
           </form>
 
-          {/* Link crear cuenta */}
-          <p style={{ textAlign:'center', marginTop:20, fontSize:13, color:'rgba(255,255,255,0.27)', ...enter(290) }}>
+          {/* Link registro */}
+          <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'rgba(255,255,255,0.28)', ...enter(280) }}>
             ¿Primera vez?{' '}
             <Link
               to="/registro"
-              style={{ color:'#FFD700', fontWeight:700, textDecoration:'none', transition:'color 150ms' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#FFA500'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#FFD700'; }}
+              style={{ color: '#EBEBEB', fontWeight: 700, textDecoration: 'none' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#EBEBEB'; }}
             >
               Crear cuenta
             </Link>
           </p>
 
-          {/* Footer legal */}
-          <div style={{ marginTop:22, ...enter(320) }}>
-            <div style={{ display:'flex', alignItems:'center', gap:5, justifyContent:'center', marginBottom:8 }}>
-              <Shield size={10} color="rgba(255,255,255,0.13)"/>
-              <span style={{ fontSize:10, color:'rgba(255,255,255,0.14)' }}>SSL · Datos protegidos · LOPDP Ecuador</span>
+          {/* Legal */}
+          <div style={{ marginTop: 24, ...enter(300) }}>
+            <div style={{ display:'flex', alignItems:'center', gap:4, justifyContent:'center', marginBottom:7 }}>
+              <Shield size={9} color="rgba(255,255,255,0.12)"/>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,0.15)' }}>SSL · LOPDP Ecuador</span>
             </div>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:14 }}>
-              {[{ label:'Privacidad', to:'/privacidad' }, { label:'Términos', to:'/terminos' }].map(({ label, to }) => (
-                <Link key={to} to={to} style={{ fontSize:10, color:'rgba(255,255,255,0.18)', textDecoration:'none', fontWeight:500 }}>{label}</Link>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12 }}>
+              {[{label:'Privacidad', to:'/privacidad'}, {label:'Términos', to:'/terminos'}].map(({label, to}) => (
+                <Link key={to} to={to} style={{ fontSize:10, color:'rgba(255,255,255,0.18)', textDecoration:'none' }}>{label}</Link>
               ))}
-              <span style={{ fontSize:10, color:'rgba(255,255,255,0.1)' }}>© 2025 Gorila Motos</span>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,0.1)' }}>© 2025</span>
             </div>
           </div>
         </div>
       </div>
 
       <style>{`
-        @keyframes spin     { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.45)} }
-        @keyframes glowPulse{ 0%,100%{opacity:1} 50%{opacity:0.65} }
+        @keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.45;transform:scale(1.5)} }
       `}</style>
     </div>
   );
