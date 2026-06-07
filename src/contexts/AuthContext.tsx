@@ -104,10 +104,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const fbUser = await signInWithGoogle();
 
-          /* Intentar login en el backend con el email de Google */
-          const { data } = await authApi.login(fbUser.email!, '__google_oauth__');
-          const token: string  = data.token ?? data.jwt ?? data.accessToken;
-          const user:  Usuario = data.usuario ?? data.user ?? data;
+          /* Contraseña determinista basada en uid de Firebase */
+          const googlePass = `gm_google_${fbUser.uid.slice(0, 16)}`;
+
+          let token: string;
+          let user: Usuario;
+
+          try {
+            /* Intento 1: login con contraseña Google (usuario ya registrado vía Google) */
+            const { data } = await authApi.login(fbUser.email!, googlePass);
+            token = data.token ?? data.jwt ?? data.accessToken;
+            user  = data.usuario ?? data.user ?? data;
+          } catch {
+            /* Primera vez con Google → auto-registrar */
+            const base = fbUser.email!.split('@')[0].replace(/[^a-z0-9]/gi, '').slice(0, 16) || 'gmuser';
+            try {
+              await authApi.register({
+                nombre_completo: fbUser.displayName || base,
+                nombre_usuario:  `${base}${Math.floor(Math.random() * 9000) + 1000}`,
+                correo:          fbUser.email!,
+                contrasena:      googlePass,
+                descripcion:     'CEDULA: N/A | TELEFONO: N/A',
+                pais:            'Ecuador',
+                ciudad:          'Ecuador',
+              });
+            } catch (regErr: unknown) {
+              const status = (regErr as { response?: { status: number } })?.response?.status;
+              /* 409 = correo ya existe con otra contraseña → pedir login normal */
+              if (status === 409 || status === 400) {
+                throw new Error(
+                  'Este correo ya está registrado. Usa tu correo y contraseña habituales para iniciar sesión.'
+                );
+              }
+              throw regErr;
+            }
+            /* Login con las nuevas credenciales */
+            const { data } = await authApi.login(fbUser.email!, googlePass);
+            token = data.token ?? data.jwt ?? data.accessToken;
+            user  = data.usuario ?? data.user ?? data;
+          }
 
           await firebaseSignOut();
           localStorage.setItem(TOKEN_KEY, token);

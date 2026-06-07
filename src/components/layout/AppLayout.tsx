@@ -4,6 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { LogOut, ChevronDown } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
@@ -104,7 +105,7 @@ export default function AppLayout() {
           <div className="hidden lg:block w-px h-8 bg-white/[0.06] shrink-0" />
 
           {/* Nav */}
-          <nav className="flex items-center gap-0.5 flex-1">
+          <nav className="flex items-center gap-0.5 flex-1 overflow-x-auto overflow-y-hidden whitespace-nowrap no-scrollbar pb-1 -mb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
             {NAV.map(({ label, to }) => {
               const active = location.pathname === to || location.pathname.startsWith(to + '/');
               return (
@@ -244,9 +245,18 @@ export default function AppLayout() {
 
       {/* ══ CONTENIDO ═══════════════════════════════════════════════ */}
       <main className="flex-1">
-        <div className="p-6 lg:p-8 max-w-screen-2xl mx-auto">
-          <Outlet />
-        </div>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="p-6 lg:p-8 max-w-screen-2xl mx-auto"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   );
