@@ -13,11 +13,18 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-/* ── Request interceptor: adjunta JWT ── */
+/* ── Request interceptor: adjunta JWT (excepto endpoints públicos) ── */
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('gm_token');
-    if (token && config.headers) {
+    const url   = config.url ?? '';
+    // No enviar token en auth endpoints — un JWT expirado haría que Spring
+    // Security rechace el login antes de llegar al permitAll()
+    const isPublic =
+      url === '/usuarios/login' ||
+      (url === '/usuarios' && config.method?.toLowerCase() === 'post') ||
+      url.includes('/recuperacion');
+    if (token && !isPublic && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -29,7 +36,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (res) => res,
   (err: AxiosError) => {
-    if (err.response?.status === 401) {
+    // Solo forzar logout si había una sesión activa — evita redirect al intentar login
+    if (err.response?.status === 401 && localStorage.getItem('gm_token')) {
       localStorage.removeItem('gm_token');
       localStorage.removeItem('gm_user');
       window.dispatchEvent(new Event('gm:unauthorized'));

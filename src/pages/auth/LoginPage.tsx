@@ -1,8 +1,8 @@
 /* ─────────────────────────────────────────────────────────────
-   GMotors — Login Page v5
-   Minimalista premium: negro · blanco · rojo de marca
-   Sin mezcla de colores — una paleta, un acento
-   Emil Kowalski: spring hover, stagger, purposeful motion
+   GMotors — Login Page v6
+   Layout cinematográfico: moto como escena, no como elemento
+   Marca grande, atmósfera roja, mobile-first
+   Emil Kowalski: spring, stagger, purposeful motion
    Google: signInWithRedirect (sin errores COOP)
    ───────────────────────────────────────────────────────────── */
 
@@ -33,31 +33,39 @@ type ServerStatus = 'checking' | 'online' | 'starting' | 'offline';
 function useServerStatus(): ServerStatus {
   const [status, setStatus] = useState<ServerStatus>('checking');
   useEffect(() => {
-    const API = import.meta.env.VITE_API_URL ?? 'https://backend-gorila-motos.onrender.com/api';
+    const API  = import.meta.env.VITE_API_URL ?? 'https://backend-gorila-motos.onrender.com/api';
     const ctrl = new AbortController();
-    const id   = setTimeout(() => setStatus('starting'), 6000);
+    const id   = setTimeout(() => setStatus('starting'), 7000);
     fetch(`${API}/actuator/health`, { signal: ctrl.signal })
-      .then(r => { clearTimeout(id); setStatus(r.ok ? 'online' : 'starting'); })
-      .catch((e: Error) => { clearTimeout(id); if (e.name !== 'AbortError') setStatus('starting'); });
+      .then(r => {
+        clearTimeout(id);
+        // 401/403 = servidor activo, solo endpoint protegido → OK
+        setStatus(r.ok || r.status === 401 || r.status === 403 ? 'online' : 'starting');
+      })
+      .catch((e: Error) => {
+        clearTimeout(id);
+        if (e.name !== 'AbortError') setStatus('starting');
+      });
     return () => { clearTimeout(id); ctrl.abort(); };
   }, []);
   return status;
 }
 
-/* ─── Logo ─── */
+/* ─── Logo gorila ─── */
 function Logo({ size = 44 }: { size?: number }) {
   const [ok, setOk] = useState(true);
   return (
     <div style={{
       width: size, height: size, borderRadius: size * 0.22,
-      background: 'linear-gradient(135deg,#E11428,#8B0010)',
-      boxShadow: '0 0 0 1px rgba(225,20,40,0.3)',
+      background: 'linear-gradient(135deg,#E11428,#7A000D)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       overflow: 'hidden', flexShrink: 0,
+      boxShadow: `0 0 0 1px rgba(225,20,40,0.35), 0 ${size * 0.1}px ${size * 0.4}px rgba(225,20,40,0.2)`,
     }}>
       {ok
-        ? <img src="/brand/gorila-logo.png" alt="" onError={() => setOk(false)} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-        : <span style={{ fontSize: size * 0.5, lineHeight:1 }}>🦍</span>}
+        ? <img src="/brand/gorila-logo.png" alt="" onError={() => setOk(false)}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+        : <span style={{ fontSize: size * 0.5, lineHeight: 1 }}>🦍</span>}
     </div>
   );
 }
@@ -74,6 +82,17 @@ function GoogleIcon() {
   );
 }
 
+/* ─── Spinner inline ─── */
+function Spinner({ color = 'white', size = 16 }: { color?: string; size?: number }) {
+  return (
+    <svg style={{ animation: 'gm-spin 0.8s linear infinite', flexShrink: 0 }}
+      width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke={color === 'white' ? 'rgba(255,255,255,0.2)' : 'rgba(10,10,10,0.15)'} strokeWidth="3"/>
+      <path d="M12 2a10 10 0 0 1 10 10" stroke={color} strokeWidth="3" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    COMPONENTE PRINCIPAL
    ═══════════════════════════════════════════════════════════ */
@@ -86,24 +105,25 @@ export default function LoginPage() {
   const [googleBusy, setGoogleBusy] = useState(false);
   const [entered,    setEntered]    = useState(false);
 
-  /* Entrada con spring */
+  /* Spring entrance */
   useEffect(() => {
-    const t = setTimeout(() => setEntered(true), 60);
+    const t = setTimeout(() => setEntered(true), 80);
     return () => clearTimeout(t);
   }, []);
 
-  /* Notificación de verificación */
+  /* Notificación verificación */
   useEffect(() => {
-    if (params.get('verified') === '1') toast.success('¡Correo verificado! Ahora puedes iniciar sesión.', 'Email confirmado');
+    if (params.get('verified') === '1')
+      toast.success('¡Correo verificado! Ahora puedes iniciar sesión.', 'Email confirmado');
   }, []);
 
-  /* ── Manejar resultado del Google redirect ── */
+  /* Resultado del Google redirect */
   useEffect(() => {
     if (!firebaseEnabled || !processGoogleUser) return;
     setGoogleBusy(true);
     getGoogleRedirectUser()
       .then(async fbUser => {
-        if (!fbUser) return; // No hay redirect pendiente
+        if (!fbUser) return;
         try {
           await processGoogleUser(fbUser);
           navigate('/dashboard', { replace: true });
@@ -128,7 +148,6 @@ export default function LoginPage() {
     }
   }, [login, navigate, toast]);
 
-  /* Google: iniciar redirect (no popup) */
   const handleGoogle = () => {
     setGoogleBusy(true);
     startGoogleRedirect().catch(err => {
@@ -137,118 +156,146 @@ export default function LoginPage() {
     });
   };
 
-  /* Status colors */
+  /* Status */
   const statusMap = {
-    checking: { dot: '#555', text: 'Verificando servidor…',   pulse: true  },
-    online:   { dot: '#22C55E', text: 'Sistema en línea',     pulse: false },
-    starting: { dot: '#E11428', text: 'Servidor iniciando…',  pulse: true  },
-    offline:  { dot: '#555', text: 'Sin conexión',            pulse: false },
+    checking: { dot: '#555',    text: 'Verificando…',          pulse: true  },
+    online:   { dot: '#22C55E', text: 'Sistema en línea',      pulse: false },
+    starting: { dot: '#F59E0B', text: 'Servidor iniciando…',   pulse: true  },
+    offline:  { dot: '#555',    text: 'Sin conexión',          pulse: false },
   };
   const st = statusMap[serverStatus];
 
-  /* Spring entrance */
+  /* Spring entrance helper */
   const enter = (delay: number): React.CSSProperties => ({
-    opacity:   entered ? 1 : 0,
-    transform: entered ? 'none' : 'translateY(14px)',
-    transition: `opacity 0.45s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms,
-                 transform 0.45s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms`,
+    opacity:    entered ? 1 : 0,
+    transform:  entered ? 'none' : 'translateY(16px)',
+    transition: `opacity 0.5s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms,
+                 transform 0.5s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms`,
   });
 
   const isLoading = loading || googleBusy;
 
   return (
     <div style={{
-      height: '100vh', overflow: 'hidden', display: 'flex',
+      minHeight: '100vh',
+      display:   'flex',
       background: '#0A0A0A',
       fontFamily: "'Inter', system-ui, sans-serif",
+      overflow:   'hidden',
     }}>
 
-      {/* ════ PANEL IZQUIERDO — 3D moto ════ */}
+      {/* ════════════════════════════════════════
+          PANEL IZQUIERDO — escena cinematográfica
+          Solo desktop (lg+)
+          ════════════════════════════════════════ */}
       <div
-        className="hidden lg:flex"
+        className="hidden lg:block"
         style={{
-          width: '52%', position: 'relative', overflow: 'hidden',
-          flexDirection: 'column',
-          background: '#050507',
-          borderRight: '1px solid rgba(255,255,255,0.05)',
+          width: '56%', position: 'relative', overflow: 'hidden',
+          background: '#060608',
+          flexShrink: 0,
         }}
       >
-        {/* Logo top-left */}
+        {/* Atmósfera: glow rojo central */}
         <div style={{
-          position: 'absolute', top: 28, left: 28, zIndex: 4,
-          display: 'flex', alignItems: 'center', gap: 11,
+          position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse 85% 70% at 52% 48%, rgba(225,20,40,0.08) 0%, transparent 68%)',
+        }}/>
+
+        {/* Viñeta lateral izquierda */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+          background: 'linear-gradient(to right, rgba(6,6,8,0.7) 0%, transparent 30%, transparent 70%, rgba(6,6,8,0.4) 100%)',
+        }}/>
+
+        {/* MARCA — top-left, más grande y poderosa */}
+        <div style={{
+          position: 'absolute', top: 32, left: 36, zIndex: 5,
+          display: 'flex', alignItems: 'center', gap: 14,
+          animation: 'gm-fadein 0.6s ease both',
         }}>
-          <Logo size={40}/>
+          <Logo size={56}/>
           <div>
             <p style={{
               fontFamily: "'Dancing Script', cursive",
-              fontWeight: 700, fontSize: 22, margin: 0, lineHeight: 1,
-              color: '#EBEBEB',
+              fontWeight: 700, fontSize: 30,
+              margin: 0, lineHeight: 1, color: '#EBEBEB',
+              letterSpacing: '-0.01em',
             }}>
               Gorila Motos
             </p>
-            <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 10, margin: '2px 0 0', fontWeight: 500 }}>
+            <p style={{
+              color: 'rgba(255,255,255,0.28)', fontSize: 11,
+              margin: '4px 0 0', fontWeight: 500, letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}>
               Gestión de talleres
             </p>
           </div>
         </div>
 
-        {/* 3D Bike — contenido en un frame, no full-bleed */}
+        {/* MOTO 3D — sin caja, sin borde, cinemática */}
+        {/* El overflow negativo + overflow:hidden en el padre crean el crop cinematográfico */}
         <div style={{
           position: 'absolute',
-          top: '12%', left: '6%', right: '6%', bottom: '30%',
-          borderRadius: 16,
-          overflow: 'hidden',
-          border: '1px solid rgba(255,255,255,0.05)',
-          background: '#030303',
+          top: '6%', left: '-18%', right: '-18%', bottom: '20%',
           zIndex: 1,
         }}>
           <Suspense fallback={
-            <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#030303' }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%',
-                border: '2px solid rgba(225,20,40,0.15)',
-                borderTop: '2px solid #E11428',
-                animation: 'spin 0.8s linear infinite',
-              }}/>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Spinner color="#E11428" size={32}/>
             </div>
           }>
             <Bike3D/>
           </Suspense>
         </div>
 
-        {/* Gradiente bottom para leer el texto */}
+        {/* Reflejo del suelo — glow rojo bajo la moto */}
         <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: '34%',
-          background: 'linear-gradient(to top, rgba(5,5,7,1) 0%, rgba(5,5,7,0.7) 60%, transparent 100%)',
+          position: 'absolute',
+          bottom: '19%', left: '15%', right: '15%', height: 80,
           zIndex: 2, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse 70% 100% at 50% 100%, rgba(225,20,40,0.2) 0%, transparent 100%)',
+          filter: 'blur(18px)',
         }}/>
 
-        {/* Texto bottom */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 28px 28px', zIndex: 3 }}>
+        {/* Fade inferior — para leer el texto */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          height: '28%', zIndex: 3, pointerEvents: 'none',
+          background: 'linear-gradient(to top, #060608 0%, rgba(6,6,8,0.92) 45%, transparent 100%)',
+        }}/>
+
+        {/* TEXTO INFERIOR — grande, impactante */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          padding: '0 36px 34px', zIndex: 4,
+          animation: 'gm-fadein 0.8s 0.2s ease both',
+        }}>
           <p style={{
             fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.3)', margin: '0 0 6px',
+            fontSize: 10, letterSpacing: '0.28em', textTransform: 'uppercase',
+            color: 'rgba(255,255,255,0.25)', margin: '0 0 8px',
           }}>
             Sistema profesional
           </p>
           <h1 style={{
             fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: 'clamp(38px,4vw,58px)',
-            lineHeight: 0.95, letterSpacing: '0.01em',
-            margin: '0 0 16px', color: '#EBEBEB',
+            fontSize: 'clamp(56px,6vw,82px)',
+            lineHeight: 0.9, letterSpacing: '0.01em',
+            margin: '0 0 18px', color: '#EBEBEB',
           }}>
-            Tu taller,{' '}
+            Tu taller,<br/>
             <span style={{ color: '#E11428' }}>en control.</span>
           </h1>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
             {['Órdenes', 'Inventario', 'Facturación SRI', 'App móvil'].map(f => (
               <span key={f} style={{
-                fontSize: 11, color: 'rgba(255,255,255,0.38)', fontWeight: 500,
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: 99, padding: '4px 10px',
+                fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.09)',
+                borderRadius: 99, padding: '5px 13px',
+                letterSpacing: '0.02em',
               }}>
                 {f}
               </span>
@@ -257,97 +304,114 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ════ PANEL DERECHO — Formulario ════ */}
+      {/* ════════════════════════════════════════
+          PANEL DERECHO — formulario
+          Full-screen en mobile
+          ════════════════════════════════════════ */}
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         justifyContent: 'center', alignItems: 'center',
-        padding: '32px 28px', overflowY: 'auto',
+        padding: '32px 24px 40px', overflowY: 'auto',
         background: '#0A0A0A',
-        position: 'relative',
+        borderLeft: '1px solid rgba(255,255,255,0.04)',
+        minWidth: 0,
       }}>
-        {/* Logo mobile */}
+
+        {/* ── HERO MOBILE — solo se ve en pantallas pequeñas ── */}
         <div className="flex lg:hidden" style={{
-          alignItems: 'center', gap: 10, marginBottom: 28,
-          alignSelf: 'flex-start', width: '100%', maxWidth: 380,
+          flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+          width: '100%', maxWidth: 380, marginBottom: 36,
+          ...enter(0),
         }}>
-          <Logo size={38}/>
-          <p style={{ fontFamily:"'Dancing Script', cursive", fontWeight:700, fontSize:20, margin:0, color:'#EBEBEB' }}>
+          <Logo size={80}/>
+          <h2 style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: 42, letterSpacing: '0.05em',
+            color: '#EBEBEB', margin: '16px 0 4px', lineHeight: 1,
+          }}>
             Gorila Motos
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 12, margin: '0 0 20px', fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            Gestión de talleres · Ecuador
           </p>
+          <div style={{ width: 40, height: 2, background: '#E11428', borderRadius: 99, opacity: 0.8 }}/>
         </div>
 
-        <div style={{ width: '100%', maxWidth: 360 }}>
+        {/* ── CONTENIDO FORMULARIO ── */}
+        <div style={{ width: '100%', maxWidth: 356 }}>
 
-          {/* Status */}
-          <div style={{ marginBottom: 24, ...enter(0) }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {/* Status servidor */}
+          <div style={{ marginBottom: 22, ...enter(0) }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
               <span style={{
-                width: 6, height: 6, borderRadius: '50%', background: st.dot,
-                animation: st.pulse ? 'pulse 1.5s ease-in-out infinite' : 'none',
-                boxShadow: st.pulse ? `0 0 6px ${st.dot}` : 'none',
+                width: 7, height: 7, borderRadius: '50%', background: st.dot,
+                animation: st.pulse ? 'gm-pulse 1.6s ease-in-out infinite' : 'none',
+                boxShadow: st.pulse ? `0 0 7px ${st.dot}` : 'none',
               }}/>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontWeight: 500 }}>{st.text}</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>
+                {st.text}
+              </span>
             </div>
           </div>
 
           {/* Heading */}
-          <div style={{ marginBottom: 28, ...enter(60) }}>
+          <div style={{ marginBottom: 26, ...enter(60) }}>
             <h2 style={{
               color: '#EBEBEB', fontWeight: 800, fontSize: 26,
-              margin: '0 0 8px', letterSpacing: '-0.04em', lineHeight: 1.05,
+              margin: '0 0 7px', letterSpacing: '-0.04em', lineHeight: 1.05,
             }}>
               Accede al sistema
             </h2>
-            <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: 13.5, margin: 0, lineHeight: 1.65 }}>
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13.5, margin: 0, lineHeight: 1.65 }}>
               Ingresa con tu cuenta de Google o con tu correo.
             </p>
           </div>
 
-          {/* ── Google Button — acción primaria ── */}
+          {/* Google — acción primaria */}
           {firebaseEnabled && (
-            <div style={{ marginBottom: 20, ...enter(110) }}>
+            <div style={{ marginBottom: 18, ...enter(110) }}>
               <button
                 type="button"
                 onClick={handleGoogle}
                 disabled={isLoading}
                 style={{
-                  width: '100%', height: 48,
-                  background: isLoading ? 'rgba(255,255,255,0.7)' : '#FFFFFF',
-                  color: '#0A0A0A', fontWeight: 600, fontSize: 14,
-                  border: 'none', borderRadius: 10,
+                  width: '100%', height: 50,
+                  background: isLoading ? 'rgba(255,255,255,0.75)' : '#FFFFFF',
+                  color: '#111', fontWeight: 600, fontSize: 14,
+                  border: 'none', borderRadius: 11,
                   cursor: isLoading ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                   transition: 'all 160ms cubic-bezier(0.34,1.56,0.64,1)',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
                   letterSpacing: '-0.01em',
                 }}
                 onMouseEnter={e => {
                   if (!isLoading) {
                     const el = e.currentTarget as HTMLElement;
-                    el.style.transform = 'translateY(-1px)';
-                    el.style.boxShadow = '0 4px 16px rgba(0,0,0,0.5)';
+                    el.style.transform  = 'translateY(-1px)';
+                    el.style.boxShadow  = '0 6px 20px rgba(0,0,0,0.6)';
                   }
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement;
                   el.style.transform = '';
-                  el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.4)';
+                  el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.5)';
                 }}
                 onMouseDown={e => { if (!isLoading) (e.currentTarget as HTMLElement).style.transform = 'scale(0.98)'; }}
                 onMouseUp={e   => { if (!isLoading) (e.currentTarget as HTMLElement).style.transform = ''; }}
               >
                 {isLoading && googleBusy
-                  ? <svg style={{ animation:'spin 0.8s linear infinite' }} width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(10,10,10,0.2)" strokeWidth="3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="#0A0A0A" strokeWidth="3" strokeLinecap="round"/></svg>
+                  ? <Spinner color="#111" size={18}/>
                   : <GoogleIcon/>}
                 Continuar con Google
               </button>
             </div>
           )}
 
-          {/* OR divider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, ...enter(150) }}>
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, ...enter(150) }}>
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }}/>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', fontWeight: 500 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', fontWeight: 500, letterSpacing: '0.04em' }}>
               {firebaseEnabled ? 'o con correo' : 'Ingresa con tu cuenta'}
             </span>
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }}/>
@@ -381,9 +445,9 @@ export default function LoginPage() {
               <div style={{ textAlign: 'right', marginTop: 6 }}>
                 <Link
                   to="/recuperar"
-                  style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', textDecoration: 'none', fontWeight: 500 }}
+                  style={{ fontSize: 12, color: 'rgba(255,255,255,0.22)', textDecoration: 'none', fontWeight: 500 }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.25)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.22)'; }}
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
@@ -395,43 +459,35 @@ export default function LoginPage() {
                 type="submit"
                 disabled={isLoading}
                 style={{
-                  width: '100%', height: 50, borderRadius: 10,
+                  width: '100%', height: 50, borderRadius: 11,
                   background: isLoading ? 'rgba(225,20,40,0.4)' : '#E11428',
                   color: '#fff', fontWeight: 700, fontSize: 15,
                   letterSpacing: '-0.01em', border: 'none',
                   cursor: isLoading ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  boxShadow: isLoading ? 'none' : '0 0 0 1px rgba(225,20,40,0.3)',
+                  boxShadow: isLoading ? 'none' : '0 0 0 1px rgba(225,20,40,0.35)',
                   transition: 'all 160ms cubic-bezier(0.34,1.56,0.64,1)',
                 }}
                 onMouseEnter={e => {
                   if (!isLoading) {
                     const el = e.currentTarget as HTMLElement;
-                    el.style.background   = '#FF1F37';
-                    el.style.transform    = 'translateY(-1px)';
-                    el.style.boxShadow    = '0 4px 20px rgba(225,20,40,0.5)';
+                    el.style.background = '#FF1F37';
+                    el.style.transform  = 'translateY(-1px)';
+                    el.style.boxShadow  = '0 6px 24px rgba(225,20,40,0.5)';
                   }
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement;
                   el.style.background = isLoading ? 'rgba(225,20,40,0.4)' : '#E11428';
                   el.style.transform  = '';
-                  el.style.boxShadow  = isLoading ? 'none' : '0 0 0 1px rgba(225,20,40,0.3)';
+                  el.style.boxShadow  = isLoading ? 'none' : '0 0 0 1px rgba(225,20,40,0.35)';
                 }}
                 onMouseDown={e => { if (!isLoading) (e.currentTarget as HTMLElement).style.transform = 'scale(0.98)'; }}
-                onMouseUp={e =>   { if (!isLoading) (e.currentTarget as HTMLElement).style.transform = ''; }}
+                onMouseUp={e   => { if (!isLoading) (e.currentTarget as HTMLElement).style.transform = ''; }}
               >
-                {loading && !googleBusy ? (
-                  <>
-                    <svg style={{ animation:'spin 0.8s linear infinite', flexShrink:0 }} width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3"/>
-                      <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-                    </svg>
-                    Verificando…
-                  </>
-                ) : (
-                  <>Iniciar sesión <ArrowRight size={15}/></>
-                )}
+                {loading && !googleBusy
+                  ? <><Spinner size={16}/> Verificando…</>
+                  : <>Iniciar sesión <ArrowRight size={15}/></>}
               </button>
             </div>
           </form>
@@ -450,24 +506,28 @@ export default function LoginPage() {
           </p>
 
           {/* Legal */}
-          <div style={{ marginTop: 24, ...enter(300) }}>
-            <div style={{ display:'flex', alignItems:'center', gap:4, justifyContent:'center', marginBottom:7 }}>
-              <Shield size={9} color="rgba(255,255,255,0.12)"/>
-              <span style={{ fontSize:10, color:'rgba(255,255,255,0.15)' }}>SSL · LOPDP Ecuador</span>
+          <div style={{ marginTop: 24, textAlign: 'center', ...enter(310) }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+              <Shield size={9} color="rgba(255,255,255,0.1)"/>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.13)' }}>SSL · LOPDP Ecuador</span>
             </div>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12 }}>
-              {[{label:'Privacidad', to:'/privacidad'}, {label:'Términos', to:'/terminos'}].map(({label, to}) => (
-                <Link key={to} to={to} style={{ fontSize:10, color:'rgba(255,255,255,0.18)', textDecoration:'none' }}>{label}</Link>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+              {[{ label: 'Privacidad', to: '/privacidad' }, { label: 'Términos', to: '/terminos' }].map(({ label, to }) => (
+                <Link key={to} to={to}
+                  style={{ fontSize: 10, color: 'rgba(255,255,255,0.16)', textDecoration: 'none' }}>
+                  {label}
+                </Link>
               ))}
-              <span style={{ fontSize:10, color:'rgba(255,255,255,0.1)' }}>© 2025</span>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.1)' }}>© 2025</span>
             </div>
           </div>
         </div>
       </div>
 
       <style>{`
-        @keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.45;transform:scale(1.5)} }
+        @keyframes gm-spin    { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes gm-pulse   { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.6)} }
+        @keyframes gm-fadein  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
       `}</style>
     </div>
   );

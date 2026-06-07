@@ -169,22 +169,23 @@ export default function RegisterPage() {
 
         {/* ─── Header ─── */}
         <div style={{ marginBottom: 24, ...enter(0) }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
-            <Logo size={44}/>
+          {/* Marca centrada, impactante */}
+          <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:22 }}>
+            <Logo size={56}/>
             <div>
-              <p style={{ fontFamily:"'Dancing Script', cursive", fontWeight:700, fontSize:24, margin:0, lineHeight:1, color:'#EBEBEB' }}>
+              <p style={{ fontFamily:"'Dancing Script', cursive", fontWeight:700, fontSize:28, margin:0, lineHeight:1, color:'#EBEBEB' }}>
                 Gorila Motos
               </p>
-              <p style={{ color:'rgba(255,255,255,0.25)', fontSize:10, margin:'3px 0 0' }}>
+              <p style={{ color:'rgba(255,255,255,0.28)', fontSize:11, margin:'4px 0 0', fontWeight:500, letterSpacing:'0.1em', textTransform:'uppercase' }}>
                 Gestión de talleres · Ecuador
               </p>
             </div>
           </div>
           <h1 style={{
             fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: 'clamp(32px,5vw,48px)',
-            lineHeight: 0.94, letterSpacing: '0.01em',
-            margin: '0 0 8px', color: '#EBEBEB',
+            fontSize: 'clamp(36px,5.5vw,54px)',
+            lineHeight: 0.9, letterSpacing: '0.01em',
+            margin: '0 0 10px', color: '#EBEBEB',
           }}>
             Crea tu <span style={{ color: '#E11428' }}>cuenta.</span>
           </h1>
