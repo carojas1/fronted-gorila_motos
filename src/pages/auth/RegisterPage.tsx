@@ -149,16 +149,26 @@ export default function RegisterPage() {
   const handleGoogle = async () => {
     if (!processGoogleUser) return;
     setGoogleBusy(true);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     try {
+      if (isMobile) {
+        await startGoogleRedirect();
+        return;
+      }
       const fbUser = await signInWithGooglePopup();
       await processGoogleUser(fbUser);
       /* navegación ocurre en el useEffect de user+token */
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? '';
       if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
-        /* Popup bloqueado → fallback a redirect */
         try { await startGoogleRedirect(); }
         catch (e) { toast.error(getErrorMsg(e), 'Error al iniciar Google'); setGoogleBusy(false); }
+      } else if (code === 'auth/unauthorized-domain') {
+        toast.error(
+          'Este dominio no está autorizado. Usa gmotors-frontend.vercel.app',
+          'Dominio no autorizado'
+        );
+        setGoogleBusy(false);
       } else {
         toast.error(getErrorMsg(err), 'Error al iniciar Google');
         setGoogleBusy(false);

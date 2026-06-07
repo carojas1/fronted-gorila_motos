@@ -77,7 +77,23 @@ export function debounce<T extends (...args: unknown[]) => void>(fn: T, ms = 300
   };
 }
 
-/** Extrae mensaje de error de Axios */
+/** Mensajes amigables para errores de Firebase Auth */
+const FIREBASE_MSGS: Record<string, string> = {
+  'auth/unauthorized-domain':       'Este dominio no está autorizado. Usa gmotors-frontend.vercel.app',
+  'auth/popup-blocked':             'El navegador bloqueó el popup de Google. Permite popups e intenta de nuevo.',
+  'auth/popup-closed-by-user':      'Cerraste la ventana de Google antes de completar.',
+  'auth/cancelled-popup-request':   'Solo puede haber una ventana de Google abierta a la vez.',
+  'auth/user-not-found':            'No existe cuenta con ese correo.',
+  'auth/wrong-password':            'Contraseña incorrecta.',
+  'auth/email-already-in-use':      'Ya existe una cuenta con ese correo.',
+  'auth/invalid-email':             'Correo electrónico no válido.',
+  'auth/too-many-requests':         'Demasiados intentos fallidos. Espera unos minutos.',
+  'auth/network-request-failed':    'Sin conexión de red. Verifica tu internet.',
+  'auth/internal-error':            'Error interno de autenticación. Intenta de nuevo.',
+  'auth/invalid-credential':        'Credenciales inválidas. Intenta de nuevo.',
+};
+
+/** Extrae mensaje de error de Axios o Firebase */
 export function getErrorMsg(err: unknown): string {
   if (typeof err === 'object' && err !== null) {
     const e = err as {
@@ -86,8 +102,16 @@ export function getErrorMsg(err: unknown): string {
       code?: string;
     };
 
+    /* Errores de Firebase (tienen code pero no response) */
+    if (e.code && e.code.startsWith('auth/')) {
+      return FIREBASE_MSGS[e.code] ?? e.message ?? `Error Google: ${e.code}`;
+    }
+
+    /* Sin respuesta HTTP → problema de red o CORS */
     if (!e.response) {
-      return 'Sin conexión. Verifica tu internet e intenta de nuevo.';
+      return e.message?.includes('verificado')
+        ? e.message
+        : 'Sin conexión. Verifica tu internet e intenta de nuevo.';
     }
 
     const status = e.response.status;
@@ -110,5 +134,6 @@ export function getErrorMsg(err: unknown): string {
 
     return e.response?.data?.message ?? e.message ?? 'Error inesperado';
   }
+  if (typeof err === 'string') return err;
   return 'Error inesperado';
 }
