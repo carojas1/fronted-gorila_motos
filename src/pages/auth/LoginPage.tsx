@@ -97,13 +97,22 @@ function Spinner({ color = 'white', size = 16 }: { color?: string; size?: number
    COMPONENTE PRINCIPAL
    ═══════════════════════════════════════════════════════════ */
 export default function LoginPage() {
-  const { login, processGoogleUser, loading } = useAuth();
+  const { login, processGoogleUser, loading, user, token } = useAuth();
   const navigate     = useNavigate();
   const toast        = useToast();
   const [params]     = useSearchParams();
   const serverStatus = useServerStatus();
   const [googleBusy, setGoogleBusy] = useState(false);
   const [entered,    setEntered]    = useState(false);
+
+  /* ── Navegación REACTIVA — se dispara cuando el contexto tiene sesión válida ──
+     Esto resuelve el race-condition entre setState del contexto y navigate:
+     en lugar de navegar dentro del callback async, observamos el estado. */
+  useEffect(() => {
+    if (user && token) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, token, navigate]);
 
   /* Spring entrance */
   useEffect(() => {
@@ -117,22 +126,24 @@ export default function LoginPage() {
       toast.success('¡Correo verificado! Ahora puedes iniciar sesión.', 'Email confirmado');
   }, []);
 
-  /* Resultado del Google redirect */
+  /* Resultado del Google redirect — procesamos, la navegación la hace el effect de arriba */
   useEffect(() => {
     if (!firebaseEnabled || !processGoogleUser) return;
+    let cancelled = false;
     setGoogleBusy(true);
     getGoogleRedirectUser()
       .then(async fbUser => {
-        if (!fbUser) return;
+        if (!fbUser || cancelled) return;
         try {
           await processGoogleUser(fbUser);
-          navigate('/dashboard', { replace: true });
+          // navigate ocurre en el useEffect de user+token de arriba
         } catch (err) {
-          toast.error(getErrorMsg(err), 'Error con Google');
+          if (!cancelled) toast.error(getErrorMsg(err), 'Error con Google');
         }
       })
       .catch(() => {})
-      .finally(() => setGoogleBusy(false));
+      .finally(() => { if (!cancelled) setGoogleBusy(false); });
+    return () => { cancelled = true; };
   }, []);
 
   const { register, handleSubmit, formState: { errors } } = useForm<Form>({
@@ -142,11 +153,11 @@ export default function LoginPage() {
   const onSubmit = useCallback(async ({ correo, contrasena }: Form) => {
     try {
       await login(correo, contrasena);
-      navigate('/dashboard', { replace: true });
+      // navigate ocurre en el useEffect de user+token
     } catch (err) {
       toast.error(getErrorMsg(err), 'Error de acceso');
     }
-  }, [login, navigate, toast]);
+  }, [login, toast]);
 
   const handleGoogle = () => {
     setGoogleBusy(true);

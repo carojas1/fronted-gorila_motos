@@ -41,6 +41,13 @@ const AuthContext = createContext<AuthCtx | null>(null);
 const TOKEN_KEY = 'gm_token';
 const USER_KEY  = 'gm_user';
 
+/* Extrae token + usuario de cualquier estructura de respuesta del backend */
+function extractAuth(data: Record<string, unknown>) {
+  const token = (data.token ?? data.jwt ?? data.accessToken) as string | undefined;
+  const user  = (data.usuario ?? data.user ?? (data.id ? data : undefined)) as Usuario | undefined;
+  return { token, user };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user:    JSON.parse(localStorage.getItem(USER_KEY)  ?? 'null'),
@@ -76,8 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       const { data } = await authApi.login(correo, contrasena);
-      const token: string  = data.token ?? data.jwt ?? data.accessToken;
-      const user:  Usuario = data.usuario ?? data.user ?? data;
+      const { token, user } = extractAuth(data);
+      if (!token || !user) throw new Error('Respuesta del servidor inválida. Intenta nuevamente.');
       localStorage.setItem(TOKEN_KEY, token);
       localStorage.setItem(USER_KEY,  JSON.stringify(user));
       setState({ user, token, loading: false });
@@ -97,20 +104,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState((s) => ({ ...s, loading: true }));
         try {
           const googlePass = `gm_google_${fbUser.uid.slice(0, 16)}`;
-          let token: string;
-          let user: Usuario;
+          let token: string | undefined;
+          let user:  Usuario | undefined;
 
+          /* 1. Login directo con contraseña determinista */
           try {
             const { data } = await authApi.login(fbUser.email!, googlePass);
-            token = data.token ?? data.jwt ?? data.accessToken;
-            user  = data.usuario ?? data.user ?? data;
+            ({ token, user } = extractAuth(data));
           } catch {
-            /* Primera vez con Google → auto-registrar */
-            const base = fbUser.email!.split('@')[0].replace(/[^a-z0-9]/gi, '').slice(0, 16) || 'gmuser';
+            /* 2. Primera vez → registrar en el backend */
+            const base = (fbUser.email!.split('@')[0].replace(/[^a-z0-9]/gi, '').slice(0, 14) || 'gmuser');
             try {
               await authApi.register({
                 nombre_completo: fbUser.displayName || base,
-                nombre_usuario:  `${base}${Math.floor(Math.random() * 9000) + 1000}`,
+                nombre_usuario:  `${base}_g`,
                 correo:          fbUser.email!,
                 contrasena:      googlePass,
                 descripcion:     'CEDULA: N/A | TELEFONO: N/A',
@@ -120,15 +127,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } catch (regErr: unknown) {
               const status = (regErr as { response?: { status: number } })?.response?.status;
               if (status === 409 || status === 400) {
+                /* El correo ya existe con diferente contraseña */
                 throw new Error(
-                  'Este correo ya está registrado con otra contraseña. Inicia sesión con tu correo y contraseña habituales.'
+                  'Este correo ya tiene cuenta. Ingresa con tu contraseña normal ' +
+                  'o usa "¿Olvidaste tu contraseña?" para restablecerla.'
                 );
               }
               throw regErr;
             }
+            /* 3. Registro OK → login con la nueva cuenta */
             const { data } = await authApi.login(fbUser.email!, googlePass);
-            token = data.token ?? data.jwt ?? data.accessToken;
-            user  = data.usuario ?? data.user ?? data;
+            ({ token, user } = extractAuth(data));
+          }
+
+          /* Validar que recibimos sesión válida */
+          if (!token || !user) {
+            throw new Error('El servidor no devolvió una sesión válida. Intenta nuevamente.');
           }
 
           await firebaseSignOut();
