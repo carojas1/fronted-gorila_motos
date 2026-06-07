@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
-import { firebaseEnabled, startGoogleRedirect, getGoogleRedirectUser } from '../../lib/firebase';
+import { firebaseEnabled, signInWithGooglePopup, startGoogleRedirect, getGoogleRedirectUser } from '../../lib/firebase';
 
 const Bike3D = lazy(() => import('../../components/3d/Bike3D'));
 
@@ -108,19 +108,21 @@ export default function LoginPage() {
       toast.success('¡Correo verificado! Ahora puedes iniciar sesión.', 'Email confirmado');
   }, []);
 
-  /* Google redirect result */
+  /* Detectar resultado de redirect previo (fallback para móviles/WebViews) */
   useEffect(() => {
     if (!firebaseEnabled || !processGoogleUser) return;
     let cancelled = false;
-    setGoogleBusy(true);
     getGoogleRedirectUser()
       .then(async fbUser => {
         if (!fbUser || cancelled) return;
+        setGoogleBusy(true);
         try { await processGoogleUser(fbUser); }
         catch (err) { if (!cancelled) toast.error(getErrorMsg(err), 'Error con Google'); }
+        finally { if (!cancelled) setGoogleBusy(false); }
       })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setGoogleBusy(false); });
+      .catch(err => {
+        if (!cancelled) toast.error(getErrorMsg(err), 'Error con Google');
+      });
     return () => { cancelled = true; };
   }, []);
 
@@ -133,12 +135,25 @@ export default function LoginPage() {
     catch (err) { toast.error(getErrorMsg(err), 'Error de acceso'); }
   }, [login, toast]);
 
-  const handleGoogle = () => {
+  /* Google: popup directo → resultado inmediato, sin redirect ni recarga de página */
+  const handleGoogle = async () => {
+    if (!processGoogleUser) return;
     setGoogleBusy(true);
-    startGoogleRedirect().catch(err => {
-      toast.error(getErrorMsg(err), 'Error al iniciar Google');
-      setGoogleBusy(false);
-    });
+    try {
+      const fbUser = await signInWithGooglePopup();
+      await processGoogleUser(fbUser);
+      /* navegación ocurre en el useEffect de user+token */
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code ?? '';
+      if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
+        /* Popup bloqueado → fallback a redirect */
+        try { await startGoogleRedirect(); }
+        catch (e) { toast.error(getErrorMsg(e), 'Error al iniciar Google'); setGoogleBusy(false); }
+      } else {
+        toast.error(getErrorMsg(err), 'Error con Google');
+        setGoogleBusy(false);
+      }
+    }
   };
 
   /* Status dot */
@@ -483,14 +498,26 @@ export default function LoginPage() {
             >Crear cuenta</Link>
           </p>
 
-          {/* Legal footer */}
-          <div style={{ marginTop: 22, textAlign: 'center', ...spring(285) }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-              <Link to="/privacidad" style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)', textDecoration: 'none' }}>Privacidad</Link>
-              <span style={{ width: 2, height: 2, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', display: 'inline-block' }}/>
-              <Link to="/terminos" style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)', textDecoration: 'none' }}>Términos</Link>
-              <span style={{ width: 2, height: 2, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', display: 'inline-block' }}/>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.1)' }}>© 2025 Gorila Motos</span>
+          {/* Legal footer — más visible */}
+          <div style={{ marginTop: 24, ...spring(285) }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16,
+              padding: '12px 0',
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              {[
+                { label: 'Privacidad', to: '/privacidad' },
+                { label: 'Términos', to: '/terminos' },
+              ].map(({ label, to }) => (
+                <Link key={to} to={to}
+                  style={{ fontSize: 12, color: 'rgba(255,255,255,0.32)', textDecoration: 'none', fontWeight: 500 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.32)'; }}
+                >
+                  {label}
+                </Link>
+              ))}
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.18)' }}>© 2025 Gorila Motos</span>
             </div>
           </div>
         </div>

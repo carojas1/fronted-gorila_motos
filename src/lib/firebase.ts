@@ -1,8 +1,7 @@
 /* ─────────────────────────────────────────────
    GMotors — Firebase Auth
-   Config embebida: la API key de Firebase es pública por diseño
-   (la seguridad viene de Firebase Console authorized domains)
-   signInWithRedirect → evita errores COOP en Vercel
+   Popup con COOP same-origin-allow-popups (vercel.json)
+   Config embebida como fallback para cualquier deploy
    ───────────────────────────────────────────── */
 
 import { initializeApp, getApps } from 'firebase/app';
@@ -12,6 +11,7 @@ import {
   signInWithEmailAndPassword,
   sendEmailVerification,
   GoogleAuthProvider,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   signOut,
@@ -20,8 +20,8 @@ import {
   type ActionCodeSettings,
 } from 'firebase/auth';
 
-/* Los env vars tienen prioridad; los valores embebidos son fallback para Vercel/Deploy
-   Firebase web API keys son públicas por diseño — la seguridad es por authorized domains */
+/* Firebase web API keys son públicas por diseño.
+   Los env vars tienen prioridad; hardcoded = fallback para Vercel sin env vars. */
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY             || 'AIzaSyBHlT5OZdK9fqmgaXZ_s8dute-wu76Z7Dk',
   authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN         || 'gorilamotos.firebaseapp.com',
@@ -32,13 +32,12 @@ const firebaseConfig = {
   measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID      || 'G-3VV4X58DKD',
 };
 
-let app;
 let authInstance = null;
 let providerInstance = null;
 let isEnabled = false;
 
 try {
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   authInstance = getAuth(app);
   providerInstance = new GoogleAuthProvider();
   providerInstance.setCustomParameters({ prompt: 'select_account' });
@@ -79,27 +78,32 @@ export async function checkEmailVerified(): Promise<boolean> {
 }
 
 /**
- * Iniciar Google Sign-In con REDIRECT (evita errores COOP en Vercel/hosting).
- * La página redirige a Google → vuelve al mismo URL de origen.
- * Después de volver, llama getGoogleRedirectUser() para obtener el usuario.
+ * Google Sign-In con POPUP.
+ * Requiere vercel.json con: Cross-Origin-Opener-Policy: same-origin-allow-popups
+ * Si el popup es bloqueado, lanza 'auth/popup-blocked' → usar redirect como fallback.
+ */
+export async function signInWithGooglePopup(): Promise<FirebaseUser> {
+  const result = await signInWithPopup(auth, googleProvider);
+  return result.user;
+}
+
+/**
+ * Google Sign-In con REDIRECT (fallback para entornos que bloquean popups).
+ * La página navega a Google y vuelve al mismo URL.
+ * Después llama getGoogleRedirectUser() para obtener el usuario.
  */
 export async function startGoogleRedirect(): Promise<void> {
   await signInWithRedirect(auth, googleProvider);
 }
 
 /**
- * Obtener el resultado de Google redirect.
- * Llama esto en el useEffect del LoginPage después de volver del redirect.
- * Devuelve null si no hay resultado pendiente.
+ * Obtener resultado del Google redirect.
+ * Propaga errores (auth/unauthorized-domain, etc.) para que el caller los maneje.
  */
 export async function getGoogleRedirectUser(): Promise<FirebaseUser | null> {
-  try {
-    if (!auth) return null;
-    const result = await getRedirectResult(auth);
-    return result?.user ?? null;
-  } catch {
-    return null;
-  }
+  if (!auth) return null;
+  const result = await getRedirectResult(auth);
+  return result?.user ?? null;
 }
 
 /** Login básico Firebase (para verificar estado de email). */

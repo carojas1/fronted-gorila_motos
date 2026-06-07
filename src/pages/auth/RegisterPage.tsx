@@ -11,10 +11,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Mail, Lock, Phone, ArrowRight, Shield, Check } from 'lucide-react';
 import { authApi } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
-import { firebaseEnabled, firebaseRegister, startGoogleRedirect } from '../../lib/firebase';
+import { firebaseEnabled, firebaseRegister, signInWithGooglePopup, startGoogleRedirect } from '../../lib/firebase';
 
 const schema = z.object({
   nombre_completo: z.string().min(3, 'Mínimo 3 caracteres'),
@@ -86,11 +87,17 @@ function PasswordStrength({ value }: { value: string }) {
 export default function RegisterPage() {
   const navigate = useNavigate();
   const toast    = useToast();
+  const { processGoogleUser, user, token } = useAuth();
   const [loading,       setLoading]       = useState(false);
   const [googleBusy,    setGoogleBusy]    = useState(false);
   const [entered,       setEntered]       = useState(false);
   const [termsChecked,  setTermsChecked]  = useState(false);
   const [passValue,     setPassValue]     = useState('');
+
+  /* Navegación reactiva — igual que en LoginPage */
+  useEffect(() => {
+    if (user && token) navigate('/dashboard', { replace: true });
+  }, [user, token, navigate]);
 
   useEffect(() => {
     const t = setTimeout(() => setEntered(true), 60);
@@ -139,12 +146,24 @@ export default function RegisterPage() {
     }
   };
 
-  const handleGoogle = () => {
+  const handleGoogle = async () => {
+    if (!processGoogleUser) return;
     setGoogleBusy(true);
-    startGoogleRedirect().catch(err => {
-      toast.error(getErrorMsg(err), 'Error al iniciar Google');
-      setGoogleBusy(false);
-    });
+    try {
+      const fbUser = await signInWithGooglePopup();
+      await processGoogleUser(fbUser);
+      /* navegación ocurre en el useEffect de user+token */
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code ?? '';
+      if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
+        /* Popup bloqueado → fallback a redirect */
+        try { await startGoogleRedirect(); }
+        catch (e) { toast.error(getErrorMsg(e), 'Error al iniciar Google'); setGoogleBusy(false); }
+      } else {
+        toast.error(getErrorMsg(err), 'Error al iniciar Google');
+        setGoogleBusy(false);
+      }
+    }
   };
 
   const enter = (delay: number): React.CSSProperties => ({
