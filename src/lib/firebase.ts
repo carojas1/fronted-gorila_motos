@@ -1,6 +1,8 @@
 /* ─────────────────────────────────────────────
    GMotors — Firebase Auth
-   signInWithRedirect (evita errores COOP en Vercel)
+   Config embebida: la API key de Firebase es pública por diseño
+   (la seguridad viene de Firebase Console authorized domains)
+   signInWithRedirect → evita errores COOP en Vercel
    ───────────────────────────────────────────── */
 
 import { initializeApp, getApps } from 'firebase/app';
@@ -18,14 +20,16 @@ import {
   type ActionCodeSettings,
 } from 'firebase/auth';
 
+/* Los env vars tienen prioridad; los valores embebidos son fallback para Vercel/Deploy
+   Firebase web API keys son públicas por diseño — la seguridad es por authorized domains */
 const firebaseConfig = {
-  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            ?? '',
-  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        ?? '',
-  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID         ?? '',
-  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET     ?? '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '',
-  appId:             import.meta.env.VITE_FIREBASE_APP_ID             ?? '',
-  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID     ?? '',
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY             || 'AIzaSyBHlT5OZdK9fqmgaXZ_s8dute-wu76Z7Dk',
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN         || 'gorilamotos.firebaseapp.com',
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID          || 'gorilamotos',
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET      || 'gorilamotos.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '835804873937',
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID              || '1:835804873937:web:9d2c607d68d0ddaa28f1f0',
+  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID      || 'G-3VV4X58DKD',
 };
 
 let app;
@@ -34,19 +38,17 @@ let providerInstance = null;
 let isEnabled = false;
 
 try {
-  if (firebaseConfig.apiKey) {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-    authInstance = getAuth(app);
-    providerInstance = new GoogleAuthProvider();
-    providerInstance.setCustomParameters({ prompt: 'select_account' });
-    isEnabled = true;
-  }
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  authInstance = getAuth(app);
+  providerInstance = new GoogleAuthProvider();
+  providerInstance.setCustomParameters({ prompt: 'select_account' });
+  isEnabled = true;
 } catch (error) {
   console.warn('⚠️ Firebase no disponible:', error);
 }
 
-export const auth          = authInstance as ReturnType<typeof getAuth>;
-export const googleProvider = providerInstance as GoogleAuthProvider;
+export const auth            = authInstance as ReturnType<typeof getAuth>;
+export const googleProvider  = providerInstance as GoogleAuthProvider;
 export const firebaseEnabled = isEnabled;
 
 const ACTION_CODE_SETTINGS: ActionCodeSettings = {
@@ -79,7 +81,7 @@ export async function checkEmailVerified(): Promise<boolean> {
 /**
  * Iniciar Google Sign-In con REDIRECT (evita errores COOP en Vercel/hosting).
  * La página redirige a Google → vuelve al mismo URL de origen.
- * Después de volver, llama `getGoogleRedirectUser()` para obtener el usuario.
+ * Después de volver, llama getGoogleRedirectUser() para obtener el usuario.
  */
 export async function startGoogleRedirect(): Promise<void> {
   await signInWithRedirect(auth, googleProvider);
