@@ -161,8 +161,8 @@ export default function DashboardPage() {
   /* ── Actividad reciente ── */
   const recientes = registros.slice(0, 8);
 
-  /* ── Vista cliente simplificada ── */
-  if (isCliente) {
+  /* ── Vista cliente — solo si NO es admin ni mecánico ── */
+  if (isCliente && !isAdmin && !isMecanico) {
     const myMotos   = motos.filter(m => m.id_usuario === user?.id_usuario);
     const myPlacas  = new Set(myMotos.map(m => m.placa));
     const myRegs    = registros.filter(r => myPlacas.has(r.placa));
