@@ -17,6 +17,7 @@ import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
 import { firebaseEnabled, startGoogleSignIn, getGoogleRedirectUser } from '../../lib/firebase';
+import { healthApi } from '../../lib/api';
 
 const Bike3D = lazy(() => import('../../components/3d/Bike3D'));
 
@@ -70,8 +71,9 @@ export default function LoginPage() {
   const navigate     = useNavigate();
   const toast        = useToast();
   const [params]     = useSearchParams();
-  const [googleBusy, setGoogleBusy] = useState(false);
-  const [entered,    setEntered]    = useState(false);
+  const [googleBusy,   setGoogleBusy]   = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [entered,      setEntered]      = useState(false);
 
   /* Navegación reactiva — se dispara cuando hay sesión válida en el contexto */
   useEffect(() => {
@@ -88,6 +90,13 @@ export default function LoginPage() {
   useEffect(() => {
     if (params.get('verified') === '1')
       toast.success('¡Correo verificado! Ahora puedes iniciar sesión.', 'Email confirmado');
+  }, []);
+
+  /* Wake-up ping — despierta el backend Render al cargar la página de login.
+     El backend duerme tras 15 min de inactividad (plan gratuito).
+     Un 401 de respuesta es OK — el servidor ya está activo. */
+  useEffect(() => {
+    healthApi.check().catch(() => {});
   }, []);
 
   /* Detectar resultado de redirect previo (fallback para móviles/WebViews) */
@@ -115,15 +124,34 @@ export default function LoginPage() {
   const [slowConn, setSlowConn] = useState(false);
 
   const onSubmit = useCallback(async ({ correo, contrasena }: Form) => {
-    // Mostrar "Conectando…" si el servidor tarda >5 s (Render durmiendo)
-    const slowTimer = setTimeout(() => setSlowConn(true), 5000);
+    setLoginLoading(true);
+    setSlowConn(false);
+    const slowTimer = setTimeout(() => setSlowConn(true), 5_000);
+
+    const tryLogin = async () => login(correo, contrasena);
+
     try {
-      await login(correo, contrasena);
+      await tryLogin();
     } catch (err) {
-      toast.error(getErrorMsg(err), 'Error de acceso');
+      const hasResponse = !!(err as { response?: unknown })?.response;
+      if (!hasResponse) {
+        // Sin respuesta HTTP → backend dormido (Render free tier).
+        // Mandamos otro ping de wake-up y esperamos a que arranque.
+        setSlowConn(true);
+        healthApi.check().catch(() => {});
+        await new Promise(r => setTimeout(r, 32_000)); // ~30s arranque Render
+        try {
+          await tryLogin(); // segundo intento automático
+        } catch (retryErr) {
+          toast.error(getErrorMsg(retryErr), 'Error de acceso');
+        }
+      } else {
+        toast.error(getErrorMsg(err), 'Error de acceso');
+      }
     } finally {
       clearTimeout(slowTimer);
       setSlowConn(false);
+      setLoginLoading(false);
     }
   }, [login, toast]);
 
@@ -187,7 +215,7 @@ export default function LoginPage() {
   const btnPress  = (el: HTMLElement) => { el.style.transform = 'scale(0.97)'; };
   const btnRelease = (el: HTMLElement) => { el.style.transform = ''; };
 
-  const isLoading = loading || googleBusy;
+  const isLoading = loading || loginLoading || googleBusy;
 
   return (
     <div style={{
@@ -464,7 +492,7 @@ export default function LoginPage() {
                 onMouseDown={e  => { if (!isLoading) btnPress(e.currentTarget as HTMLElement); }}
                 onMouseUp={e    => { if (!isLoading) btnRelease(e.currentTarget as HTMLElement); }}
               >
-                {loading && !googleBusy ? (
+                {(loading || loginLoading) && !googleBusy ? (
                   slowConn
                     ? <><Ring size={16}/> Despertando servidor…</>
                     : <><Ring size={16}/> Verificando…</>

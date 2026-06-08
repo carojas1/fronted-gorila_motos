@@ -10,7 +10,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Mail, Lock, Phone, ArrowRight, Shield, Check } from 'lucide-react';
-import { authApi } from '../../lib/api';
+import { authApi, healthApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
@@ -118,6 +118,11 @@ export default function RegisterPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* Wake-up ping — despierta el backend Render al cargar la página de registro */
+  useEffect(() => {
+    healthApi.check().catch(() => {});
+  }, []);
+
   useEffect(() => {
     const t = setTimeout(() => setEntered(true), 60);
     return () => clearTimeout(t);
@@ -135,18 +140,36 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: Form) => {
     setLoading(true);
-    const slowTimer = setTimeout(() => setSlowConn(true), 5000);
+    setSlowConn(false);
+    const slowTimer = setTimeout(() => setSlowConn(true), 5_000);
+
+    const doRegister = () => authApi.register({
+      nombre_completo: data.nombre_completo,
+      nombre_usuario:  data.correo.split('@')[0],
+      correo:          data.correo,
+      contrasena:      data.contrasena,
+      pais:            'Ecuador',
+      ciudad:          'Ecuador',
+      descripcion:     `CEDULA: N/A | TELEFONO: ${data.telefono}`,
+      ruta_imagen:     null,
+    });
+
     try {
-      await authApi.register({
-        nombre_completo: data.nombre_completo,
-        nombre_usuario:  data.correo.split('@')[0],
-        correo:          data.correo,
-        contrasena:      data.contrasena,
-        pais:            'Ecuador',
-        ciudad:          'Ecuador',
-        descripcion:     `CEDULA: N/A | TELEFONO: ${data.telefono}`,
-        ruta_imagen:     null,
-      });
+      // Intento de registro — si hay error de red, wake-up + retry automático
+      try {
+        await doRegister();
+      } catch (registerErr) {
+        const hasResponse = !!(registerErr as { response?: unknown })?.response;
+        if (!hasResponse) {
+          // Backend dormido → despertar y reintentar
+          setSlowConn(true);
+          healthApi.check().catch(() => {});
+          await new Promise(r => setTimeout(r, 32_000));
+          await doRegister(); // segundo intento (lanza si falla de nuevo)
+        } else {
+          throw registerErr; // error real del backend (409 duplicado, etc.)
+        }
+      }
 
       /* ── Auto-login inmediato tras registrar ──────────────────────────────
          Evita que el usuario tenga que volver a escribir sus credenciales.
@@ -154,7 +177,7 @@ export default function RegisterPage() {
          ──────────────────────────────────────────────────────────────────── */
       try {
         await login(data.correo, data.contrasena);
-        // El useEffect([user, token]) navega a /dashboard automáticamente
+        // useEffect([user, token]) navega a /dashboard automáticamente
       } catch {
         toast.success('¡Cuenta creada! Ahora inicia sesión.', '¡Listo!');
         navigate('/login');
