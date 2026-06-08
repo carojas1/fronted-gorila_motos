@@ -32,6 +32,7 @@ import PuntosPage        from './pages/puntos/PuntosPage';
 import CombustiblePage   from './pages/combustible/CombustiblePage';
 import InvoicePage       from './pages/invoice/InvoicePage';
 import PortalClientePage from './pages/portal/PortalClientePage';
+import MiMotoPage        from './pages/moto-cliente/MiMotoPage';
 
 /* ─── Guarda de roles ─────────────────────────────────────────────────────────
    Redirige a /dashboard si el usuario no tiene ninguno de los roles indicados.
@@ -71,6 +72,7 @@ export default function App() {
                 <Route path="/combustible" element={<CombustiblePage />}   />
                 <Route path="/invoice/:id" element={<InvoicePage />}       />
                 <Route path="/portal"      element={<PortalClientePage />} />
+                <Route path="/mi-moto"    element={<MiMotoPage />}        />
                 <Route path="/ajustes"     element={<DashboardPage />}     />
 
                 {/* Solo ADMIN + MECÁNICO */}

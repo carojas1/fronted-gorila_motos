@@ -33,14 +33,15 @@ export default function AppLayout() {
   const roleColor = isAdmin ? '#E11428' : isMecanico ? '#3B82F6' : '#10B981';
 
   const NAV = [
-    { label: 'Dashboard',   to: '/dashboard'   },
+    { label: 'Dashboard',    to: '/dashboard'   },
     ...((isAdmin || isMecanico) ? [{ label: 'Registros',  to: '/registros'  }] : []),
-    { label: 'Motos',       to: '/motos'       },
+    ...((isAdmin || isMecanico) ? [{ label: 'Motos',      to: '/motos'      }] : []),
     ...((isAdmin || isMecanico) ? [{ label: 'Clientes',   to: '/clientes'   }] : []),
     ...((isAdmin || isMecanico) ? [{ label: 'Inventario', to: '/inventario' }] : []),
     ...((isAdmin || isMecanico) ? [{ label: 'Alertas',    to: '/alertas'    }] : []),
-    { label: 'Puntos',      to: '/puntos'      },
-    { label: 'Combustible', to: '/combustible' },
+    { label: 'Puntos',       to: '/puntos'      },
+    { label: 'Combustible',  to: '/combustible' },
+    ...(isCliente             ? [{ label: 'Mi Moto',    to: '/mi-moto'    }] : []),
     ...(isCliente             ? [{ label: 'Mi Portal',  to: '/portal'     }] : []),
     ...(isAdmin               ? [{ label: 'Perfiles',   to: '/perfiles'   }] : []),
   ];
