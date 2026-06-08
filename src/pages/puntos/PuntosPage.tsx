@@ -311,7 +311,8 @@ export default function PuntosPage() {
               {selected.historia.length === 0 ? (
                 <div className="py-14 text-center text-white/25 text-sm">Sin servicios registrados aún</div>
               ) : (
-                <table className="gm-table-d">
+                <div className="overflow-x-auto dark-scroll">
+                <table className="gm-table-d" style={{ minWidth: 520 }}>
                   <thead>
                     <tr>
                       <th>Fecha</th>
@@ -340,6 +341,7 @@ export default function PuntosPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           )}

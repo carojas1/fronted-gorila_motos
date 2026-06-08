@@ -283,7 +283,7 @@ export default function ProfilesPage() {
     setSaving(true);
     try {
       await rolesApi.assign(roleModal.user.id_usuario, selectedRol, me.id_usuario);
-      toast.success("Rol actualizado");
+      toast.success("Rol actualizado · el usuario verá los cambios al iniciar sesión nuevamente");
       setRoleModal(null);
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }

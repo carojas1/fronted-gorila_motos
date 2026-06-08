@@ -237,41 +237,43 @@ export default function PortalClientePage() {
           {filtered.length === 0 ? (
             <div className="py-12 text-center text-white/25 text-sm">Sin registros</div>
           ) : (
-            <table className="gm-table-d">
-              <thead>
-                <tr>
-                  <th>Fecha</th><th>Placa</th><th>Servicio</th>
-                  <th className="text-right">Costo</th><th>Estado</th><th>Factura</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(r => (
-                  <tr key={r.id_registro}>
-                    <td className="text-white/45 text-xs">{fmtDate(r.fecha)}</td>
-                    <td><span className="plate-tag">{r.placa}</span></td>
-                    <td className="text-white/65 text-sm">{r.tipo_servicio ?? '—'}</td>
-                    <td className="text-right text-emerald-400 font-bold text-sm">{fmtMoney(r.costo_total)}</td>
-                    <td>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                            style={{
-                              background: r.estado >= 3 ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-                              color:      r.estado >= 3 ? '#10B981' : '#F59E0B',
-                            }}>
-                        {['Pendiente','En proceso','Completado','Entregado','Facturado'][r.estado] ?? '—'}
-                      </span>
-                    </td>
-                    <td>
-                      {r.id_factura > 0 && (
-                        <Link to={`/invoice/${r.id_registro}`}
-                              className="text-gm-red text-xs font-bold hover:text-gm-red-lt">
-                          Ver →
-                        </Link>
-                      )}
-                    </td>
+            <div className="overflow-x-auto dark-scroll">
+              <table className="gm-table-d" style={{ minWidth: 560 }}>
+                <thead>
+                  <tr>
+                    <th>Fecha</th><th>Placa</th><th>Servicio</th>
+                    <th className="text-right">Costo</th><th>Estado</th><th>Factura</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtered.map(r => (
+                    <tr key={r.id_registro}>
+                      <td className="text-white/45 text-xs whitespace-nowrap">{fmtDate(r.fecha)}</td>
+                      <td><span className="plate-tag">{r.placa}</span></td>
+                      <td className="text-white/65 text-sm">{r.tipo_servicio ?? '—'}</td>
+                      <td className="text-right text-emerald-400 font-bold text-sm whitespace-nowrap">{fmtMoney(r.costo_total)}</td>
+                      <td>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+                              style={{
+                                background: r.estado >= 3 ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                                color:      r.estado >= 3 ? '#10B981' : '#F59E0B',
+                              }}>
+                          {['Pendiente','En proceso','Completado','Entregado','Facturado'][r.estado] ?? '—'}
+                        </span>
+                      </td>
+                      <td>
+                        {r.id_factura > 0 && (
+                          <Link to={`/invoice/${r.id_registro}`}
+                                className="text-gm-red text-xs font-bold hover:text-gm-red-lt whitespace-nowrap">
+                            Ver →
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}

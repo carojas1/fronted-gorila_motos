@@ -207,7 +207,8 @@ export default function CombustiblePage() {
             </button>
           </div>
         ) : (
-          <table className="gm-table-d">
+          <div className="overflow-x-auto dark-scroll">
+          <table className="gm-table-d" style={{ minWidth: 680 }}>
             <thead>
               <tr>
                 <th>Fecha</th>
@@ -245,6 +246,7 @@ export default function CombustiblePage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
