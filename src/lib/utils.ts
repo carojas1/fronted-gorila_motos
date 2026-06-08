@@ -6,10 +6,26 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** Formatea fecha ISO → "12 may 2025" */
-export function fmtDate(iso: string): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-ES', {
+/**
+ * Normaliza cualquier fecha del backend a string "yyyy-MM-dd".
+ * El backend puede enviar: "2026-06-08" (string) o [2026,6,8] (array de Java LocalDate).
+ * Después del fix jackson (write-dates-as-timestamps=false) siempre llega string.
+ */
+export function toIsoStr(fecha: unknown): string {
+  if (!fecha) return '';
+  if (Array.isArray(fecha)) {
+    const [y, m, d] = fecha as number[];
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+  return String(fecha).slice(0, 10);
+}
+
+/** Formatea fecha ISO → "12 may 2025" — acepta string o array Java */
+export function fmtDate(iso: unknown): string {
+  const s = toIsoStr(iso);
+  if (!s) return '—';
+  // Añade T00:00:00 para evitar off-by-one de zona horaria
+  return new Date(s + 'T00:00:00').toLocaleDateString('es-ES', {
     day: '2-digit', month: 'short', year: 'numeric',
   });
 }

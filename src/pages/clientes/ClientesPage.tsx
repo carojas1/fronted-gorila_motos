@@ -16,7 +16,7 @@ import gsap from 'gsap';
 import { usuariosApi, registrosApi, authApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
-import { fmtDate, fmtMoney, ESTADO_REGISTRO, extractPhone, extractCedula, initials } from '../../lib/utils';
+import { fmtDate, fmtMoney, ESTADO_REGISTRO, extractPhone, extractCedula, initials, toIsoStr } from '../../lib/utils';
 import type { Usuario } from '../../types';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -454,7 +454,7 @@ export default function ClientesPage() {
   const totalVisitas = regs.filter(r=>clienteNombres.has(r.nombre_cliente)).length;
   const now = new Date();
   const visitasMes = regs.filter(r => {
-    const d = new Date(r.fecha);
+    const d = new Date(toIsoStr(r.fecha) + 'T00:00:00');
     return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear() && clienteNombres.has(r.nombre_cliente);
   }).length;
 

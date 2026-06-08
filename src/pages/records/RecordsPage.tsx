@@ -14,7 +14,7 @@ import { registrosApi, usuariosApi, motosApi, tiposApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  fmtDate, fmtMoney, getErrorMsg, ESTADO_REGISTRO, extractPhone,
+  fmtDate, fmtMoney, getErrorMsg, ESTADO_REGISTRO, extractPhone, toIsoStr,
 } from '../../lib/utils';
 import type { RegistroDetalle, Usuario, Moto, Tipo } from '../../types';
 import Badge from '../../components/ui/Badge';
@@ -641,9 +641,9 @@ export default function RecordsPage() {
               return (
                 <div key={r.id_registro} className="flex items-center gap-4 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                   <div className="text-center shrink-0 w-14">
-                    <p className="text-[10px] text-white/25 uppercase tracking-wider">{new Date(r.fecha).toLocaleDateString('es-ES', { month: 'short' })}</p>
-                    <p className="text-lg font-black text-white/80">{new Date(r.fecha).getDate()}</p>
-                    <p className="text-[10px] text-white/25">{new Date(r.fecha).getFullYear()}</p>
+                    <p className="text-[10px] text-white/25 uppercase tracking-wider">{new Date(toIsoStr(r.fecha)+'T00:00:00').toLocaleDateString('es-ES', { month: 'short' })}</p>
+                    <p className="text-lg font-black text-white/80">{new Date(toIsoStr(r.fecha)+'T00:00:00').getDate()}</p>
+                    <p className="text-[10px] text-white/25">{new Date(toIsoStr(r.fecha)+'T00:00:00').getFullYear()}</p>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-white/85">{r.tipo_servicio}</p>

@@ -9,7 +9,7 @@ import { Star, Gift, Trophy, Zap, TrendingUp, Award } from 'lucide-react';
 import { registrosApi, motosApi, usuariosApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import type { RegistroDetalle, Moto, Usuario } from '../../types';
-import { fmtDate, fmtMoney } from '../../lib/utils';
+import { fmtDate, fmtMoney, toIsoStr } from '../../lib/utils';
 
 /* ── Tabla de puntos por cilindraje ── */
 const POINTS_TABLE: { max: number; pts: number; label: string; color: string }[] = [
@@ -111,7 +111,7 @@ export default function PuntosPage() {
               total: pts + bono,
             };
           })
-          .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+          .sort((a, b) => toIsoStr(b.fecha).localeCompare(toIsoStr(a.fecha)));
 
         const totales = historia.reduce((s, h) => s + h.total, 0);
         return { usuario: u, motos: userMotos, historia, totales, canjeados: 0 };

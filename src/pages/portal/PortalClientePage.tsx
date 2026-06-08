@@ -13,7 +13,7 @@ import {
 import { motosApi, registrosApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Moto, RegistroDetalle } from '../../types';
-import { fmtDate, fmtMoney } from '../../lib/utils';
+import { fmtDate, fmtMoney, toIsoStr } from '../../lib/utils';
 
 const TALLER = {
   nombre:    'Gorila Motos',
@@ -62,7 +62,7 @@ export default function PortalClientePage() {
       const myMotos    = allMotos.filter(m => m.id_usuario === user?.id_usuario);
       const myPlacas   = new Set(myMotos.map(m => m.placa));
       const myRegistros= allRegistros.filter(r => myPlacas.has(r.placa))
-                                     .sort((a,b) => b.fecha.localeCompare(a.fecha));
+                                     .sort((a,b) => toIsoStr(b.fecha).localeCompare(toIsoStr(a.fecha)));
 
       setMotos(myMotos);
       setRegistros(myRegistros);

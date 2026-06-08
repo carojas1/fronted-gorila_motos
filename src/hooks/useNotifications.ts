@@ -5,6 +5,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { motosApi, productosApi, registrosApi } from '../lib/api';
+import { toIsoStr } from '../lib/utils';
 import type { Moto, Producto, RegistroDetalle } from '../types';
 
 export type NotifPriority = 'high' | 'medium' | 'low';
@@ -111,7 +112,7 @@ export function useNotifications() {
       /* ── Órdenes pendientes > 24h ── */
       const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
       registros
-        .filter(r => r.estado === 0 && new Date(r.fecha) < cutoff)
+        .filter(r => r.estado === 0 && new Date(toIsoStr(r.fecha) + 'T00:00:00') < cutoff)
         .slice(0, 5)
         .forEach(r => {
           const nid = genId('pending', r.id_registro);

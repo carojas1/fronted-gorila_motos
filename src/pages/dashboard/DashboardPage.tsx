@@ -110,6 +110,17 @@ export default function DashboardPage() {
     registros.filter(r => r.estado < 3).length
   , [registros]);
 
+  /* ── Normaliza fecha a string ISO "yyyy-MM-dd" sin importar formato del backend ── */
+  const toIsoDate = (fecha: unknown): string => {
+    if (!fecha) return '';
+    if (typeof fecha === 'string') return fecha.slice(0, 10);
+    if (Array.isArray(fecha)) {
+      const [y, m, d] = fecha as number[];
+      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+    return String(fecha).slice(0, 10);
+  };
+
   /* ── Datos para AreaChart (registros últimos 7 días) ── */
   const areaData = useMemo(() => {
     const days = Array.from({ length: 7 }, (_, i) => {
@@ -118,7 +129,7 @@ export default function DashboardPage() {
       return d.toISOString().slice(0, 10);
     });
     return days.map(day => {
-      const dayRegs = registros.filter(r => r.fecha?.startsWith(day));
+      const dayRegs = registros.filter(r => toIsoDate(r.fecha).startsWith(day));
       return {
         day: day.slice(5),
         ordenes: dayRegs.length,
