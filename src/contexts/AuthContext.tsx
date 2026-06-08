@@ -12,8 +12,6 @@ import type { Usuario } from '../types';
 import {
   firebaseEnabled,
   firebaseSignOut,
-  checkEmailVerified,
-  firebaseSignIn,
   type FirebaseUser,
 } from '../lib/firebase';
 
@@ -96,27 +94,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // solo al montar
 
-  /* ── Login con email + contraseña ── */
+  /* ── Login con email + contraseña (backend directo, sin Firebase) ── */
   const login = useCallback(async (correo: string, contrasena: string) => {
     setState((s) => ({ ...s, loading: true }));
     try {
-      if (firebaseEnabled) {
-        try {
-          await firebaseSignIn(correo, contrasena);
-          const verified = await checkEmailVerified();
-          await firebaseSignOut();
-          if (!verified) {
-            throw new Error(
-              'Tu correo electrónico no ha sido verificado. Revisa tu bandeja de entrada y haz clic en el enlace de confirmación.'
-            );
-          }
-        } catch (fbErr: unknown) {
-          if (fbErr instanceof Error && fbErr.message.includes('verificado')) {
-            setState((s) => ({ ...s, loading: false }));
-            throw fbErr;
-          }
-        }
-      }
       const { data } = await authApi.login(correo, contrasena);
       const { token, user } = extractAuth(data);
       if (!token || !user) throw new Error('Respuesta del servidor inválida. Intenta nuevamente.');

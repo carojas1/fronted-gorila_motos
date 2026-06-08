@@ -15,7 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
-import { firebaseEnabled, firebaseRegister, startGoogleRedirect, getGoogleRedirectUser } from '../../lib/firebase';
+import { firebaseEnabled, startGoogleRedirect, getGoogleRedirectUser } from '../../lib/firebase';
 
 const schema = z.object({
   nombre_completo: z.string().min(3, 'Mínimo 3 caracteres'),
@@ -134,18 +134,8 @@ export default function RegisterPage() {
   const onSubmit = async (data: Form) => {
     setLoading(true);
     try {
-      if (firebaseEnabled) {
-        await firebaseRegister(data.correo, data.contrasena);
-        sessionStorage.setItem('gm_pending_register', JSON.stringify({
-          nombre_completo: data.nombre_completo,
-          correo:          data.correo,
-          telefono:        data.telefono,
-          contrasena:      data.contrasena,
-        }));
-        toast.success('¡Revisa tu correo! Haz clic en el enlace de verificación.', 'Email enviado');
-        navigate('/verificar-email');
-        return;
-      }
+      /* Registro directo en el backend — sin verificación Firebase.
+         Google Auth usa su propio flujo (redirect). */
       await authApi.register({
         nombre_completo: data.nombre_completo,
         nombre_usuario:  data.correo.split('@')[0],
@@ -156,7 +146,7 @@ export default function RegisterPage() {
         descripcion:     `CEDULA: N/A | TELEFONO: ${data.telefono}`,
         ruta_imagen:     null,
       });
-      toast.success('Cuenta creada. Ahora inicia sesión.', '¡Listo!');
+      toast.success('¡Cuenta creada! Ahora inicia sesión.', '¡Listo!');
       navigate('/login');
     } catch (err) {
       toast.error(getErrorMsg(err), 'Error al registrar');
@@ -392,10 +382,10 @@ export default function RegisterPage() {
                       <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3"/>
                       <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
                     </svg>
-                    {firebaseEnabled ? 'Enviando verificación…' : 'Creando cuenta…'}
+                    Creando cuenta…
                   </>
                 ) : (
-                  <>{firebaseEnabled ? 'Crear cuenta con correo' : 'Crear cuenta'} <ArrowRight size={15}/></>
+                  <>Crear cuenta <ArrowRight size={15}/></>
                 )}
               </button>
             </div>

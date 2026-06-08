@@ -1,13 +1,13 @@
 /* ─────────────────────────────────────────────
    GORILA MOTOS — Enrutador principal
-   React Router v6 + protección de rutas
+   React Router v6 + protección de rutas + guardas por rol
    ───────────────────────────────────────────── */
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider }   from './contexts/AuthContext';
-import { ToastProvider }  from './components/ui/Toast';
-import ProtectedRoute     from './components/layout/ProtectedRoute';
-import AppLayout          from './components/layout/AppLayout';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { AuthProvider, useAuth }  from './contexts/AuthContext';
+import { ToastProvider }          from './components/ui/Toast';
+import ProtectedRoute             from './components/layout/ProtectedRoute';
+import AppLayout                  from './components/layout/AppLayout';
 
 /* Auth pages */
 import LoginPage               from './pages/auth/LoginPage';
@@ -33,13 +33,26 @@ import CombustiblePage   from './pages/combustible/CombustiblePage';
 import InvoicePage       from './pages/invoice/InvoicePage';
 import PortalClientePage from './pages/portal/PortalClientePage';
 
+/* ─── Guarda de roles ─────────────────────────────────────────────────────────
+   Redirige a /dashboard si el usuario no tiene ninguno de los roles indicados.
+   Debe usarse siempre dentro de <ProtectedRoute> (token garantizado).
+   ──────────────────────────────────────────────────────────────────────────── */
+function RequireRole({ roles }: { roles: Array<'admin' | 'mecanico' | 'cliente'> }) {
+  const { isAdmin, isMecanico, isCliente } = useAuth();
+  const allowed =
+    (roles.includes('admin')    && isAdmin)    ||
+    (roles.includes('mecanico') && isMecanico) ||
+    (roles.includes('cliente')  && isCliente);
+  return allowed ? <Outlet /> : <Navigate to="/dashboard" replace />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
         <BrowserRouter>
           <Routes>
-            {/* Rutas públicas */}
+            {/* ── Rutas públicas ───────────────────────────────────────── */}
             <Route path="/login"           element={<LoginPage />}              />
             <Route path="/registro"        element={<RegisterPage />}           />
             <Route path="/recuperar"       element={<RecuperarPage />}          />
@@ -47,26 +60,37 @@ export default function App() {
             <Route path="/privacidad"      element={<PrivacidadPage />}         />
             <Route path="/terminos"        element={<TerminosPage />}           />
 
-            {/* Rutas protegidas */}
+            {/* ── Rutas protegidas (requieren JWT) ─────────────────────── */}
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
-                <Route path="/dashboard"      element={<DashboardPage />}      />
-                <Route path="/registros"      element={<RecordsPage />}        />
-                <Route path="/motos"          element={<MotosPage />}          />
-                <Route path="/inventario"     element={<InventoryPage />}      />
-                <Route path="/clientes"       element={<ClientesPage />}       />
-                <Route path="/perfiles"       element={<ProfilesPage />}       />
-                <Route path="/perfiles/:id"   element={<EmpleadoDetailPage />} />
-                <Route path="/alertas"          element={<AlertasPage />}        />
-                <Route path="/puntos"           element={<PuntosPage />}         />
-                <Route path="/combustible"      element={<CombustiblePage />}    />
-                <Route path="/invoice/:id"      element={<InvoicePage />}        />
-                <Route path="/portal"           element={<PortalClientePage />}  />
-                <Route path="/ajustes"          element={<DashboardPage />}      />
+
+                {/* Accesibles para TODOS los roles autenticados */}
+                <Route path="/dashboard"   element={<DashboardPage />}    />
+                <Route path="/motos"       element={<MotosPage />}         />
+                <Route path="/puntos"      element={<PuntosPage />}        />
+                <Route path="/combustible" element={<CombustiblePage />}   />
+                <Route path="/invoice/:id" element={<InvoicePage />}       />
+                <Route path="/portal"      element={<PortalClientePage />} />
+                <Route path="/ajustes"     element={<DashboardPage />}     />
+
+                {/* Solo ADMIN + MECÁNICO */}
+                <Route element={<RequireRole roles={['admin', 'mecanico']} />}>
+                  <Route path="/registros"  element={<RecordsPage />}   />
+                  <Route path="/inventario" element={<InventoryPage />}  />
+                  <Route path="/clientes"   element={<ClientesPage />}   />
+                  <Route path="/alertas"    element={<AlertasPage />}    />
+                </Route>
+
+                {/* Solo ADMIN */}
+                <Route element={<RequireRole roles={['admin']} />}>
+                  <Route path="/perfiles"     element={<ProfilesPage />}       />
+                  <Route path="/perfiles/:id" element={<EmpleadoDetailPage />} />
+                </Route>
+
               </Route>
             </Route>
 
-            {/* Redirecciones */}
+            {/* ── Redirecciones ────────────────────────────────────────── */}
             <Route path="/"  element={<Navigate to="/dashboard" replace />} />
             <Route path="*"  element={<Navigate to="/login"     replace />} />
           </Routes>
