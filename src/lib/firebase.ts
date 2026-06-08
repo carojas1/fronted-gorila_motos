@@ -78,37 +78,27 @@ export async function checkEmailVerified(): Promise<boolean> {
 }
 
 /**
- * Google Sign-In inteligente: popup-primero, redirect como fallback.
+ * Google Sign-In con REDIRECT — única estrategia fiable en producción.
  *
- * • Popup (desktop/mobile Chrome): instantáneo, sin cruzar origen, sin perder estado.
- *   Funciona gracias a vercel.json: Cross-Origin-Opener-Policy: unsafe-none
- * • Redirect (fallback si popup bloqueado): guarda flag en sessionStorage para
- *   detectar el retorno en getGoogleRedirectUser().
+ * signInWithPopup NO se usa porque Google pone COOP: same-origin-allow-popups
+ * en sus páginas de OAuth, lo que hace que Chrome bloquee window.closed y
+ * genere una cascada de errores rojos en la consola.
  *
- * Retorna el FirebaseUser si el popup tuvo éxito, o null si se inició redirect
- * (el resultado se obtiene al volver con getGoogleRedirectUser).
+ * Redirect no tiene ese problema: navega toda la pestaña, vuelve al mismo
+ * URL y getGoogleRedirectUser() recoge el resultado.
+ *
+ * Siempre retorna null (la página navega antes de que haya un valor de vuelta).
  */
-export async function startGoogleSignIn(): Promise<FirebaseUser | null> {
+export async function startGoogleSignIn(): Promise<null> {
   if (!auth) throw new Error('Firebase no disponible');
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
-  } catch (err: unknown) {
-    const code = (err as { code?: string })?.code;
-    // Solo fallback a redirect si el popup fue bloqueado por el navegador
-    if (code === 'auth/popup-blocked') {
-      sessionStorage.setItem('gm_google_redirect_pending', '1');
-      await signInWithRedirect(auth, googleProvider);
-      return null; // página navega a Google; resultado en getGoogleRedirectUser()
-    }
-    throw err; // re-throw: unauthorized-domain, popup-closed-by-user, etc.
-  }
-}
-
-/** @deprecated Usa startGoogleSignIn() en su lugar */
-export async function startGoogleRedirect(): Promise<void> {
   sessionStorage.setItem('gm_google_redirect_pending', '1');
   await signInWithRedirect(auth, googleProvider);
+  return null; // la página navega; resultado en getGoogleRedirectUser()
+}
+
+/** Alias para compatibilidad — delega en startGoogleSignIn() */
+export async function startGoogleRedirect(): Promise<void> {
+  await startGoogleSignIn();
 }
 
 /**
