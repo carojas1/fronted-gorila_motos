@@ -71,10 +71,11 @@ function SkeletonCard() {
 
 /* ─── Moto Card Premium ─── */
 function MotoCard({
-  moto, ownerName, onEdit, onDelete, index,
+  moto, ownerName, onEdit, onDelete, index, canManage = false,
 }: {
   moto: Moto; ownerName: string; index: number;
   onEdit: (m: Moto) => void; onDelete: (m: Moto) => void;
+  canManage?: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
@@ -127,15 +128,17 @@ function MotoCard({
           <span style={{ color: tc.color }}>{moto.tipo_moto}</span>
         </div>
 
-        {/* Actions */}
-        <div className="moto-card-actions">
-          <button onClick={() => onEdit(moto)} className="moto-action-btn" title="Editar">
-            <Pencil size={12} />
-          </button>
-          <button onClick={() => onDelete(moto)} className="moto-action-btn danger" title="Eliminar">
-            <Trash2 size={12} />
-          </button>
-        </div>
+        {/* Acciones — solo para admin/mecánico */}
+        {canManage && (
+          <div className="moto-card-actions">
+            <button onClick={() => onEdit(moto)} className="moto-action-btn" title="Editar">
+              <Pencil size={12} />
+            </button>
+            <button onClick={() => onDelete(moto)} className="moto-action-btn danger" title="Eliminar">
+              <Trash2 size={12} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Plate + Main info */}
@@ -208,7 +211,10 @@ function MotoCard({
 export default function MotosPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   const toast   = useToast();
-  const { user: me } = useAuth();
+  const { user: me, isAdmin, isMecanico, isCliente } = useAuth();
+
+  /** Admin y mecánico tienen acceso completo (crear/editar/eliminar, ver todo) */
+  const canManage = isAdmin || isMecanico;
 
   const [motos,        setMotos]        = useState<Moto[]>([]);
   const [usuarios,     setUsuarios]     = useState<Usuario[]>([]);
@@ -226,11 +232,21 @@ export default function MotosPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [m, u] = await Promise.allSettled([motosApi.list(), usuariosApi.list()]);
-    if (m.status === 'fulfilled') setMotos(m.value.data as Moto[]);
-    if (u.status === 'fulfilled') setUsuarios(u.value.data as Usuario[]);
-    setLoading(false);
-  }, []);
+    try {
+      if (isCliente && !canManage && me) {
+        // Cliente: solo sus propias motos, sin llamar a la lista completa
+        const { data } = await motosApi.byUser(me.id_usuario);
+        setMotos(data as Moto[]);
+        setUsuarios([me as unknown as Usuario]);
+      } else {
+        // Admin / Mecánico: todas las motos y todos los propietarios
+        const [m, u] = await Promise.allSettled([motosApi.list(), usuariosApi.list()]);
+        if (m.status === 'fulfilled') setMotos(m.value.data as Moto[]);
+        if (u.status === 'fulfilled') setUsuarios(u.value.data as Usuario[]);
+      }
+    } catch { /* silent */ }
+    finally { setLoading(false); }
+  }, [isCliente, canManage, me]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -311,16 +327,19 @@ export default function MotosPage() {
         <div className="mp-header-left">
           <div className="mp-breadcrumb">
             <Shield size={10} className="mp-bc-icon" />
-            <span>Inventario</span>
+            <span>{canManage ? 'Inventario' : 'Mi cuenta'}</span>
             <span className="mp-bc-sep">›</span>
-            <span className="mp-bc-active">Vehículos</span>
+            <span className="mp-bc-active">{canManage ? 'Vehículos' : 'Mis motos'}</span>
           </div>
           <h1 className="mp-title">
-            Flota de <span className="mp-title-accent">Motos</span>
+            {canManage
+              ? <>Flota de <span className="mp-title-accent">Motos</span></>
+              : <>Mis <span className="mp-title-accent">Motos</span></>
+            }
           </h1>
         </div>
         <Button icon={<Plus size={14} />} onClick={openCreate}>
-          Nueva moto
+          {canManage ? 'Nueva moto' : 'Agregar moto'}
         </Button>
       </div>
 
@@ -411,6 +430,7 @@ export default function MotosPage() {
                 onEdit={openEdit}
                 onDelete={setDeleteTarget}
                 index={i}
+                canManage={canManage}
               />
             ))
         }
@@ -482,15 +502,30 @@ export default function MotosPage() {
           </div>
           <div>
             <label className="text-sm font-medium text-white/70 block mb-1.5">Propietario</label>
-            <select className="gm-input-d" {...register('id_usuario')}>
-              <option value="">Seleccionar propietario</option>
-              {usuarios.map((u) => (
-                <option key={u.id_usuario} value={u.id_usuario}>
-                  {u.nombre_completo} — {u.correo}
-                </option>
-              ))}
-            </select>
-            {errors.id_usuario && <p className="text-xs text-gm-red mt-1">{errors.id_usuario.message}</p>}
+            {canManage ? (
+              /* Admin / Mecánico — elige cualquier propietario */
+              <>
+                <select className="gm-input-d" {...register('id_usuario')}>
+                  <option value="">Seleccionar propietario</option>
+                  {usuarios.map((u) => (
+                    <option key={u.id_usuario} value={u.id_usuario}>
+                      {u.nombre_completo} — {u.correo}
+                    </option>
+                  ))}
+                </select>
+                {errors.id_usuario && <p className="text-xs text-gm-red mt-1">{errors.id_usuario.message}</p>}
+              </>
+            ) : (
+              /* Cliente — siempre es él mismo */
+              <>
+                <input type="hidden" value={me?.id_usuario ?? 0} {...register('id_usuario')} />
+                <div className="gm-input-d flex items-center gap-2 text-white/50 cursor-not-allowed select-none"
+                     style={{ opacity: 0.7 }}>
+                  <User size={13} />
+                  <span>{me?.nombre_completo} (tu cuenta)</span>
+                </div>
+              </>
+            )}
           </div>
         </form>
       </Modal>
