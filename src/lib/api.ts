@@ -76,6 +76,9 @@ export const motosApi = {
   create:    (data: Record<string, unknown>) => api.post('/motos', data),
   update:    (id: number, data: Record<string, unknown>) => api.put(`/motos/${id}`, data),
   remove:    (id: number)  => api.delete(`/motos/${id}`),
+  /** Sube foto al storage Supabase → devuelve { url } */
+  upload:    (form: FormData) =>
+    api.post('/motos/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
 /* ── Registros ── */

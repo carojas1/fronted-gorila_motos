@@ -4,12 +4,12 @@
    Incluye sección para completar datos personales (cédula / teléfono).
    ───────────────────────────────────────────── */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Bike, Plus, User, Phone, CreditCard,
+  Bike, Camera, Plus, User, Phone, CreditCard,
   CheckCircle, AlertTriangle, Pencil, X, Save,
 } from 'lucide-react';
 import { motosApi, usuariosApi } from '../../lib/api';
@@ -58,6 +58,10 @@ export default function MiMotoPage() {
   const [addingMoto,   setAddingMoto]  = useState(false);
   const [savingMoto,   setSavingMoto]  = useState(false);
 
+  const [photoFile,    setPhotoFile]   = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [editingPerfil, setEditingPerfil] = useState(false);
   const [savingPerfil,  setSavingPerfil]  = useState(false);
 
@@ -98,18 +102,46 @@ export default function MiMotoPage() {
     }
   }, [editingPerfil]);
 
+  /* ── Seleccionar foto ── */
+  const onSelectPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  /* ── Cancelar formulario + limpiar foto ── */
+  const handleCancelMoto = () => {
+    setAddingMoto(false);
+    resetMoto();
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  };
+
   /* ── Guardar moto ── */
   const onSaveMoto = async (data: MotoForm) => {
     if (!user?.id_usuario) return;
     setSavingMoto(true);
     try {
+      /* 1. Subir foto si se seleccionó */
+      let photoUrl: string | undefined;
+      if (photoFile) {
+        const form = new FormData();
+        form.append('file', photoFile);
+        const { data: uploadData } = await motosApi.upload(form);
+        photoUrl = (uploadData as { url?: string })?.url;
+      }
+      /* 2. Crear moto */
       const { data: nuevaMoto } = await motosApi.create({
         ...data,
         id_usuario: user.id_usuario,
+        ...(photoUrl ? { ruta_imagen_motos: photoUrl } : {}),
       });
       setMotos(prev => [...prev, nuevaMoto as Moto]);
       resetMoto();
       setAddingMoto(false);
+      setPhotoFile(null);
+      setPhotoPreview(null);
       toast.success('¡Moto registrada correctamente!', 'Mi Moto');
     } catch (err) {
       toast.error(getErrorMsg(err), 'Error al guardar');
@@ -317,14 +349,24 @@ export default function MiMotoPage() {
                 borderLeft: `3px solid ${color}`,
                 display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap',
               }}>
-                <div style={{
-                  width: 52, height: 52, borderRadius: 12, flexShrink: 0,
-                  background: `${color}18`,
-                  border: `1px solid ${color}30`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Bike size={24} color={color} />
-                </div>
+                {moto.ruta_imagen_motos && moto.ruta_imagen_motos !== 'Desconocido' ? (
+                  <img
+                    src={moto.ruta_imagen_motos}
+                    alt={`${moto.marca} ${moto.modelo}`}
+                    style={{
+                      width: 56, height: 56, borderRadius: 12, flexShrink: 0,
+                      objectFit: 'cover', border: `1px solid ${color}30`,
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: 56, height: 56, borderRadius: 12, flexShrink: 0,
+                    background: `${color}18`, border: `1px solid ${color}30`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Bike size={24} color={color} />
+                  </div>
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ color: '#EBEBEB', fontWeight: 800, fontSize: 16, margin: '0 0 2px', letterSpacing: '-0.02em' }}>
                     {moto.marca} {moto.modelo}
@@ -383,13 +425,51 @@ export default function MiMotoPage() {
               <Plus size={16} color="#E11428" />
               <span style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 15 }}>Registrar moto</span>
             </div>
-            <button onClick={() => { setAddingMoto(false); resetMoto(); }}
+            <button onClick={handleCancelMoto}
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.4)' }}>
               <X size={14} />
             </button>
           </div>
 
           <form onSubmit={handleMoto(onSaveMoto)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* ── Foto de la moto ── */}
+            <div>
+              <label style={label}>
+                Foto de tu moto <span style={{ color: 'rgba(255,255,255,0.2)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional)</span>
+              </label>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  border: `1px dashed ${photoPreview ? 'rgba(225,20,40,0.35)' : 'rgba(255,255,255,0.1)'}`,
+                  borderRadius: 12, cursor: 'pointer', overflow: 'hidden',
+                  background: 'rgba(255,255,255,0.02)', transition: 'border-color 180ms',
+                  minHeight: 80, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(225,20,40,0.4)')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = photoPreview ? 'rgba(225,20,40,0.35)' : 'rgba(255,255,255,0.1)')}
+              >
+                {photoPreview ? (
+                  <img src={photoPreview} alt="preview" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 20 }}>
+                    <Camera size={22} color="rgba(255,255,255,0.2)" />
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>Toca para subir una foto</span>
+                  </div>
+                )}
+              </div>
+              {photoPreview && (
+                <button
+                  type="button"
+                  onClick={() => { setPhotoFile(null); setPhotoPreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                  style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  <X size={10} /> Quitar foto
+                </button>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onSelectPhoto} />
+            </div>
+
             {/* Fila 1 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <Input label="Marca" type="text" placeholder="Ej. Honda, Yamaha…" error={errMoto.marca?.message} {...regMoto('marca')} />
@@ -424,7 +504,7 @@ export default function MiMotoPage() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-              <button type="button" onClick={() => { setAddingMoto(false); resetMoto(); }}
+              <button type="button" onClick={handleCancelMoto}
                 style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '9px 18px', cursor: 'pointer' }}>
                 Cancelar
               </button>
