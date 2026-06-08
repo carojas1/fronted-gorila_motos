@@ -7,7 +7,6 @@
    ───────────────────────────────────────────────────────────── */
 
 import { lazy, Suspense, useEffect, useState, useCallback } from 'react';
-import { useServerStatus } from '../../hooks/useServerStatus';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,9 +25,6 @@ const schema = z.object({
   contrasena: z.string().min(1, 'Ingresa tu contraseña'),
 });
 type Form = z.infer<typeof schema>;
-
-/* ─── Server status types ─── */
-type ServerStatus = 'checking' | 'online' | 'starting' | 'offline';
 
 /* ─── Logo gorila ─── */
 function BrandLogo({ size = 48 }: { size?: number }) {
@@ -74,7 +70,6 @@ export default function LoginPage() {
   const navigate     = useNavigate();
   const toast        = useToast();
   const [params]     = useSearchParams();
-  const serverStatus = useServerStatus();
   const [googleBusy, setGoogleBusy] = useState(false);
   const [entered,    setEntered]    = useState(false);
 
@@ -149,15 +144,6 @@ export default function LoginPage() {
     }
   };
 
-  /* Status dot */
-  const statusMap = {
-    checking: { dot: '#444',    text: 'Verificando…',        pulse: true  },
-    online:   { dot: '#22C55E', text: 'Sistema en línea',    pulse: false },
-    starting: { dot: '#F59E0B', text: 'Servidor iniciando…', pulse: true  },
-    offline:  { dot: '#444',    text: 'Sin conexión',        pulse: false },
-  };
-  const st = statusMap[serverStatus];
-
   /* Emil Kowalski spring entrance — cada elemento entra de forma escalonada */
   const spring = (delay: number): React.CSSProperties => ({
     opacity:    entered ? 1 : 0,
@@ -182,10 +168,7 @@ export default function LoginPage() {
   const btnPress  = (el: HTMLElement) => { el.style.transform = 'scale(0.97)'; };
   const btnRelease = (el: HTMLElement) => { el.style.transform = ''; };
 
-  const isLoading   = loading || googleBusy;
-  const serverReady = serverStatus === 'online';
-  // Mientras el servidor duerme no dejamos enviar — evita timeouts confusos
-  const isBlocked = isLoading || serverStatus === 'starting';
+  const isLoading = loading || googleBusy;
 
   return (
     <div style={{
@@ -352,20 +335,6 @@ export default function LoginPage() {
         {/* ── FORMULARIO ── */}
         <div style={{ width: '100%', maxWidth: 352, position: 'relative', zIndex: 1 }}>
 
-          {/* Status */}
-          <div style={{ marginBottom: 20, ...spring(0) }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-              <span style={{
-                width: 7, height: 7, borderRadius: '50%', background: st.dot,
-                animation: st.pulse ? 'gm-pulse 1.6s ease-in-out infinite' : 'none',
-                boxShadow: st.pulse ? `0 0 8px ${st.dot}` : 'none',
-              }}/>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>
-                {st.text}
-              </span>
-            </span>
-          </div>
-
           {/* Heading — impeccable: jerarquía dominante */}
           <div style={{ marginBottom: 28, ...spring(55) }}>
             <h2 style={{
@@ -384,25 +353,25 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleGoogle}
-              disabled={isBlocked}
+              disabled={isLoading}
               style={{
                 width: '100%', height: 50,
-                background: isBlocked ? 'rgba(255,255,255,0.65)' : '#FFFFFF',
+                background: isLoading ? 'rgba(255,255,255,0.65)' : '#FFFFFF',
                 color: '#111', fontWeight: 600, fontSize: 14,
                 border: 'none', borderRadius: 12,
-                cursor: isBlocked ? 'not-allowed' : 'pointer',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                 transition: 'all 160ms cubic-bezier(.34,1.56,.64,1)',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
                 letterSpacing: '-.01em',
               }}
-              onMouseEnter={e => { if (!isBlocked) btnHoverOn(e.currentTarget as HTMLElement, false); }}
+              onMouseEnter={e => { if (!isLoading) btnHoverOn(e.currentTarget as HTMLElement, false); }}
               onMouseLeave={e => { btnHoverOff(e.currentTarget as HTMLElement, false); }}
-              onMouseDown={e  => { if (!isBlocked) btnPress(e.currentTarget as HTMLElement); }}
-              onMouseUp={e    => { if (!isBlocked) btnRelease(e.currentTarget as HTMLElement); }}
+              onMouseDown={e  => { if (!isLoading) btnPress(e.currentTarget as HTMLElement); }}
+              onMouseUp={e    => { if (!isLoading) btnRelease(e.currentTarget as HTMLElement); }}
             >
               {isLoading && googleBusy ? <Ring color="#111" size={18}/> : <GoogleIcon/>}
-              {serverStatus === 'starting' ? 'Esperando servidor…' : 'Continuar con Google'}
+              Continuar con Google
             </button>
           </div>
 
@@ -460,39 +429,26 @@ export default function LoginPage() {
             <div style={{ marginTop: 12, ...spring(215) }}>
               <button
                 type="submit"
-                disabled={isBlocked}
+                disabled={isLoading}
                 style={{
                   width: '100%', height: 52, borderRadius: 12,
-                  background: isBlocked ? 'rgba(225,20,40,0.38)' : '#E11428',
+                  background: isLoading ? 'rgba(225,20,40,0.38)' : '#E11428',
                   color: '#fff', fontWeight: 700, fontSize: 15,
                   letterSpacing: '-.015em', border: 'none',
-                  cursor: isBlocked ? 'not-allowed' : 'pointer',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  boxShadow: isBlocked ? 'none' : '0 0 0 1px rgba(225,20,40,0.4)',
+                  boxShadow: isLoading ? 'none' : '0 0 0 1px rgba(225,20,40,0.4)',
                   transition: 'all 160ms cubic-bezier(.34,1.56,.64,1)',
                 }}
-                onMouseEnter={e => { if (!isBlocked) btnHoverOn(e.currentTarget as HTMLElement, true); }}
+                onMouseEnter={e => { if (!isLoading) btnHoverOn(e.currentTarget as HTMLElement, true); }}
                 onMouseLeave={e => { btnHoverOff(e.currentTarget as HTMLElement, true); }}
-                onMouseDown={e  => { if (!isBlocked) btnPress(e.currentTarget as HTMLElement); }}
-                onMouseUp={e    => { if (!isBlocked) btnRelease(e.currentTarget as HTMLElement); }}
+                onMouseDown={e  => { if (!isLoading) btnPress(e.currentTarget as HTMLElement); }}
+                onMouseUp={e    => { if (!isLoading) btnRelease(e.currentTarget as HTMLElement); }}
               >
-                {loading && !googleBusy ? (
-                  <><Ring size={16}/> Verificando…</>
-                ) : serverStatus === 'starting' ? (
-                  <><Ring size={16} color="rgba(255,255,255,0.5)"/> Despertando servidor…</>
-                ) : (
-                  <>Iniciar sesión <ArrowRight size={15}/></>
-                )}
+                {loading && !googleBusy
+                  ? <><Ring size={16}/> Iniciando sesión…</>
+                  : <>Iniciar sesión <ArrowRight size={15}/></>}
               </button>
-              {/* Mensaje explicativo mientras el servidor inicia */}
-              {serverStatus === 'starting' && (
-                <p style={{
-                  textAlign: 'center', marginTop: 8, fontSize: 11.5,
-                  color: 'rgba(255,255,255,0.28)', lineHeight: 1.6,
-                }}>
-                  El servidor está despertando (~30 s), se habilitará automáticamente.
-                </p>
-              )}
             </div>
           </form>
 
