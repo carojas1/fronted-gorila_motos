@@ -15,7 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
-import { firebaseEnabled, firebaseRegister, signInWithGooglePopup, startGoogleRedirect } from '../../lib/firebase';
+import { firebaseEnabled, firebaseRegister, startGoogleRedirect, getGoogleRedirectUser } from '../../lib/firebase';
 
 const schema = z.object({
   nombre_completo: z.string().min(3, 'Mínimo 3 caracteres'),
@@ -99,6 +99,25 @@ export default function RegisterPage() {
     if (user && token) navigate('/dashboard', { replace: true });
   }, [user, token, navigate]);
 
+  /* Detectar resultado de Google redirect al volver de autenticación */
+  useEffect(() => {
+    if (!firebaseEnabled || !processGoogleUser) return;
+    let cancelled = false;
+    getGoogleRedirectUser()
+      .then(async fbUser => {
+        if (!fbUser || cancelled) return;
+        setGoogleBusy(true);
+        try { await processGoogleUser(fbUser); }
+        catch (err) { if (!cancelled) toast.error(getErrorMsg(err), 'Error con Google'); }
+        finally    { if (!cancelled) setGoogleBusy(false); }
+      })
+      .catch(err => {
+        if (!cancelled) toast.error(getErrorMsg(err), 'Error con Google');
+      });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const t = setTimeout(() => setEntered(true), 60);
     return () => clearTimeout(t);
@@ -146,33 +165,28 @@ export default function RegisterPage() {
     }
   };
 
+  /**
+   * Google Sign-In — siempre usa REDIRECT (sin popup).
+   * Igual que LoginPage: evita COOP errors, funciona en desktop, móvil y WebViews.
+   */
   const handleGoogle = async () => {
     if (!processGoogleUser) return;
     setGoogleBusy(true);
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     try {
-      if (isMobile) {
-        await startGoogleRedirect();
-        return;
-      }
-      const fbUser = await signInWithGooglePopup();
-      await processGoogleUser(fbUser);
-      /* navegación ocurre en el useEffect de user+token */
+      await startGoogleRedirect();
+      /* La página navega a Google — al regresar, el useEffect de getGoogleRedirectUser
+         detecta el resultado y llama processGoogleUser automáticamente */
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? '';
-      if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
-        try { await startGoogleRedirect(); }
-        catch (e) { toast.error(getErrorMsg(e), 'Error al iniciar Google'); setGoogleBusy(false); }
-      } else if (code === 'auth/unauthorized-domain') {
+      if (code === 'auth/unauthorized-domain') {
         toast.error(
           'Este dominio no está autorizado. Usa gmotors-frontend.vercel.app',
           'Dominio no autorizado'
         );
-        setGoogleBusy(false);
       } else {
         toast.error(getErrorMsg(err), 'Error al iniciar Google');
-        setGoogleBusy(false);
       }
+      setGoogleBusy(false);
     }
   };
 

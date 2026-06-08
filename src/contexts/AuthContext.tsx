@@ -7,7 +7,7 @@ import {
   createContext, useContext, useState,
   useEffect, useCallback, type ReactNode,
 } from 'react';
-import { authApi, usuariosApi } from '../lib/api';
+import { authApi } from '../lib/api';
 import type { Usuario } from '../types';
 import {
   firebaseEnabled,
@@ -63,9 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Al montar, refrescar los roles del usuario desde el backend.
-   * Resuelve el problema de localStorage con roles obsoletos (ej: Andres sigue
-   * apareciendo como ADMIN después de que el admin le cambió el rol a CLIENTE).
-   * Si el backend está durmiendo (Render free tier), se usa el dato guardado sin error.
+   * IMPORTANTE: usa fetch nativo (NO axios) para evitar que el interceptor
+   * de axios dispare un logout si el token está expirado.
+   * Un 401/403/404 simplemente se ignora → el usuario sigue con roles guardados.
+   * El logout solo ocurre si el usuario hace una acción real (API call con axios).
    */
   useEffect(() => {
     const token   = localStorage.getItem(TOKEN_KEY);
@@ -76,20 +77,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { stored = JSON.parse(userStr); } catch { return; }
     if (!stored?.id_usuario) return;
 
-    usuariosApi.get(stored.id_usuario)
-      .then(({ data }) => {
+    const API = (import.meta.env.VITE_API_URL as string | undefined)
+      ?? 'https://backend-gorila-motos.onrender.com/api';
+
+    fetch(`${API}/usuarios/${stored.id_usuario}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async res => {
+        if (!res.ok) return; // token expirado / servidor dormido → mantener datos guardados
+        const data = await res.json() as Record<string, unknown>;
         if (data?.id_usuario) {
-          // Nunca guardar el hash de contraseña en localStorage
-          delete data.contrasena;
+          delete data.contrasena; // nunca guardar hash en localStorage
           localStorage.setItem(USER_KEY, JSON.stringify(data));
-          setState(s => ({ ...s, user: data as Usuario }));
+          setState(s => ({ ...s, user: data as unknown as Usuario }));
         }
       })
-      .catch(() => {
-        // Backend durmiendo o error de red → continuar con datos guardados
-      });
+      .catch(() => {}); // red caída o backend dormido → mantener datos guardados
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Ejecutar solo al montar
+  }, []); // solo al montar
 
   /* ── Login con email + contraseña ── */
   const login = useCallback(async (correo: string, contrasena: string) => {
