@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
-import { firebaseEnabled, startGoogleRedirect, getGoogleRedirectUser } from '../../lib/firebase';
+import { firebaseEnabled, startGoogleSignIn, getGoogleRedirectUser } from '../../lib/firebase';
 
 const Bike3D = lazy(() => import('../../components/3d/Bike3D'));
 
@@ -128,26 +128,34 @@ export default function LoginPage() {
   }, [login, toast]);
 
   /**
-   * Google Sign-In — siempre usa REDIRECT (sin popup).
-   * Motivo: Chrome bloquea window.closed en popups cross-origin (COOP).
-   * Redirect funciona en desktop, móvil, WebViews y cualquier navegador.
-   * El resultado se procesa en el useEffect de getGoogleRedirectUser al volver.
+   * Google Sign-In — popup-primero (COOP: unsafe-none en vercel.json lo permite).
+   * Más confiable que redirect en mobile: el popup no pierde estado cross-site.
+   * Si el popup es bloqueado → fallback automático a redirect.
    */
   const handleGoogle = async () => {
     if (!processGoogleUser) return;
     setGoogleBusy(true);
     try {
-      await startGoogleRedirect();
-      /* La página navega a Google — al regresar, el useEffect de arriba
-         detecta el resultado y llama processGoogleUser automáticamente */
+      const fbUser = await startGoogleSignIn();
+      if (fbUser) {
+        // Popup exitoso — procesar inmediatamente sin navegación
+        try {
+          await processGoogleUser(fbUser);
+          // useEffect([user, token]) navega a /dashboard automáticamente
+        } catch (processErr) {
+          toast.error(getErrorMsg(processErr), 'Error con Google');
+          setGoogleBusy(false);
+        }
+      }
+      // fbUser === null → redirect iniciado, la página navegará hacia Google
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? '';
       if (code === 'auth/unauthorized-domain') {
         toast.error(
-          'Este dominio no está autorizado en Firebase. Usa gmotors-frontend.vercel.app o contacta al administrador.',
+          'Este dominio no está autorizado en Firebase. Usa gmotors-frontend.vercel.app',
           'Dominio no autorizado'
         );
-      } else {
+      } else if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
         toast.error(getErrorMsg(err), 'Error al iniciar Google');
       }
       setGoogleBusy(false);

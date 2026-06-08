@@ -138,6 +138,14 @@ export function getErrorMsg(err: unknown): string {
     if (status === 401) {
       return 'Correo o contraseña incorrectos.';
     }
+    if (status === 409) {
+      // El backend puede devolver el mensaje como string plano o como { message }
+      const backendMsg =
+        typeof e.response?.data === 'string'
+          ? e.response.data
+          : (e.response?.data as { message?: string })?.message;
+      return backendMsg || 'Este correo ya está registrado. Inicia sesión o recupera tu contraseña.';
+    }
     if (status === 403) {
       return 'No tienes permiso para realizar esta acción.';
     }

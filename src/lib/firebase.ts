@@ -78,32 +78,67 @@ export async function checkEmailVerified(): Promise<boolean> {
 }
 
 /**
- * Google Sign-In con POPUP.
- * Requiere vercel.json con: Cross-Origin-Opener-Policy: same-origin-allow-popups
- * Si el popup es bloqueado, lanza 'auth/popup-blocked' → usar redirect como fallback.
+ * Google Sign-In inteligente: popup-primero, redirect como fallback.
+ *
+ * • Popup (desktop/mobile Chrome): instantáneo, sin cruzar origen, sin perder estado.
+ *   Funciona gracias a vercel.json: Cross-Origin-Opener-Policy: unsafe-none
+ * • Redirect (fallback si popup bloqueado): guarda flag en sessionStorage para
+ *   detectar el retorno en getGoogleRedirectUser().
+ *
+ * Retorna el FirebaseUser si el popup tuvo éxito, o null si se inició redirect
+ * (el resultado se obtiene al volver con getGoogleRedirectUser).
  */
-export async function signInWithGooglePopup(): Promise<FirebaseUser> {
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
+export async function startGoogleSignIn(): Promise<FirebaseUser | null> {
+  if (!auth) throw new Error('Firebase no disponible');
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code;
+    // Solo fallback a redirect si el popup fue bloqueado por el navegador
+    if (code === 'auth/popup-blocked') {
+      sessionStorage.setItem('gm_google_redirect_pending', '1');
+      await signInWithRedirect(auth, googleProvider);
+      return null; // página navega a Google; resultado en getGoogleRedirectUser()
+    }
+    throw err; // re-throw: unauthorized-domain, popup-closed-by-user, etc.
+  }
 }
 
-/**
- * Google Sign-In con REDIRECT (fallback para entornos que bloquean popups).
- * La página navega a Google y vuelve al mismo URL.
- * Después llama getGoogleRedirectUser() para obtener el usuario.
- */
+/** @deprecated Usa startGoogleSignIn() en su lugar */
 export async function startGoogleRedirect(): Promise<void> {
+  sessionStorage.setItem('gm_google_redirect_pending', '1');
   await signInWithRedirect(auth, googleProvider);
 }
 
 /**
- * Obtener resultado del Google redirect.
- * Propaga errores (auth/unauthorized-domain, etc.) para que el caller los maneje.
+ * Obtiene el FirebaseUser resultante de un redirect previo.
+ * Llama esto en el useEffect de Login/Register al montar la página.
+ * Si no había redirect pendiente, retorna null sin lanzar error.
  */
 export async function getGoogleRedirectUser(): Promise<FirebaseUser | null> {
   if (!auth) return null;
-  const result = await getRedirectResult(auth);
-  return result?.user ?? null;
+  // Detectar si venimos de un redirect (sessionStorage persiste durante navegación)
+  const wasPending = sessionStorage.getItem('gm_google_redirect_pending') === '1';
+  sessionStorage.removeItem('gm_google_redirect_pending');
+
+  try {
+    const result = await getRedirectResult(auth);
+    if (result?.user) return result.user;
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code;
+    // Ignorar "no hay redirect activo" — solo propagar errores reales
+    if (code && code !== 'auth/no-auth-event') throw err;
+  }
+
+  // Si venía un redirect pero no hubo resultado → error descriptivo
+  if (wasPending) {
+    throw Object.assign(
+      new Error('Google no completó la autenticación. Asegúrate de usar gmotors-frontend.vercel.app y no tener DevTools con simulación de dispositivo activa.'),
+      { code: 'auth/redirect-no-result' }
+    );
+  }
+  return null;
 }
 
 /** Login básico Firebase (para verificar estado de email). */

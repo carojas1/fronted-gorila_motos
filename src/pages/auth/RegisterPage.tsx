@@ -15,7 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
-import { firebaseEnabled, startGoogleRedirect, getGoogleRedirectUser } from '../../lib/firebase';
+import { firebaseEnabled, startGoogleSignIn, getGoogleRedirectUser } from '../../lib/firebase';
 
 const schema = z.object({
   nombre_completo: z.string().min(3, 'Mínimo 3 caracteres'),
@@ -87,7 +87,7 @@ function PasswordStrength({ value }: { value: string }) {
 export default function RegisterPage() {
   const navigate = useNavigate();
   const toast    = useToast();
-  const { processGoogleUser, user, token } = useAuth();
+  const { processGoogleUser, login, user, token } = useAuth();
   const [loading,       setLoading]       = useState(false);
   const [googleBusy,    setGoogleBusy]    = useState(false);
   const [entered,       setEntered]       = useState(false);
@@ -147,8 +147,18 @@ export default function RegisterPage() {
         descripcion:     `CEDULA: N/A | TELEFONO: ${data.telefono}`,
         ruta_imagen:     null,
       });
-      toast.success('¡Cuenta creada! Ahora inicia sesión.', '¡Listo!');
-      navigate('/login');
+
+      /* ── Auto-login inmediato tras registrar ──────────────────────────────
+         Evita que el usuario tenga que volver a escribir sus credenciales.
+         Si falla (caso muy raro), redirigir al login con un mensaje de éxito.
+         ──────────────────────────────────────────────────────────────────── */
+      try {
+        await login(data.correo, data.contrasena);
+        // El useEffect([user, token]) navega a /dashboard automáticamente
+      } catch {
+        toast.success('¡Cuenta creada! Ahora inicia sesión.', '¡Listo!');
+        navigate('/login');
+      }
     } catch (err) {
       toast.error(getErrorMsg(err), 'Error al registrar');
     } finally {
@@ -159,16 +169,26 @@ export default function RegisterPage() {
   };
 
   /**
-   * Google Sign-In — siempre usa REDIRECT (sin popup).
-   * Igual que LoginPage: evita COOP errors, funciona en desktop, móvil y WebViews.
+   * Google Sign-In — popup-primero (COOP: unsafe-none en vercel.json lo permite).
+   * Si el popup es bloqueado por el navegador → fallback automático a redirect.
+   * El resultado del redirect se procesa en el useEffect de getGoogleRedirectUser.
    */
   const handleGoogle = async () => {
     if (!processGoogleUser) return;
     setGoogleBusy(true);
     try {
-      await startGoogleRedirect();
-      /* La página navega a Google — al regresar, el useEffect de getGoogleRedirectUser
-         detecta el resultado y llama processGoogleUser automáticamente */
+      const fbUser = await startGoogleSignIn();
+      if (fbUser) {
+        // Popup exitoso — procesar inmediatamente sin navegación
+        try {
+          await processGoogleUser(fbUser);
+          // useEffect([user, token]) navega a /dashboard automáticamente
+        } catch (processErr) {
+          toast.error(getErrorMsg(processErr), 'Error con Google');
+          setGoogleBusy(false);
+        }
+      }
+      // fbUser === null → redirect iniciado, la página navegará hacia Google
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? '';
       if (code === 'auth/unauthorized-domain') {
@@ -176,7 +196,7 @@ export default function RegisterPage() {
           'Este dominio no está autorizado. Usa gmotors-frontend.vercel.app',
           'Dominio no autorizado'
         );
-      } else {
+      } else if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
         toast.error(getErrorMsg(err), 'Error al iniciar Google');
       }
       setGoogleBusy(false);
