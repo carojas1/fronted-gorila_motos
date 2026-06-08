@@ -12,6 +12,7 @@ import { initials } from '../../lib/utils';
 import { NotificationBell, NotificationPanel } from '../ui/NotificationCenter';
 import { useNotifications } from '../../hooks/useNotifications';
 import TermsModal, { useTermsAccepted } from '../ui/TermsModal';
+import { healthApi } from '../../lib/api';
 
 export default function AppLayout() {
   const { user, isAdmin, isMecanico, isCliente, logout } = useAuth();
@@ -63,6 +64,18 @@ export default function AppLayout() {
     document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
+
+  /**
+   * Keep-alive: evitar que el backend de Render (free tier) se duerma.
+   * Hace un ping inmediato al montar (despierta el servidor si estaba dormido)
+   * y luego cada 4 minutos (Render duerme tras 15 min de inactividad).
+   */
+  useEffect(() => {
+    const ping = () => healthApi.check().catch(() => {}); // silencioso
+    ping(); // ping inmediato al abrir la app
+    const id = setInterval(ping, 4 * 60 * 1000); // cada 4 minutos
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: '#0C0C10' }}>

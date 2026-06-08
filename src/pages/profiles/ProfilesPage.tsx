@@ -293,14 +293,31 @@ export default function ProfilesPage() {
   const onAddUser = async (data: Record<string, string>) => {
     setSaving(true);
     try {
+      const correo = data.correo?.trim() || `${data.nombre_usuario}@gmotors.com`;
+
       await authApi.register({
         nombre_completo: data.nombre_completo,
         nombre_usuario:  data.nombre_usuario,
-        correo: data.correo || `${data.nombre_usuario}@gmotors.com`,
+        correo,
         contrasena: data.contrasena,
         descripcion: `CEDULA: ${data.cedula} | TELEFONO: ${data.telefono || "N/A"}`,
         pais: "Ecuador", ciudad: "Quito",
       });
+
+      // Aplicar el rol seleccionado si es distinto a CLIENTE (que es el rol por defecto)
+      if (me && data.rol && data.rol !== "CLIENTE") {
+        const roleObj = roles.find(r => r.nombre === data.rol);
+        if (roleObj) {
+          // Obtener la lista fresca para conseguir el id_usuario del nuevo usuario
+          const { data: freshUsers } = await usuariosApi.list();
+          const newUser = (freshUsers as Usuario[]).find((u: Usuario) => u.correo === correo);
+          if (newUser?.id_usuario) {
+            // cambiarCategoria reemplaza el rol actual (CLIENTE → rol seleccionado)
+            await rolesApi.cambiarCategoria(newUser.id_usuario, roleObj.id_rol, me.id_usuario);
+          }
+        }
+      }
+
       toast.success("Usuario registrado correctamente");
       setAddModal(false);
       reset();

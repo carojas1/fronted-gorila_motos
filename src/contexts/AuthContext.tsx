@@ -7,7 +7,7 @@ import {
   createContext, useContext, useState,
   useEffect, useCallback, type ReactNode,
 } from 'react';
-import { authApi } from '../lib/api';
+import { authApi, usuariosApi } from '../lib/api';
 import type { Usuario } from '../types';
 import {
   firebaseEnabled,
@@ -60,6 +60,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener('gm:unauthorized', handler);
     return () => window.removeEventListener('gm:unauthorized', handler);
   }, []);
+
+  /**
+   * Al montar, refrescar los roles del usuario desde el backend.
+   * Resuelve el problema de localStorage con roles obsoletos (ej: Andres sigue
+   * apareciendo como ADMIN después de que el admin le cambió el rol a CLIENTE).
+   * Si el backend está durmiendo (Render free tier), se usa el dato guardado sin error.
+   */
+  useEffect(() => {
+    const token   = localStorage.getItem(TOKEN_KEY);
+    const userStr = localStorage.getItem(USER_KEY);
+    if (!token || !userStr) return;
+
+    let stored: { id_usuario?: number } | null = null;
+    try { stored = JSON.parse(userStr); } catch { return; }
+    if (!stored?.id_usuario) return;
+
+    usuariosApi.get(stored.id_usuario)
+      .then(({ data }) => {
+        if (data?.id_usuario) {
+          // Nunca guardar el hash de contraseña en localStorage
+          delete data.contrasena;
+          localStorage.setItem(USER_KEY, JSON.stringify(data));
+          setState(s => ({ ...s, user: data as Usuario }));
+        }
+      })
+      .catch(() => {
+        // Backend durmiendo o error de red → continuar con datos guardados
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Ejecutar solo al montar
 
   /* ── Login con email + contraseña ── */
   const login = useCallback(async (correo: string, contrasena: string) => {

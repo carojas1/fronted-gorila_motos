@@ -114,6 +114,9 @@ export const rolesApi = {
     api.post('/usuario_rol/asignar', { usuarioId, rolId, adminId }),
   revoke: (usuarioId: number, rolId: number, adminId: number) =>
     api.delete('/usuario_rol/revocar', { data: { usuarioId, rolId, adminId } }),
+  /** Reemplaza el rol actual por nuevoRolId (un solo rol activo al salir). */
+  cambiarCategoria: (usuarioId: number, nuevoRolId: number, adminId: number) =>
+    api.post('/usuario_rol/cambiar-categoria', { usuarioId, nuevoRolId, adminId }),
 };
 
 /* ── Tipos de servicio ── */
