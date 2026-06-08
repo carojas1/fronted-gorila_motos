@@ -78,29 +78,40 @@ export async function checkEmailVerified(): Promise<boolean> {
 }
 
 /**
- * Google Sign-In con REDIRECT — única estrategia fiable en producción.
+ * Google Sign-In — popup con fallback automático a redirect.
  *
- * signInWithPopup NO se usa porque Google pone COOP en sus páginas OAuth,
- * lo que hace que Chrome genere una cascada de errores en la consola.
- * Redirect navega la pestaña completa, sin popups, sin errores COOP.
+ * vercel.json tiene `COOP: same-origin-allow-popups` (recomendado por Firebase)
+ * lo que permite que el popup funcione sin errores COOP en consola.
  *
- * Retorna null siempre (la página navega; resultado en getGoogleRedirectUser).
+ * Flujo:
+ *  1. Abre popup → el usuario elige cuenta Google → retorna FirebaseUser al instante.
+ *  2. Si el navegador bloqueó el popup → signInWithRedirect (fallback móvil/webview).
+ *     En ese caso retorna null y el resultado se recoge con getGoogleRedirectUser().
  */
-export async function startGoogleSignIn(): Promise<null> {
+export async function startGoogleSignIn(): Promise<FirebaseUser | null> {
   if (!auth) throw new Error('Firebase no disponible');
-  await signInWithRedirect(auth, googleProvider);
-  return null;
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code;
+    if (code === 'auth/popup-blocked') {
+      // Popup bloqueado (típico en móviles/WebViews) → fallback a redirect
+      await signInWithRedirect(auth, googleProvider);
+      return null;
+    }
+    throw err;
+  }
 }
 
-/** Alias para compatibilidad */
+/** Alias para compatibilidad con código que espera void */
 export async function startGoogleRedirect(): Promise<void> {
-  await startGoogleSignIn();
+  await signInWithRedirect(auth, googleProvider);
 }
 
 /**
- * Obtiene el FirebaseUser resultante de un redirect previo.
- * Si no hay resultado (redirect no ocurrió o no completó) retorna null en silencio.
- * Solo propaga errores reales de Firebase (auth/unauthorized-domain, etc.).
+ * Recoge el resultado de un signInWithRedirect previo (fallback móvil).
+ * Retorna null en silencio si no hubo redirect (caso normal con popup).
  */
 export async function getGoogleRedirectUser(): Promise<FirebaseUser | null> {
   if (!auth) return null;
@@ -109,9 +120,8 @@ export async function getGoogleRedirectUser(): Promise<FirebaseUser | null> {
     return result?.user ?? null;
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code;
-    // auth/no-auth-event = no había redirect → silencio total
     if (!code || code === 'auth/no-auth-event') return null;
-    throw err; // unauthorized-domain y similares sí se propagan
+    throw err;
   }
 }
 

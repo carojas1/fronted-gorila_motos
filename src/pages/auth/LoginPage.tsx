@@ -128,15 +128,26 @@ export default function LoginPage() {
   }, [login, toast]);
 
   /**
-   * Google Sign-In — redirect (sin popup para evitar errores COOP de consola).
-   * La página navega a Google; al volver el useEffect llama getGoogleRedirectUser.
+   * Google Sign-In — popup (COOP: same-origin-allow-popups en vercel.json).
+   * Si el popup tiene éxito → processGoogleUser() inmediatamente.
+   * Si el popup está bloqueado → signInWithRedirect (fallback móvil).
    */
   const handleGoogle = async () => {
     if (!processGoogleUser) return;
     setGoogleBusy(true);
     try {
-      await startGoogleSignIn();
-      // La página navega hacia Google — todo lo que sigue no se ejecuta
+      const fbUser = await startGoogleSignIn();
+      if (fbUser) {
+        // Popup completado — procesar cuenta Google con el backend
+        try {
+          await processGoogleUser(fbUser);
+          // useEffect([user, token]) navega a /dashboard automáticamente
+        } catch (processErr) {
+          toast.error(getErrorMsg(processErr), 'Error con Google');
+          setGoogleBusy(false);
+        }
+      }
+      // fbUser === null → redirect iniciado, la página navega sola
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? '';
       if (code === 'auth/unauthorized-domain') {
@@ -144,7 +155,8 @@ export default function LoginPage() {
           'Este dominio no está autorizado en Firebase. Usa gmotors-frontend.vercel.app',
           'Dominio no autorizado'
         );
-      } else {
+      } else if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
+        // Silenciar cancelación voluntaria del usuario; mostrar el resto
         toast.error(getErrorMsg(err), 'Error al iniciar Google');
       }
       setGoogleBusy(false);
