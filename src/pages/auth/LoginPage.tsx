@@ -7,6 +7,7 @@
    ───────────────────────────────────────────────────────────── */
 
 import { lazy, Suspense, useEffect, useState, useCallback } from 'react';
+import { useServerStatus } from '../../hooks/useServerStatus';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,22 +27,8 @@ const schema = z.object({
 });
 type Form = z.infer<typeof schema>;
 
-/* ─── Server status ─── */
+/* ─── Server status types ─── */
 type ServerStatus = 'checking' | 'online' | 'starting' | 'offline';
-
-function useServerStatus(): ServerStatus {
-  const [status, setStatus] = useState<ServerStatus>('checking');
-  useEffect(() => {
-    const API  = import.meta.env.VITE_API_URL ?? 'https://backend-gorila-motos.onrender.com/api';
-    const ctrl = new AbortController();
-    const id   = setTimeout(() => setStatus('starting'), 7000);
-    fetch(`${API}/actuator/health`, { signal: ctrl.signal })
-      .then(r => { clearTimeout(id); setStatus(r.ok || r.status === 401 || r.status === 403 ? 'online' : 'starting'); })
-      .catch((e: Error) => { clearTimeout(id); if (e.name !== 'AbortError') setStatus('starting'); });
-    return () => { clearTimeout(id); ctrl.abort(); };
-  }, []);
-  return status;
-}
 
 /* ─── Logo gorila ─── */
 function BrandLogo({ size = 48 }: { size?: number }) {
@@ -195,7 +182,10 @@ export default function LoginPage() {
   const btnPress  = (el: HTMLElement) => { el.style.transform = 'scale(0.97)'; };
   const btnRelease = (el: HTMLElement) => { el.style.transform = ''; };
 
-  const isLoading = loading || googleBusy;
+  const isLoading   = loading || googleBusy;
+  const serverReady = serverStatus === 'online';
+  // Mientras el servidor duerme no dejamos enviar — evita timeouts confusos
+  const isBlocked = isLoading || serverStatus === 'starting';
 
   return (
     <div style={{
@@ -394,25 +384,25 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleGoogle}
-              disabled={isLoading}
+              disabled={isBlocked}
               style={{
                 width: '100%', height: 50,
-                background: isLoading ? 'rgba(255,255,255,0.75)' : '#FFFFFF',
+                background: isBlocked ? 'rgba(255,255,255,0.65)' : '#FFFFFF',
                 color: '#111', fontWeight: 600, fontSize: 14,
                 border: 'none', borderRadius: 12,
-                cursor: isLoading ? 'not-allowed' : 'pointer',
+                cursor: isBlocked ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                 transition: 'all 160ms cubic-bezier(.34,1.56,.64,1)',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
                 letterSpacing: '-.01em',
               }}
-              onMouseEnter={e => { if (!isLoading) btnHoverOn(e.currentTarget as HTMLElement, false); }}
+              onMouseEnter={e => { if (!isBlocked) btnHoverOn(e.currentTarget as HTMLElement, false); }}
               onMouseLeave={e => { btnHoverOff(e.currentTarget as HTMLElement, false); }}
-              onMouseDown={e  => { if (!isLoading) btnPress(e.currentTarget as HTMLElement); }}
-              onMouseUp={e    => { if (!isLoading) btnRelease(e.currentTarget as HTMLElement); }}
+              onMouseDown={e  => { if (!isBlocked) btnPress(e.currentTarget as HTMLElement); }}
+              onMouseUp={e    => { if (!isBlocked) btnRelease(e.currentTarget as HTMLElement); }}
             >
               {isLoading && googleBusy ? <Ring color="#111" size={18}/> : <GoogleIcon/>}
-              Continuar con Google
+              {serverStatus === 'starting' ? 'Esperando servidor…' : 'Continuar con Google'}
             </button>
           </div>
 
@@ -466,30 +456,43 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Submit — Emil Kowalski: el botón principal tiene presencia */}
+            {/* Submit */}
             <div style={{ marginTop: 12, ...spring(215) }}>
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isBlocked}
                 style={{
                   width: '100%', height: 52, borderRadius: 12,
-                  background: isLoading ? 'rgba(225,20,40,0.38)' : '#E11428',
+                  background: isBlocked ? 'rgba(225,20,40,0.38)' : '#E11428',
                   color: '#fff', fontWeight: 700, fontSize: 15,
                   letterSpacing: '-.015em', border: 'none',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  cursor: isBlocked ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  boxShadow: isLoading ? 'none' : '0 0 0 1px rgba(225,20,40,0.4)',
+                  boxShadow: isBlocked ? 'none' : '0 0 0 1px rgba(225,20,40,0.4)',
                   transition: 'all 160ms cubic-bezier(.34,1.56,.64,1)',
                 }}
-                onMouseEnter={e => { if (!isLoading) btnHoverOn(e.currentTarget as HTMLElement, true); }}
+                onMouseEnter={e => { if (!isBlocked) btnHoverOn(e.currentTarget as HTMLElement, true); }}
                 onMouseLeave={e => { btnHoverOff(e.currentTarget as HTMLElement, true); }}
-                onMouseDown={e  => { if (!isLoading) btnPress(e.currentTarget as HTMLElement); }}
-                onMouseUp={e    => { if (!isLoading) btnRelease(e.currentTarget as HTMLElement); }}
+                onMouseDown={e  => { if (!isBlocked) btnPress(e.currentTarget as HTMLElement); }}
+                onMouseUp={e    => { if (!isBlocked) btnRelease(e.currentTarget as HTMLElement); }}
               >
-                {loading && !googleBusy
-                  ? <><Ring size={16}/> Verificando…</>
-                  : <>Iniciar sesión <ArrowRight size={15}/></>}
+                {loading && !googleBusy ? (
+                  <><Ring size={16}/> Verificando…</>
+                ) : serverStatus === 'starting' ? (
+                  <><Ring size={16} color="rgba(255,255,255,0.5)"/> Despertando servidor…</>
+                ) : (
+                  <>Iniciar sesión <ArrowRight size={15}/></>
+                )}
               </button>
+              {/* Mensaje explicativo mientras el servidor inicia */}
+              {serverStatus === 'starting' && (
+                <p style={{
+                  textAlign: 'center', marginTop: 8, fontSize: 11.5,
+                  color: 'rgba(255,255,255,0.28)', lineHeight: 1.6,
+                }}>
+                  El servidor está despertando (~30 s), se habilitará automáticamente.
+                </p>
+              )}
             </div>
           </form>
 

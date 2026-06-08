@@ -16,6 +16,7 @@ import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
 import { firebaseEnabled, startGoogleRedirect, getGoogleRedirectUser } from '../../lib/firebase';
+import { useServerStatus } from '../../hooks/useServerStatus';
 
 const schema = z.object({
   nombre_completo: z.string().min(3, 'Mínimo 3 caracteres'),
@@ -85,8 +86,9 @@ function PasswordStrength({ value }: { value: string }) {
    COMPONENTE PRINCIPAL
    ═══════════════════════════════════════════════════════════ */
 export default function RegisterPage() {
-  const navigate = useNavigate();
-  const toast    = useToast();
+  const navigate     = useNavigate();
+  const toast        = useToast();
+  const serverStatus = useServerStatus();
   const { processGoogleUser, user, token } = useAuth();
   const [loading,       setLoading]       = useState(false);
   const [googleBusy,    setGoogleBusy]    = useState(false);
@@ -187,7 +189,8 @@ export default function RegisterPage() {
                  transform 0.45s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms`,
   });
 
-  const isBusy = loading || googleBusy;
+  const isBusy    = loading || googleBusy;
+  const isBlocked = isBusy || serverStatus === 'starting';
 
   return (
     <div style={{
@@ -233,20 +236,20 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={handleGoogle}
-              disabled={isBusy}
+              disabled={isBlocked}
               style={{
                 width: '100%', height: 48,
-                background: isBusy ? 'rgba(255,255,255,0.7)' : '#FFFFFF',
+                background: isBlocked ? 'rgba(255,255,255,0.7)' : '#FFFFFF',
                 color: '#0A0A0A', fontWeight: 600, fontSize: 14,
                 border: 'none', borderRadius: 10,
-                cursor: isBusy ? 'not-allowed' : 'pointer',
+                cursor: isBlocked ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                 transition: 'all 160ms cubic-bezier(0.34,1.56,0.64,1)',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
                 letterSpacing: '-0.01em',
               }}
               onMouseEnter={e => {
-                if (!isBusy) {
+                if (!isBlocked) {
                   const el = e.currentTarget as HTMLElement;
                   el.style.transform = 'translateY(-1px)';
                   el.style.boxShadow = '0 4px 16px rgba(0,0,0,0.5)';
@@ -257,13 +260,13 @@ export default function RegisterPage() {
                 el.style.transform = '';
                 el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.4)';
               }}
-              onMouseDown={e => { if (!isBusy) (e.currentTarget as HTMLElement).style.transform = 'scale(0.98)'; }}
-              onMouseUp={e =>   { if (!isBusy) (e.currentTarget as HTMLElement).style.transform = ''; }}
+              onMouseDown={e => { if (!isBlocked) (e.currentTarget as HTMLElement).style.transform = 'scale(0.98)'; }}
+              onMouseUp={e =>   { if (!isBlocked) (e.currentTarget as HTMLElement).style.transform = ''; }}
             >
               {googleBusy
                 ? <svg style={{ animation:'spin 0.8s linear infinite' }} width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(10,10,10,0.2)" strokeWidth="3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="#0A0A0A" strokeWidth="3" strokeLinecap="round"/></svg>
                 : <GoogleIcon/>}
-              Registrarse con Google
+              {serverStatus === 'starting' ? 'Esperando servidor…' : 'Registrarse con Google'}
             </button>
 
             <div style={{ display:'flex', alignItems:'center', gap:12, marginTop:16 }}>
@@ -349,18 +352,18 @@ export default function RegisterPage() {
             <div style={{ marginTop: 8, ...enter(firebaseEnabled ? 280 : 230) }}>
               <button
                 type="submit"
-                disabled={isBusy}
+                disabled={isBlocked}
                 style={{
                   width:'100%', height:50, borderRadius:10,
-                  background: isBusy ? 'rgba(225,20,40,0.4)' : '#E11428',
+                  background: isBlocked ? 'rgba(225,20,40,0.4)' : '#E11428',
                   color:'#fff', fontWeight:700, fontSize:15, letterSpacing:'-0.01em',
-                  border:'none', cursor:isBusy?'not-allowed':'pointer',
+                  border:'none', cursor:isBlocked?'not-allowed':'pointer',
                   display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-                  boxShadow: isBusy ? 'none' : '0 0 0 1px rgba(225,20,40,0.3)',
+                  boxShadow: isBlocked ? 'none' : '0 0 0 1px rgba(225,20,40,0.3)',
                   transition:'all 160ms cubic-bezier(0.34,1.56,0.64,1)',
                 }}
                 onMouseEnter={e => {
-                  if (!isBusy) {
+                  if (!isBlocked) {
                     const el = e.currentTarget as HTMLElement;
                     el.style.background = '#FF1F37';
                     el.style.transform  = 'translateY(-1px)';
@@ -369,12 +372,12 @@ export default function RegisterPage() {
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement;
-                  el.style.background = isBusy ? 'rgba(225,20,40,0.4)' : '#E11428';
+                  el.style.background = isBlocked ? 'rgba(225,20,40,0.4)' : '#E11428';
                   el.style.transform  = '';
-                  el.style.boxShadow  = isBusy ? 'none' : '0 0 0 1px rgba(225,20,40,0.3)';
+                  el.style.boxShadow  = isBlocked ? 'none' : '0 0 0 1px rgba(225,20,40,0.3)';
                 }}
-                onMouseDown={e => { if (!isBusy) (e.currentTarget as HTMLElement).style.transform = 'scale(0.98)'; }}
-                onMouseUp={e =>   { if (!isBusy) (e.currentTarget as HTMLElement).style.transform = ''; }}
+                onMouseDown={e => { if (!isBlocked) (e.currentTarget as HTMLElement).style.transform = 'scale(0.98)'; }}
+                onMouseUp={e =>   { if (!isBlocked) (e.currentTarget as HTMLElement).style.transform = ''; }}
               >
                 {loading && !googleBusy ? (
                   <>
@@ -384,10 +387,23 @@ export default function RegisterPage() {
                     </svg>
                     Creando cuenta…
                   </>
+                ) : serverStatus === 'starting' ? (
+                  <>
+                    <svg style={{ animation:'spin 0.8s linear infinite', flexShrink:0 }} width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3"/>
+                      <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+                    </svg>
+                    Despertando servidor…
+                  </>
                 ) : (
                   <>Crear cuenta <ArrowRight size={15}/></>
                 )}
               </button>
+              {serverStatus === 'starting' && (
+                <p style={{ textAlign:'center', marginTop:8, fontSize:11.5, color:'rgba(255,255,255,0.28)', lineHeight:1.6 }}>
+                  El servidor está despertando (~30 s), se habilitará solo.
+                </p>
+              )}
             </div>
 
           </form>
