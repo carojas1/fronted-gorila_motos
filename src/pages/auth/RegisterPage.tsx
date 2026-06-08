@@ -131,11 +131,12 @@ export default function RegisterPage() {
   const watchedPass = watch('contrasena', '');
   useEffect(() => { setPassValue(watchedPass); }, [watchedPass]);
 
+  const [slowConn, setSlowConn] = useState(false);
+
   const onSubmit = async (data: Form) => {
     setLoading(true);
+    const slowTimer = setTimeout(() => setSlowConn(true), 5000);
     try {
-      /* Registro directo en el backend — sin verificación Firebase.
-         Google Auth usa su propio flujo (redirect). */
       await authApi.register({
         nombre_completo: data.nombre_completo,
         nombre_usuario:  data.correo.split('@')[0],
@@ -151,6 +152,8 @@ export default function RegisterPage() {
     } catch (err) {
       toast.error(getErrorMsg(err), 'Error al registrar');
     } finally {
+      clearTimeout(slowTimer);
+      setSlowConn(false);
       setLoading(false);
     }
   };
@@ -382,7 +385,7 @@ export default function RegisterPage() {
                       <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3"/>
                       <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
                     </svg>
-                    Creando cuenta…
+                    {slowConn ? 'Despertando servidor…' : 'Creando cuenta…'}
                   </>
                 ) : (
                   <>Crear cuenta <ArrowRight size={15}/></>

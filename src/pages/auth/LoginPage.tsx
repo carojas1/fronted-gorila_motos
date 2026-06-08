@@ -112,9 +112,19 @@ export default function LoginPage() {
     resolver: zodResolver(schema),
   });
 
+  const [slowConn, setSlowConn] = useState(false);
+
   const onSubmit = useCallback(async ({ correo, contrasena }: Form) => {
-    try { await login(correo, contrasena); }
-    catch (err) { toast.error(getErrorMsg(err), 'Error de acceso'); }
+    // Mostrar "Conectando…" si el servidor tarda >5 s (Render durmiendo)
+    const slowTimer = setTimeout(() => setSlowConn(true), 5000);
+    try {
+      await login(correo, contrasena);
+    } catch (err) {
+      toast.error(getErrorMsg(err), 'Error de acceso');
+    } finally {
+      clearTimeout(slowTimer);
+      setSlowConn(false);
+    }
   }, [login, toast]);
 
   /**
@@ -445,9 +455,11 @@ export default function LoginPage() {
                 onMouseDown={e  => { if (!isLoading) btnPress(e.currentTarget as HTMLElement); }}
                 onMouseUp={e    => { if (!isLoading) btnRelease(e.currentTarget as HTMLElement); }}
               >
-                {loading && !googleBusy
-                  ? <><Ring size={16}/> Iniciando sesión…</>
-                  : <>Iniciar sesión <ArrowRight size={15}/></>}
+                {loading && !googleBusy ? (
+                  slowConn
+                    ? <><Ring size={16}/> Despertando servidor…</>
+                    : <><Ring size={16}/> Verificando…</>
+                ) : <>Iniciar sesión <ArrowRight size={15}/></>}
               </button>
             </div>
           </form>
