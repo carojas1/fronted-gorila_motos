@@ -12,9 +12,12 @@ export function useServerStatus(): ServerStatus {
   const [status, setStatus] = useState<ServerStatus>('checking');
 
   useEffect(() => {
-    // Derivar el origen real (quitar el sufijo /api si existe)
-    const raw    = (import.meta.env.VITE_API_URL as string | undefined) ?? 'https://backend-gorila-motos.onrender.com/api';
-    const origin = raw.replace(/\/api\/?$/, '');
+    // Usamos /api/usuarios (GET, requiere auth → 401) en lugar de /actuator/health
+    // porque /api/** pasa por el filtro CORS de Spring Security y siempre incluye
+    // el header Access-Control-Allow-Origin. El actuator está fuera de ese filtro
+    // y Chrome bloquea su respuesta con CORS error aunque devuelva 200.
+    const apiBase = (import.meta.env.VITE_API_URL as string | undefined)
+      ?? 'https://backend-gorila-motos.onrender.com/api';
 
     let dead    = false;
     let retryId = 0 as unknown as ReturnType<typeof setTimeout>;
@@ -22,26 +25,21 @@ export function useServerStatus(): ServerStatus {
     const attempt = () => {
       if (dead) return;
       const ctrl = new AbortController();
-      // Abort si no responde en 12 s
-      const tid = setTimeout(() => ctrl.abort(), 12_000);
+      const tid  = setTimeout(() => ctrl.abort(), 12_000); // 12 s por intento
 
-      fetch(`${origin}/actuator/health`, { signal: ctrl.signal })
+      fetch(`${apiBase}/usuarios`, { signal: ctrl.signal })
         .then(r => {
           clearTimeout(tid);
           if (dead) return;
-          // Cualquier respuesta HTTP = servidor despierto
-          if (r.ok || r.status === 401 || r.status === 403) {
-            setStatus('online');
-          } else {
-            setStatus('starting');
-            retryId = setTimeout(attempt, 8_000);
-          }
+          // Cualquier respuesta HTTP (200, 401, 403…) = servidor despierto con CORS
+          if (r.status > 0) setStatus('online');
+          else { setStatus('starting'); retryId = setTimeout(attempt, 8_000); }
         })
         .catch((e: Error) => {
           clearTimeout(tid);
           if (dead) return;
+          // CORS block, timeout o red caída → servidor dormido → reintentar
           setStatus('starting');
-          // Reintento cada 8 s (incluyendo tras AbortError = timeout)
           retryId = setTimeout(attempt, 8_000);
         });
     };

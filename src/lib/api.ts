@@ -151,7 +151,10 @@ export const rutasApi = {
   remove: (id: number)  => api.delete(`/rutas/${id}`),
 };
 
-/* ── Health check ── */
+/* ── Health check (keep-alive para Render) ──────────────────────────────────
+   GET /tipos es un endpoint liviano con CORS. El actuator (/actuator/health)
+   está fuera del filtro CORS de Spring Security → CORS error en el navegador.
+   ──────────────────────────────────────────────────────────────────────────── */
 export const healthApi = {
-  check: () => api.get('/actuator/health'),
+  check: () => api.get('/tipos'),
 };
