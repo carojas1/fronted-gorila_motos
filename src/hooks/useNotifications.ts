@@ -135,7 +135,16 @@ export function useNotifications() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  /* Refresco inicial + polling en tiempo real cada 30 s (solo con pestaña visible) */
+  useEffect(() => {
+    refresh();
+    const tick = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') refresh();
+    };
+    const id = setInterval(tick, 30_000);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
+  }, [refresh]);
 
   const markRead    = (id: string) => setNotifications(prev => {
     const updated = prev.map(n => n.id === id ? { ...n, read: true } : n);

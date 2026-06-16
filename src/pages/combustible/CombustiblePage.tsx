@@ -5,7 +5,10 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useMemo } from 'react';
-import { Fuel, Plus, Trash2, TrendingDown, DollarSign, Gauge, X } from 'lucide-react';
+import { Fuel, Plus, Trash2, TrendingDown, DollarSign, Gauge, X, AlertTriangle, TrendingUp, Activity } from 'lucide-react';
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
+} from 'recharts';
 import { motosApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Moto, CargaCombustible } from '../../types';
@@ -83,6 +86,34 @@ export default function CombustiblePage() {
     const cpkm  = kmRec > 0 ? totalCosto / kmRec : 0;
     return { totalLitros, totalCosto, kmRec, lx100, cpkm };
   }, [filtered]);
+
+  /* Datos para la gráfica (orden ascendente) + consumo por carga */
+  const chartData = useMemo(() => {
+    return [...filtered]
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))
+      .map(l => {
+        const km = l.km_actual - (l.km_anterior ?? 0);
+        const consumo = km > 0 ? +(l.litros / km * 100).toFixed(2) : null;
+        return {
+          fecha:   fmtDate(l.fecha),
+          consumo,
+          costo:   +l.costo_total.toFixed(2),
+          litros:  +l.litros.toFixed(1),
+        };
+      });
+  }, [filtered]);
+
+  /* Consumo anormal: última carga > 20% sobre el promedio previo → posible falla */
+  const anomaly = useMemo(() => {
+    const cons = chartData.map(d => d.consumo).filter((v): v is number => v != null && v > 0);
+    if (cons.length < 3) return null;
+    const last = cons[cons.length - 1];
+    const prev = cons.slice(0, -1);
+    const avg  = prev.reduce((s, v) => s + v, 0) / prev.length;
+    if (avg <= 0) return null;
+    const pct = ((last - avg) / avg) * 100;
+    return pct >= 20 ? { last: +last.toFixed(1), avg: +avg.toFixed(1), pct: Math.round(pct) } : null;
+  }, [chartData]);
 
   const addLog = () => {
     if (!form.id_moto || !form.fecha || !form.litros || !form.km_actual) return;
@@ -181,6 +212,67 @@ export default function CombustiblePage() {
               <p className="text-[11px] text-white/35 mt-0.5">{label}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Alerta de consumo anormal ── */}
+      {anomaly && (
+        <div className="rounded-2xl p-4 flex items-start gap-3"
+             style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.28)' }}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+               style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)' }}>
+            <AlertTriangle size={17} color="#F59E0B" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[13.5px] font-black text-white/90 flex items-center gap-2">
+              Consumo más alto de lo normal
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }}>
+                +{anomaly.pct}%
+              </span>
+            </p>
+            <p className="text-[12px] text-white/45 mt-1 leading-relaxed">
+              La última carga rinde <b style={{ color: '#F59E0B' }}>{anomaly.last} L/100km</b> contra un promedio de{' '}
+              <b className="text-white/70">{anomaly.avg} L/100km</b>. Un salto así puede indicar baja presión de llantas,
+              filtro de aire sucio, bujía gastada o una falla. Recomendamos una revisión con el mecánico.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Gráfica de consumo ── */}
+      {chartData.filter(d => d.consumo != null).length >= 2 && (
+        <div className="gm-card-d rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity size={15} className="text-gm-red/70" />
+            <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+              Evolución del consumo (L / 100 km)
+            </p>
+          </div>
+          <div style={{ width: '100%', height: 240 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 6, right: 8, left: -18, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gradConsumo" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stopColor="#F59E0B" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="fecha" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.08)' }} />
+                <YAxis tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} tickLine={false} axisLine={false} width={42} />
+                <Tooltip
+                  contentStyle={{ background: '#16161E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12 }}
+                  labelStyle={{ color: 'rgba(255,255,255,0.6)' }}
+                  itemStyle={{ color: '#F59E0B' }}
+                  formatter={(v: number) => [`${v} L/100km`, 'Consumo']}
+                />
+                <Area type="monotone" dataKey="consumo" stroke="#F59E0B" strokeWidth={2.5} fill="url(#gradConsumo)" connectNulls dot={{ r: 3, fill: '#F59E0B' }} activeDot={{ r: 5 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-[11px] text-white/30 mt-3 flex items-center gap-1.5">
+            <TrendingUp size={11} /> Menor es mejor. Un alza sostenida sugiere revisar mantenimiento.
+          </p>
         </div>
       )}
 

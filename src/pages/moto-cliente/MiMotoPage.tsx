@@ -11,14 +11,16 @@ import { z } from 'zod';
 import {
   Bike, Camera, Plus, User, Phone, CreditCard,
   CheckCircle, AlertTriangle, Pencil, X, Save,
-  Gauge, RefreshCw, Activity,
+  Gauge, Activity,
 } from 'lucide-react';
-import { motosApi, usuariosApi, alertasApi } from '../../lib/api';
+import { motosApi, usuariosApi, uploadWithRetry } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg, extractPhone, extractCedula } from '../../lib/utils';
 import Input from '../../components/ui/Input';
-import type { Moto, EstadoMantenimiento } from '../../types';
+import type { Moto } from '../../types';
+import { EstadoMotoLive } from '../../components/mantenimiento/EstadoMantenimiento';
+import { calcularEstadoLocal } from '../../lib/mantenimiento';
 
 /* ─── Tipos de moto disponibles ─── */
 const TIPOS = ['Sport', 'Naked', 'Touring', 'Enduro', 'Scrambler', 'Cruiser', 'Scooter', 'Otro'];
@@ -66,11 +68,10 @@ export default function MiMotoPage() {
   const [editingPerfil, setEditingPerfil] = useState(false);
   const [savingPerfil,  setSavingPerfil]  = useState(false);
 
-  /* Actualización de km + salud */
+  /* Actualización de km */
   const [kmMoto,       setKmMoto]       = useState<Record<number, string>>({});
   const [savingKm,     setSavingKm]     = useState<number | null>(null);
-  const [saludMoto,    setSaludMoto]    = useState<Record<number, EstadoMantenimiento[]>>({});
-  const [loadingSalud, setLoadingSalud] = useState<number | null>(null);
+  const [uploadMsg,    setUploadMsg]    = useState<string | null>(null);
 
   const cedula   = extractCedula(user?.descripcion ?? '');
   const telefono = extractPhone(user?.descripcion  ?? '');
@@ -106,18 +107,7 @@ export default function MiMotoPage() {
       .finally(() => setLoadingMotos(false));
   }, [user?.id_usuario]);
 
-  /* Cargar salud de una moto */
-  const cargarSalud = async (idMoto: number) => {
-    if (saludMoto[idMoto]) return; // ya cargado
-    setLoadingSalud(idMoto);
-    try {
-      const { data } = await alertasApi.estadoMoto(idMoto);
-      setSaludMoto(prev => ({ ...prev, [idMoto]: data as EstadoMantenimiento[] }));
-    } catch { /* silent */ }
-    finally { setLoadingSalud(null); }
-  };
-
-  /* Actualizar km */
+  /* Actualizar km — EstadoMotoLive se recalcula solo al cambiar moto.kilometraje */
   const actualizarKm = async (moto: Moto) => {
     const km = parseInt(kmMoto[moto.id_moto] ?? '');
     if (isNaN(km) || km < 0) { toast.error('Ingresa un kilómetro válido', 'Error'); return; }
@@ -125,11 +115,7 @@ export default function MiMotoPage() {
     try {
       await motosApi.update(moto.id_moto, { kilometraje: km });
       setMotos(prev => prev.map(m => m.id_moto === moto.id_moto ? { ...m, kilometraje: km } : m));
-      // Invalidar salud para que se recargue con nuevo km
-      setSaludMoto(prev => { const n = { ...prev }; delete n[moto.id_moto]; return n; });
-      toast.success('Kilometraje actualizado · Revisando alertas…', 'Mi Moto');
-      // Cargar nueva salud
-      setTimeout(() => cargarSalud(moto.id_moto), 1500);
+      toast.success('Kilometraje actualizado · Recalculando mantenimiento…', 'Mi Moto');
     } catch (err) {
       toast.error(getErrorMsg(err), 'Error');
     } finally {
@@ -165,13 +151,16 @@ export default function MiMotoPage() {
     if (!user?.id_usuario) return;
     setSavingMoto(true);
     try {
-      /* 1. Subir foto si se seleccionó */
+      /* 1. Subir foto si se seleccionó (con reintentos si el servidor está dormido) */
       let photoUrl: string | undefined;
       if (photoFile) {
-        const form = new FormData();
-        form.append('file', photoFile);
-        const { data: uploadData } = await motosApi.upload(form);
-        photoUrl = (uploadData as { url?: string })?.url;
+        try {
+          photoUrl = await uploadWithRetry('/motos/upload', photoFile, setUploadMsg);
+        } catch {
+          toast.error('No se pudo subir la foto — la moto se guardará sin imagen');
+        } finally {
+          setUploadMsg(null);
+        }
       }
       /* 2. Crear moto */
       const { data: nuevaMoto } = await motosApi.create({
@@ -189,6 +178,7 @@ export default function MiMotoPage() {
       toast.error(getErrorMsg(err), 'Error al guardar');
     } finally {
       setSavingMoto(false);
+      setUploadMsg(null);
     }
   };
 
@@ -385,9 +375,9 @@ export default function MiMotoPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {motos.map(moto => {
             const color   = TIPO_COLOR[moto.tipo_moto ?? 'Otro'] ?? '#8A8A9E';
-            const salud   = saludMoto[moto.id_moto];
-            const hasVenc = salud?.some(s => s.estado === 'VENCIDO');
-            const hasPrx  = salud?.some(s => s.estado === 'PROXIMO');
+            const estLocal = calcularEstadoLocal(moto.cilindraje, moto.kilometraje);
+            const hasVenc = estLocal.some(s => s.estado === 'VENCIDO');
+            const hasPrx  = estLocal.some(s => s.estado === 'PROXIMO');
             return (
               <div key={moto.id_moto} style={{ ...card, borderLeft: `3px solid ${color}` }}>
 
@@ -413,9 +403,9 @@ export default function MiMotoPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                     <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color, padding: '3px 10px', background: `${color}15`, border: `1px solid ${color}25`, borderRadius: 99 }}>{moto.tipo_moto}</span>
-                    {hasVenc && <span style={{ fontSize: 10, color: '#E11428', background: 'rgba(225,20,40,0.1)', border: '1px solid rgba(225,20,40,0.2)', borderRadius: 99, padding: '2px 8px', fontWeight: 700 }}>⚠ Mantenimiento vencido</span>}
+                    {hasVenc && <span style={{ fontSize: 10, color: '#E11428', background: 'rgba(225,20,40,0.1)', border: '1px solid rgba(225,20,40,0.2)', borderRadius: 99, padding: '2px 8px', fontWeight: 700 }}>Mantenimiento vencido</span>}
                     {!hasVenc && hasPrx && <span style={{ fontSize: 10, color: '#F59E0B', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 99, padding: '2px 8px', fontWeight: 700 }}>Próximo mantenimiento</span>}
-                    {salud && !hasVenc && !hasPrx && <span style={{ fontSize: 10, color: '#10B981', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 99, padding: '2px 8px', fontWeight: 700 }}><CheckCircle size={9} style={{ verticalAlign: 'middle', marginRight: 3 }} />Todo en orden</span>}
+                    {!hasVenc && !hasPrx && <span style={{ fontSize: 10, color: '#10B981', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 99, padding: '2px 8px', fontWeight: 700 }}><CheckCircle size={9} style={{ verticalAlign: 'middle', marginRight: 3 }} />Todo en orden</span>}
                   </div>
                 </div>
 
@@ -438,88 +428,44 @@ export default function MiMotoPage() {
                   </button>
                 </div>
 
-                {/* ── Salud de la moto ── */}
-                {!salud ? (
-                  <button
-                    onClick={() => cargarSalud(moto.id_moto)}
-                    disabled={loadingSalud === moto.id_moto}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.35)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    {loadingSalud === moto.id_moto
-                      ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin .7s linear infinite', display: 'inline-block' }} /> Cargando salud…</>
-                      : <><Activity size={13} /> Ver estado de mantenimiento</>}
-                  </button>
-                ) : (
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                      <Activity size={13} color="rgba(255,255,255,0.4)" />
-                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)' }}>Estado de mantenimiento</span>
-                      <button onClick={() => { setSaludMoto(prev => { const n = { ...prev }; delete n[moto.id_moto]; return n; }); setTimeout(() => cargarSalud(moto.id_moto), 100); }}
-                        style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', padding: 4 }}>
-                        <RefreshCw size={11} />
-                      </button>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                      {salud.map(s => {
-                        const ec = s.estado === 'VENCIDO' ? { color: '#E11428', bg: 'rgba(225,20,40,0.1)' }
-                                 : s.estado === 'PROXIMO' ? { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' }
-                                 :                          { color: '#10B981', bg: 'rgba(16,185,129,0.1)' };
-                        const barColor = s.estado === 'VENCIDO' ? '#E11428' : s.estado === 'PROXIMO' ? '#F59E0B' : '#10B981';
-                        const label = {
-                          ACEITE: 'Aceite', FILTRO_AIRE: 'Filtro aire', BUJIA: 'Bujía',
-                          CADENA: 'Cadena', LLANTA_TRASERA: 'Llanta trasera',
-                          FRENOS: 'Frenos', REVISION_GENERAL: 'Revisión general',
-                        }[s.tipo] ?? s.tipo;
-                        return (
-                          <div key={s.tipo} style={{ background: ec.bg, borderRadius: 9, padding: '9px 12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: '#EBEBEB', flex: 1 }}>{label}</span>
-                              <span style={{ fontSize: 10, fontWeight: 700, color: ec.color }}>
-                                {s.estado === 'VENCIDO' ? '¡Vencido!' : s.estado === 'PROXIMO' ? `${s.kmRestante.toLocaleString()} km` : `${s.kmRestante.toLocaleString()} km`}
-                              </span>
-                              <span style={{ fontSize: 10, fontWeight: 700, color: ec.color, background: 'rgba(0,0,0,0.2)', borderRadius: 99, padding: '2px 6px' }}>
-                                {s.porcentajeDesgaste}%
-                              </span>
-                            </div>
-                            {/* Barra de progreso */}
-                            <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                              <div style={{ height: '100%', width: `${Math.min(100, s.porcentajeDesgaste)}%`, background: barColor, borderRadius: 99, transition: 'width 0.6s ease' }} />
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Cada {s.intervaloKm.toLocaleString()} km</span>
-                              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Próximo: {s.proximoCambioKm.toLocaleString()} km</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                {/* ── Estado de mantenimiento (en vivo) ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <Activity size={13} color="rgba(255,255,255,0.4)" />
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)' }}>Estado de mantenimiento</span>
+                </div>
+                <EstadoMotoLive moto={moto} />
               </div>
             );
           })}
 
-          {/* Botón agregar otra moto */}
+          {/* Botón agregar otra moto — requiere datos personales completos */}
           {!addingMoto && (
-            <button
-              onClick={() => setAddingMoto(true)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
-                width: '100%', padding: '13px', borderRadius: 14,
-                background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.35)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                transition: 'all 180ms',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(225,20,40,0.3)';
-                (e.currentTarget as HTMLElement).style.color = '#E11428';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)';
-                (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)';
-              }}
-            >
-              <Plus size={15} /> Agregar otra moto
-            </button>
+            perfilOk ? (
+              <button
+                onClick={() => setAddingMoto(true)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
+                  width: '100%', padding: '13px', borderRadius: 14,
+                  background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)',
+                  color: 'rgba(255,255,255,0.35)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  transition: 'all 180ms',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(225,20,40,0.3)';
+                  (e.currentTarget as HTMLElement).style.color = '#E11428';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)';
+                  (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)';
+                }}
+              >
+                <Plus size={15} /> Agregar otra moto
+              </button>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '13px', borderRadius: 14, background: 'rgba(245,158,11,0.06)', border: '1px dashed rgba(245,158,11,0.25)', color: '#F59E0B', fontSize: 12.5, fontWeight: 600 }}>
+                <AlertTriangle size={14} /> Completa tus datos personales para agregar otra moto
+              </div>
+            )
           )}
         </div>
       )}
@@ -617,7 +563,7 @@ export default function MiMotoPage() {
               </button>
               <button type="submit" disabled={savingMoto}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#fff', background: savingMoto ? 'rgba(225,20,40,0.4)' : '#E11428', border: 'none', borderRadius: 10, padding: '9px 22px', cursor: savingMoto ? 'not-allowed' : 'pointer' }}>
-                <Save size={14} /> {savingMoto ? 'Guardando…' : 'Guardar moto'}
+                <Save size={14} /> {savingMoto ? (uploadMsg ?? 'Guardando…') : 'Guardar moto'}
               </button>
             </div>
           </form>

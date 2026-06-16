@@ -9,12 +9,12 @@ import {
   ArrowLeft, Bike, Gauge, Calendar, User, Pencil,
   ClipboardList, Plus, Clock, CheckCircle, AlertTriangle,
   XCircle, ChevronDown, ChevronUp, Cog, Link2, Shield,
-  Circle, ArrowUpDown, Droplets, Zap, type LucideIcon,
+  Circle, ArrowUpDown, Droplets, Zap, Activity, type LucideIcon,
 } from 'lucide-react';
 import { motosApi, diagnosticosApi, usuariosApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { getErrorMsg } from '../../lib/utils';
 import type { Moto, Usuario, DiagnosticoMoto } from '../../types';
+import { EstadoMotoLive } from '../../components/mantenimiento/EstadoMantenimiento';
 
 /* ── Constantes ── */
 const CC_RANGES = [
@@ -323,6 +323,22 @@ export default function MotoPerfilPage() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* ── Estado de mantenimiento en vivo ── */}
+      <div style={{ ...s, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Activity size={17} color="#10B981" />
+          </div>
+          <div>
+            <p style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 15, margin: 0 }}>Estado de mantenimiento</p>
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, margin: '2px 0 0' }}>
+              Calculado con {moto.kilometraje.toLocaleString('es-EC')} km actuales
+            </p>
+          </div>
+        </div>
+        <EstadoMotoLive moto={moto} />
       </div>
 
       {/* ── Historial de diagnósticos ── */}

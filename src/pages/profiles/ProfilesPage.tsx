@@ -11,11 +11,13 @@ import {
   ChevronRight, Wrench, Crown, User, X, TrendingUp,
   Lock, Zap, Star, Activity, Trash2,
 } from "lucide-react";
-import { usuariosApi, rolesApi, authApi } from "../../lib/api";
+import { usuariosApi, rolesApi, authApi, motosApi } from "../../lib/api";
 import { useToast } from "../../components/ui/Toast";
 import { useAuth } from "../../contexts/AuthContext";
 import { initials, extractCedula, getErrorMsg } from "../../lib/utils";
-import type { Usuario, Rol } from "../../types";
+import type { Usuario, Rol, Moto } from "../../types";
+import { useNavigate } from "react-router-dom";
+import { Bike, Gauge } from "lucide-react";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
@@ -85,8 +87,9 @@ function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg"
 }
 
 /* ── Tarjeta de usuario premium ── */
-function UserCard({ u, roleName, onAssign, onDelete }: {
-  u: Usuario; roleName: string; onAssign: (u: Usuario) => void; onDelete?: (u: Usuario) => void;
+function UserCard({ u, roleName, onAssign, onDelete, onView, motosCount = 0 }: {
+  u: Usuario; roleName: string; onAssign: (u: Usuario) => void;
+  onDelete?: (u: Usuario) => void; onView?: (u: Usuario) => void; motosCount?: number;
 }) {
   const isProtected = u.correo === 'gorilamotos2026@gmail.com';
   const tab    = TABS.find(t => t.key === roleName);
@@ -172,6 +175,12 @@ function UserCard({ u, roleName, onAssign, onDelete }: {
                 <span>{phone}</span>
               </div>
             )}
+            {motosCount > 0 && (
+              <div className="flex items-center gap-2 text-[12px]" style={{ color }}>
+                <Bike size={10} className="shrink-0" style={{ opacity: 0.7 }} />
+                <span className="font-bold">{motosCount} moto{motosCount !== 1 ? "s" : ""} registrada{motosCount !== 1 ? "s" : ""}</span>
+              </div>
+            )}
           </div>
 
           {/* Footer acciones */}
@@ -186,6 +195,17 @@ function UserCard({ u, roleName, onAssign, onDelete }: {
               <Lock size={9} /> Cambiar rol
             </button>
             <div className="flex items-center gap-2">
+              {onView && (
+                <button
+                  onClick={() => onView(u)}
+                  className="flex items-center gap-1 text-[11px] font-bold transition-colors duration-150"
+                  style={{ color: `${color}90` }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = color}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = `${color}90`}
+                >
+                  Ver detalle <ChevronRight size={10} />
+                </button>
+              )}
               {roleName === "MECANICO" && (
                 <Link
                   to={`/perfiles/${u.id_usuario}`}
@@ -240,7 +260,9 @@ export default function ProfilesPage() {
   const toast = useToast();
   const { user: me, isAdmin } = useAuth();
 
+  const navigate = useNavigate();
   const [usuarios,   setUsuarios]   = useState<Usuario[]>([]);
+  const [motos,      setMotos]      = useState<Moto[]>([]);
   const [roles,      setRoles]      = useState<Rol[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [search,     setSearch]     = useState("");
@@ -251,6 +273,18 @@ export default function ProfilesPage() {
   const [addModal,     setAddModal]     = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Usuario | null>(null);
   const [deleting,     setDeleting]     = useState(false);
+  const [viewClient,   setViewClient]   = useState<Usuario | null>(null);
+
+  /* Motos agrupadas por id de propietario */
+  const motosByUser = useMemo(() => {
+    const map = new Map<number, Moto[]>();
+    motos.forEach(m => {
+      const arr = map.get(m.id_usuario) ?? [];
+      arr.push(m);
+      map.set(m.id_usuario, arr);
+    });
+    return map;
+  }, [motos]);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(regSchema),
@@ -259,8 +293,9 @@ export default function ProfilesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [uRes, rRes] = await Promise.allSettled([usuariosApi.list(), rolesApi.list()]);
+      const [uRes, rRes, mRes] = await Promise.allSettled([usuariosApi.list(), rolesApi.list(), motosApi.list()]);
       if (uRes.status === "fulfilled") setUsuarios(uRes.value.data);
+      if (mRes.status === "fulfilled") setMotos(mRes.value.data as Moto[]);
       const def = [{ id_rol: 1, nombre: "ADMIN" }, { id_rol: 2, nombre: "MECANICO" }, { id_rol: 3, nombre: "CLIENTE" }];
       if (rRes.status === "fulfilled" && rRes.value.data?.length > 0) setRoles(rRes.value.data);
       else setRoles(def);
@@ -283,14 +318,16 @@ export default function ProfilesPage() {
       const matchTab = activeTab === "SINROL" ? rn === "" : rn === activeTab;
       if (!matchTab) return false;
       if (!q) return true;
+      const placas = (motosByUser.get(u.id_usuario) ?? []).map(m => m.placa.toLowerCase());
       return (
         u.nombre_completo?.toLowerCase().includes(q) ||
         u.correo?.toLowerCase().includes(q) ||
         u.nombre_usuario?.toLowerCase().includes(q) ||
-        (extractCedula(u.descripcion) ?? "").includes(q)
+        (extractCedula(u.descripcion) ?? "").includes(q) ||
+        placas.some(p => p.includes(q))
       );
     });
-  }, [usuarios, activeTab, search]);
+  }, [usuarios, activeTab, search, motosByUser]);
 
   const assignRole = async () => {
     if (!roleModal || !selectedRol || !me) return;
@@ -451,7 +488,7 @@ export default function ProfilesPage() {
           <Search size={14} />
           <input
             className="gm-input-d w-full"
-            placeholder={`Buscar en ${activeTab_?.label.toLowerCase()}…`}
+            placeholder="Buscar por nombre, correo o placa…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -511,7 +548,9 @@ export default function ProfilesPage() {
                 key={u.id_usuario}
                 u={u}
                 roleName={getRolName((u.roles ?? []) as unknown[])}
+                motosCount={(motosByUser.get(u.id_usuario) ?? []).length}
                 onAssign={(uu: Usuario) => setRoleModal({ user: uu })}
+                onView={(uu: Usuario) => setViewClient(uu)}
                 onDelete={isAdmin ? (uu: Usuario) => setDeleteTarget(uu) : undefined}
               />
             ))}
@@ -702,6 +741,101 @@ export default function ProfilesPage() {
             El usuario perderá acceso inmediatamente.
           </p>
         </div>
+      </Modal>
+
+      {/* ══ MODAL: Detalle de usuario + sus motos ══ */}
+      <Modal
+        open={!!viewClient}
+        onClose={() => setViewClient(null)}
+        title="Detalle del usuario"
+        size="md"
+      >
+        {viewClient && (() => {
+          const ced   = extractCedula(viewClient.descripcion);
+          const tel   = viewClient.descripcion?.match(/TELEFONO:\s*([^\s|]+)/)?.[1];
+          const sus   = motosByUser.get(viewClient.id_usuario) ?? [];
+          const rn    = getRolName((viewClient.roles ?? []) as unknown[]);
+          const tab   = TABS.find(t => t.key === rn);
+          const color = tab?.color ?? "#8B8FA8";
+          return (
+            <div className="space-y-5">
+              {/* Cabecera */}
+              <div className="flex items-center gap-3 p-4 rounded-xl"
+                   style={{ background: `${color}0D`, border: `1px solid ${color}25` }}>
+                <Avatar name={viewClient.nombre_completo} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-black text-white/92">{viewClient.nombre_completo}</p>
+                  <p className="text-[12px] text-white/40">@{viewClient.nombre_usuario}</p>
+                  {tab && (
+                    <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full"
+                          style={{ color, background: `${color}18`, border: `1px solid ${color}30` }}>
+                      <tab.icon size={9} /> {tab.label.replace(/s$/, "")}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Datos de contacto */}
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { icon: Mail,       label: "Correo",   val: viewClient.correo },
+                  { icon: Shield,     label: "Cédula",   val: ced ?? "No registrada" },
+                  { icon: Star,       label: "Teléfono", val: tel && tel !== "N/A" ? tel : "No registrado" },
+                  { icon: MapPin,     label: "Ciudad",   val: viewClient.ciudad ?? "—" },
+                ].map(({ icon: Icon, label, val }) => (
+                  <div key={label} className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <p className="flex items-center gap-1.5 text-[10px] tracking-wider uppercase font-black text-white/25 mb-1">
+                      <Icon size={10} /> {label}
+                    </p>
+                    <p className="text-[12.5px] text-white/70 font-semibold truncate">{val}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Motos del usuario */}
+              <div>
+                <p className="flex items-center gap-2 text-[10px] tracking-[0.2em] uppercase font-black text-white/25 mb-3">
+                  <Bike size={11} /> Motos registradas ({sus.length})
+                </p>
+                {sus.length === 0 ? (
+                  <div className="py-6 text-center rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+                    <p className="text-[12px] text-white/30">Este usuario no tiene motos registradas</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {sus.map(m => (
+                      <button
+                        key={m.id_moto}
+                        onClick={() => { setViewClient(null); navigate(`/motos/${m.id_moto}`); }}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-150"
+                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(59,130,246,0.4)"; (e.currentTarget as HTMLElement).style.background = "rgba(59,130,246,0.06)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)"; }}
+                      >
+                        {m.ruta_imagen_motos && m.ruta_imagen_motos !== "Desconocido" ? (
+                          <img src={m.ruta_imagen_motos} alt={m.placa} className="w-11 h-11 rounded-lg object-cover shrink-0" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.05)" }}>
+                            <Bike size={18} className="text-white/30" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-black text-white/90 truncate">{m.marca} {m.modelo}</p>
+                          <p className="flex items-center gap-2 text-[11px] text-white/40 mt-0.5">
+                            <span className="plate-tag">{m.placa}</span>
+                            <span className="flex items-center gap-1"><Gauge size={9} /> {m.kilometraje.toLocaleString("es-EC")} km</span>
+                            <span>· {m.cilindraje} cc</span>
+                          </p>
+                        </div>
+                        <ChevronRight size={15} className="text-white/25 shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </Modal>
     </div>
   );

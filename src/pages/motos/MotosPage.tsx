@@ -12,7 +12,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import gsap from 'gsap';
-import { motosApi, usuariosApi } from '../../lib/api';
+import { motosApi, usuariosApi, uploadWithRetry } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { getErrorMsg } from '../../lib/utils';
@@ -60,12 +60,8 @@ const schema = z.object({
 });
 type Form = z.infer<typeof schema>;
 
-async function uploadMotoImage(file: File): Promise<string> {
-  const fd = new FormData();
-  fd.append('file', file);
-  const uploadPr = motosApi.upload(fd).then(r => (r.data as { url: string }).url);
-  const timeout  = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 15_000));
-  return Promise.race([uploadPr, timeout]);
+async function uploadMotoImage(file: File, onMsg?: (m: string) => void): Promise<string> {
+  return uploadWithRetry('/motos/upload', file, onMsg);
 }
 
 /* ─── Skeleton Card ─── */
@@ -279,6 +275,7 @@ export default function MotosPage() {
   const [deleteTarget, setDeleteTarget] = useState<Moto | null>(null);
   const [imageFile,    setImageFile]    = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadMsg,    setUploadMsg]    = useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -338,9 +335,11 @@ export default function MotosPage() {
     try {
       if (imageFile) {
         try {
-          data.ruta_imagen_motos = await uploadMotoImage(imageFile);
+          data.ruta_imagen_motos = await uploadMotoImage(imageFile, setUploadMsg);
         } catch {
-          toast.error('Error subiendo imagen — se guardará sin foto');
+          toast.error('No se pudo subir la imagen — la moto se guardará sin foto');
+        } finally {
+          setUploadMsg(null);
         }
       }
       if (editTarget) {
@@ -354,7 +353,7 @@ export default function MotosPage() {
       setImageFile(null); setImagePreview(null);
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }
-    finally { setSaving(false); }
+    finally { setSaving(false); setUploadMsg(null); }
   };
 
   const confirmDelete = async () => {
@@ -509,6 +508,12 @@ export default function MotosPage() {
         size="lg"
         footer={
           <>
+            {uploadMsg && (
+              <span style={{ fontSize: 12, color: '#3B82F6', fontWeight: 600, marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid rgba(59,130,246,0.3)', borderTopColor: '#3B82F6', animation: 'spin .7s linear infinite', display: 'inline-block' }} />
+                {uploadMsg}
+              </span>
+            )}
             <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancelar</Button>
             <Button form="moto-form" type="submit" loading={saving}>
               {editTarget ? 'Guardar cambios' : 'Registrar moto'}

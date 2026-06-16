@@ -174,4 +174,43 @@ export const alertasApi = {
    ──────────────────────────────────────────────────────────────────────────── */
 export const healthApi = {
   check: () => api.get('/tipos'),
+  /** Ping con timeout largo — despierta Render si estaba dormido. */
+  wake:  () => api.get('/health', { timeout: 65_000 }),
 };
+
+/* ── Upload con retry: despierta backend si está dormido y reintenta ─────────
+   Render free duerme tras 15 min. Primera petición tarda 30-50s.
+   Estrategia: ping → upload con timeout 90s → reintenta 2 veces si falla.
+   ──────────────────────────────────────────────────────────────────────────── */
+export async function uploadWithRetry(
+  endpoint: '/motos/upload' | '/usuarios/upload' | '/productos/upload',
+  file: File,
+  onProgress?: (msg: string) => void
+): Promise<string> {
+  const fd = new FormData();
+  fd.append('file', file);
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      if (attempt === 1) onProgress?.('Despertando servidor…');
+      else onProgress?.(`Reintentando (${attempt}/3)…`);
+
+      // Ping al backend en attempt 1 para despertarlo
+      if (attempt === 1) {
+        try { await healthApi.wake(); } catch { /* puede fallar la primera vez */ }
+      }
+
+      onProgress?.('Subiendo imagen…');
+      const { data } = await api.post(endpoint, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 90_000,
+      });
+      return (data as { url: string }).url;
+
+    } catch (err) {
+      if (attempt === 3) throw err;
+      await new Promise(r => setTimeout(r, 3_000));
+    }
+  }
+  throw new Error('Upload falló después de 3 intentos');
+}

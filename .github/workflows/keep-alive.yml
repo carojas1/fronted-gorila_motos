@@ -1,0 +1,25 @@
+name: Keep Backend Alive
+
+on:
+  schedule:
+    - cron: '*/13 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health
+        run: |
+          echo "Pinging backend at $(date -u)"
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 https://backend-gorila-motos.onrender.com/api/health || echo "fail")
+            echo "Attempt $i → status: $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Backend OK"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Backend no respondió, pero el ping ya despertó Render"
+          exit 0

@@ -41,6 +41,7 @@ export default function AppLayout() {
     ...((isAdmin || isMecanico) ? [{ label: 'Inventario',  to: '/inventario'  }] : []),
     ...((isAdmin || isMecanico) ? [{ label: 'Alertas',     to: '/alertas'     }] : []),
     ...((isAdmin || isMecanico) ? [{ label: 'Proveedores', to: '/proveedores' }] : []),
+    ...((isAdmin || isMecanico) ? [{ label: 'Metodología', to: '/metodologia' }] : []),
     ...(isAdmin               ? [{ label: 'Pagos',       to: '/pagos'       }] : []),
     { label: 'Puntos',        to: '/puntos'       },
     { label: 'Combustible',   to: '/combustible'  },
