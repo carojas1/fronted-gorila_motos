@@ -6,8 +6,10 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus, Search, Pencil, Trash2, Bike, Gauge, User,
-  Calendar, Zap, Shield, ChevronRight, SlidersHorizontal, ClipboardList,
+  Calendar, Zap, Shield, ChevronRight, SlidersHorizontal, ClipboardList, ImageIcon,
 } from 'lucide-react';
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -47,17 +49,30 @@ const CC_RANGES = [
 const getCCRange = (cc: number) => CC_RANGES.find(r => cc <= r.max) ?? CC_RANGES[CC_RANGES.length - 1];
 
 const schema = z.object({
-  placa:       z.string().min(6, 'Mínimo 6 caracteres').transform((v) => v.toUpperCase()),
-  anio:        z.coerce.number().int().min(1980).max(new Date().getFullYear() + 1),
-  marca:       z.string().min(2),
-  modelo:      z.string().min(1),
-  nombre_moto: z.string().optional(),
-  tipo_moto:   z.string().min(1, 'Selecciona el tipo'),
-  kilometraje: z.coerce.number().int().nonnegative(),
-  cilindraje:  z.coerce.number().int().positive(),
-  id_usuario:  z.coerce.number().positive('Selecciona un propietario'),
+  placa:              z.string().min(6, 'Mínimo 6 caracteres').transform((v) => v.toUpperCase()),
+  anio:               z.coerce.number().int().min(1980).max(new Date().getFullYear() + 1),
+  marca:              z.string().min(2),
+  modelo:             z.string().min(1),
+  nombre_moto:        z.string().optional(),
+  tipo_moto:          z.string().min(1, 'Selecciona el tipo'),
+  kilometraje:        z.coerce.number().int().nonnegative(),
+  cilindraje:         z.coerce.number().int().positive(),
+  id_usuario:         z.coerce.number().positive('Selecciona un propietario'),
+  ruta_imagen_motos:  z.string().optional(),
 });
 type Form = z.infer<typeof schema>;
+
+async function uploadMotoImage(file: File): Promise<string> {
+  const fbAuth = getAuth();
+  if (!fbAuth.currentUser) {
+    await signInAnonymously(fbAuth);
+  }
+  const storage = getStorage();
+  const fileName = `motos/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  const imgRef = sRef(storage, fileName);
+  await uploadBytes(imgRef, file);
+  return getDownloadURL(imgRef);
+}
 
 /* ─── Skeleton Card ─── */
 function SkeletonCard() {
@@ -249,8 +264,9 @@ function MotoCard({
 
 /* ═══════════════ MAIN PAGE ═══════════════ */
 export default function MotosPage() {
-  const pageRef = useRef<HTMLDivElement>(null);
-  const toast   = useToast();
+  const pageRef  = useRef<HTMLDivElement>(null);
+  const imgInput = useRef<HTMLInputElement>(null);
+  const toast    = useToast();
   const { user: me, isAdmin, isMecanico, isCliente } = useAuth();
 
   /** Admin y mecánico tienen acceso completo (crear/editar/eliminar, ver todo) */
@@ -265,6 +281,8 @@ export default function MotosPage() {
   const [modalOpen,    setModalOpen]    = useState(false);
   const [editTarget,   setEditTarget]   = useState<Moto | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Moto | null>(null);
+  const [imageFile,    setImageFile]    = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -302,16 +320,19 @@ export default function MotosPage() {
 
   const openCreate = () => {
     setEditTarget(null);
+    setImageFile(null); setImagePreview(null);
     reset({ id_usuario: 0 });
     setModalOpen(true);
   };
 
   const openEdit = (m: Moto) => {
     setEditTarget(m);
+    setImageFile(null); setImagePreview(null);
     reset({
       placa: m.placa, anio: m.anio, marca: m.marca, modelo: m.modelo,
       nombre_moto: m.nombre_moto ?? '', tipo_moto: m.tipo_moto,
       kilometraje: m.kilometraje, cilindraje: m.cilindraje, id_usuario: m.id_usuario,
+      ruta_imagen_motos: m.ruta_imagen_motos ?? '',
     });
     setModalOpen(true);
   };
@@ -319,6 +340,13 @@ export default function MotosPage() {
   const onSubmit = async (data: Form) => {
     setSaving(true);
     try {
+      if (imageFile) {
+        try {
+          data.ruta_imagen_motos = await uploadMotoImage(imageFile);
+        } catch {
+          toast.error('Error subiendo imagen — se guardará sin foto');
+        }
+      }
       if (editTarget) {
         await motosApi.update(editTarget.id_moto, data);
         toast.success('Moto actualizada');
@@ -327,6 +355,7 @@ export default function MotosPage() {
         toast.success('Moto registrada');
       }
       setModalOpen(false);
+      setImageFile(null); setImagePreview(null);
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setSaving(false); }
@@ -528,6 +557,60 @@ export default function MotosPage() {
             <Input label="Modelo" placeholder="MT-07" error={errors.modelo?.message} {...register('modelo')} />
           </div>
           <Input label='Nombre moto (opcional)' placeholder='"La Bestia"' {...register('nombre_moto')} />
+
+          {/* Foto de la moto */}
+          <div>
+            <label className="text-sm font-medium text-white/70 block mb-1.5">
+              Foto de la moto <span className="text-white/25 text-xs font-normal">(opcional)</span>
+            </label>
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => imgInput.current?.click()}
+              onKeyDown={e => e.key === 'Enter' && imgInput.current?.click()}
+              className="relative border-2 border-dashed rounded-xl overflow-hidden cursor-pointer transition-all duration-200 focus:outline-none"
+              style={{
+                borderColor: imagePreview || editTarget?.ruta_imagen_motos ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.02)',
+              }}
+            >
+              {imagePreview || editTarget?.ruta_imagen_motos ? (
+                <div className="relative">
+                  <img
+                    src={imagePreview ?? editTarget?.ruta_imagen_motos ?? ''}
+                    alt="Preview"
+                    className="w-full h-40 object-cover block"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200"
+                       style={{ background: 'rgba(0,0,0,0.55)' }}>
+                    <p className="text-white text-xs font-bold tracking-wider uppercase">Cambiar foto</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 gap-2">
+                  <ImageIcon size={28} className="text-white/15" />
+                  <p className="text-[12px] font-semibold text-white/30">Toca para subir foto</p>
+                  <p className="text-[10px] text-white/18">JPG · PNG · WebP · máx 10MB</p>
+                </div>
+              )}
+              <input
+                ref={imgInput}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  setImageFile(f);
+                  const reader = new FileReader();
+                  reader.onload = () => setImagePreview(reader.result as string);
+                  reader.readAsDataURL(f);
+                  e.target.value = '';
+                }}
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium text-white/70 block mb-1.5">Tipo de moto</label>

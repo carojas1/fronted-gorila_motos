@@ -164,7 +164,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw new Error('El servidor no devolvió una sesión válida. Intenta nuevamente.');
           }
 
-          await firebaseSignOut();
           localStorage.setItem(TOKEN_KEY, token);
           localStorage.setItem(USER_KEY,  JSON.stringify(user));
           setState({ user, token, loading: false });
