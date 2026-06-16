@@ -23,6 +23,7 @@ import InventoryPage       from './pages/inventory/InventoryPage';
 import ProfilesPage        from './pages/profiles/ProfilesPage';
 import EmpleadoDetailPage  from './pages/profiles/EmpleadoDetailPage';
 import MotosPage           from './pages/motos/MotosPage';
+import MotoPerfilPage     from './pages/motos/MotoPerfilPage';
 import RecordsPage         from './pages/records/RecordsPage';
 import ClientesPage        from './pages/clientes/ClientesPage';
 
@@ -71,6 +72,7 @@ export default function App() {
                 {/* Accesibles para TODOS los roles autenticados */}
                 <Route path="/dashboard"   element={<DashboardPage />}    />
                 <Route path="/motos"       element={<MotosPage />}         />
+                <Route path="/motos/:id"   element={<MotoPerfilPage />}    />
                 <Route path="/puntos"      element={<PuntosPage />}        />
                 <Route path="/combustible" element={<CombustiblePage />}   />
                 <Route path="/invoice/:id" element={<InvoicePage />}       />

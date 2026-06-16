@@ -8,6 +8,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   ClipboardList, Search, Bike, CheckCircle, AlertTriangle, XCircle,
   ChevronDown, ChevronUp, Gauge, Save, Clock, User,
+  Cog, Link2, Shield, Circle, ArrowUpDown, Droplets, Zap, type LucideIcon,
 } from 'lucide-react';
 import { motosApi, diagnosticosApi, usuariosApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,15 +17,15 @@ import { getErrorMsg } from '../../lib/utils';
 import type { Moto, Usuario, DiagnosticoMoto, DetalleDiagnostico } from '../../types';
 
 /* ─── Partes a evaluar ─── */
-const PARTES = [
-  { key: 'MOTOR',        label: 'Motor',           icon: '⚙️' },
-  { key: 'TRANSMISION',  label: 'Transmisión / Cadena', icon: '🔗' },
-  { key: 'FRENOS',       label: 'Sistema de Frenos', icon: '🛑' },
-  { key: 'LLANTAS',      label: 'Llantas',          icon: '⭕' },
-  { key: 'SUSPENSION',   label: 'Suspensión',       icon: '🔧' },
-  { key: 'ELECTRICO',    label: 'Sistema Eléctrico', icon: '⚡' },
-  { key: 'CARROCERIA',   label: 'Carrocería',       icon: '🏍️' },
-  { key: 'REFRIGERACION',label: 'Refrigeración',    icon: '💧' },
+const PARTES: { key: string; label: string; Icon: LucideIcon }[] = [
+  { key: 'MOTOR',         label: 'Motor',                Icon: Cog        },
+  { key: 'TRANSMISION',   label: 'Transmisión / Cadena', Icon: Link2      },
+  { key: 'FRENOS',        label: 'Sistema de Frenos',    Icon: Shield     },
+  { key: 'LLANTAS',       label: 'Llantas',              Icon: Circle     },
+  { key: 'SUSPENSION',    label: 'Suspensión',           Icon: ArrowUpDown},
+  { key: 'ELECTRICO',     label: 'Sistema Eléctrico',    Icon: Zap        },
+  { key: 'CARROCERIA',    label: 'Carrocería',           Icon: Bike       },
+  { key: 'REFRIGERACION', label: 'Refrigeración',        Icon: Droplets   },
 ];
 
 const ESTADO_CONFIG = {
@@ -98,7 +99,7 @@ function DiagnosticoCard({ d, motos, usuarios }: { d: DiagnosticoMoto; motos: Mo
               const part = PARTES.find(p => p.key === det.parte);
               return (
                 <div key={det.parte} style={{ background: pc.bg, border: `1px solid ${pc.border}`, borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 16, lineHeight: 1 }}>{part?.icon ?? '🔩'}</span>
+                  {(() => { const Icon = part?.Icon ?? Cog; return <Icon size={15} color="rgba(255,255,255,0.45)" style={{ flexShrink: 0, marginTop: 1 }} />; })()}
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#EBEBEB' }}>{part?.label ?? det.parte}</span>
@@ -348,7 +349,7 @@ export default function DiagnosticoPage() {
               return (
                 <div key={parte.key} style={{ background: '#16161E', borderRadius: 12, border: `1px solid ${ec.border}`, padding: '12px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 18, flexShrink: 0 }}>{parte.icon}</span>
+                    <parte.Icon size={16} color="rgba(255,255,255,0.5)" style={{ flexShrink: 0 }} />
                     <span style={{ color: '#EBEBEB', fontSize: 13, fontWeight: 700, flex: 1, minWidth: 120 }}>{parte.label}</span>
                     {/* Botones de estado */}
                     <div style={{ display: 'flex', gap: 6 }}>

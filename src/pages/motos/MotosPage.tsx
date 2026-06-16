@@ -3,13 +3,11 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Pencil, Trash2, Bike, Gauge, User,
   Calendar, Zap, Shield, ChevronRight, SlidersHorizontal, ClipboardList, ImageIcon,
 } from 'lucide-react';
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getAuth, signInAnonymously } from 'firebase/auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -63,15 +61,11 @@ const schema = z.object({
 type Form = z.infer<typeof schema>;
 
 async function uploadMotoImage(file: File): Promise<string> {
-  const fbAuth = getAuth();
-  if (!fbAuth.currentUser) {
-    await signInAnonymously(fbAuth);
-  }
-  const storage = getStorage();
-  const fileName = `motos/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-  const imgRef = sRef(storage, fileName);
-  await uploadBytes(imgRef, file);
-  return getDownloadURL(imgRef);
+  const fd = new FormData();
+  fd.append('file', file);
+  const uploadPr = motosApi.upload(fd).then(r => (r.data as { url: string }).url);
+  const timeout  = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 15_000));
+  return Promise.race([uploadPr, timeout]);
 }
 
 /* ─── Skeleton Card ─── */
@@ -102,8 +96,9 @@ function MotoCard({
   onEdit: (m: Moto) => void; onDelete: (m: Moto) => void;
   canManage?: boolean;
 }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
+  const navigate  = useNavigate();
+  const cardRef   = useRef<HTMLDivElement>(null);
+  const glowRef   = useRef<HTMLDivElement>(null);
   const tc = getTipoConfig(moto.tipo_moto);
 
   /* Mouse parallax glow */
@@ -134,10 +129,11 @@ function MotoCard({
     <div
       ref={cardRef}
       className="moto-card card-enter"
-      style={{ '--tc': tc.color, '--tc-bg': tc.bg } as React.CSSProperties}
+      style={{ '--tc': tc.color, '--tc-bg': tc.bg, cursor: 'pointer' } as React.CSSProperties}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
       onMouseMove={handleMove}
+      onClick={() => navigate(`/motos/${moto.id_moto}`)}
     >
       {/* Glow layer */}
       <div ref={glowRef} className="moto-card-glow" />
@@ -156,10 +152,10 @@ function MotoCard({
         {/* Acciones — solo para admin/mecánico */}
         {canManage && (
           <div className="moto-card-actions">
-            <button onClick={() => onEdit(moto)} className="moto-action-btn" title="Editar">
+            <button onClick={e => { e.stopPropagation(); onEdit(moto); }} className="moto-action-btn" title="Editar">
               <Pencil size={12} />
             </button>
-            <button onClick={() => onDelete(moto)} className="moto-action-btn danger" title="Eliminar">
+            <button onClick={e => { e.stopPropagation(); onDelete(moto); }} className="moto-action-btn danger" title="Eliminar">
               <Trash2 size={12} />
             </button>
           </div>
@@ -588,9 +584,9 @@ export default function MotosPage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 gap-2">
-                  <ImageIcon size={28} className="text-white/15" />
-                  <p className="text-[12px] font-semibold text-white/30">Toca para subir foto</p>
-                  <p className="text-[10px] text-white/18">JPG · PNG · WebP · máx 10MB</p>
+                  <ImageIcon size={28} className="text-white/40" />
+                  <p className="text-[12px] font-semibold text-white/55">Toca para subir foto</p>
+                  <p className="text-[10px] text-white/40">JPG · PNG · WebP · máx 10 MB</p>
                 </div>
               )}
               <input
