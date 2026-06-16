@@ -95,7 +95,7 @@ function UserCard({ u, roleName, onAssign, onDelete }: {
   const phone  = u.descripcion?.match(/TELEFONO:\s*([^\s|]+)/)?.[1];
 
   return (
-    <motion.div variants={cardV} layout>
+    <motion.div variants={cardV}>
       <div
         className="group relative rounded-2xl overflow-hidden flex flex-col h-full cursor-default"
         style={{
@@ -506,7 +506,6 @@ export default function ProfilesPage() {
           animate="show"
           className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"
         >
-          <AnimatePresence mode="popLayout">
             {filtered.map(u => (
               <UserCard
                 key={u.id_usuario}
@@ -516,7 +515,6 @@ export default function ProfilesPage() {
                 onDelete={isAdmin ? (uu: Usuario) => setDeleteTarget(uu) : undefined}
               />
             ))}
-          </AnimatePresence>
         </motion.div>
       )}
 

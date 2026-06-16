@@ -168,8 +168,8 @@ function MotoCard({
             <Gauge size={13} style={{ color: tc.color }} />
           </div>
           <div>
-            <p className="moto-stat-val">{moto.cilindraje} cc</p>
-            <p className="moto-stat-lbl">cilindraje</p>
+            <p className="moto-stat-val">{moto.cilindraje}</p>
+            <p className="moto-stat-lbl">CC</p>
           </div>
         </div>
 
@@ -180,8 +180,8 @@ function MotoCard({
             <Zap size={13} className="text-white/40" />
           </div>
           <div>
-            <p className="moto-stat-val">{km} km</p>
-            <p className="moto-stat-lbl">kilometraje</p>
+            <p className="moto-stat-val">{km}</p>
+            <p className="moto-stat-lbl">km</p>
           </div>
         </div>
 
@@ -193,7 +193,7 @@ function MotoCard({
           </div>
           <div>
             <p className="moto-stat-val">{moto.anio}</p>
-            <p className="moto-stat-lbl">{antiguedad === 0 ? 'nuevo' : `${antiguedad}a antigüedad`}</p>
+            <p className="moto-stat-lbl">{antiguedad === 0 ? 'nuevo' : `${antiguedad}a`}</p>
           </div>
         </div>
       </div>
@@ -267,7 +267,7 @@ export default function MotosPage() {
 
   const openCreate = () => {
     setEditTarget(null);
-    reset({ id_usuario: me?.id_usuario ?? 0 });
+    reset({ id_usuario: 0 });
     setModalOpen(true);
   };
 
@@ -512,11 +512,19 @@ export default function MotosPage() {
               <>
                 <select className="gm-input-d" {...register('id_usuario')}>
                   <option value="">Seleccionar propietario</option>
-                  {usuarios.map((u) => (
-                    <option key={u.id_usuario} value={u.id_usuario}>
-                      {u.nombre_completo} — {u.correo}
-                    </option>
-                  ))}
+                  {[...usuarios]
+                    .sort((a, b) => {
+                      const aAdmin = a.correo === 'gorilamotos2026@gmail.com';
+                      const bAdmin = b.correo === 'gorilamotos2026@gmail.com';
+                      if (aAdmin && !bAdmin) return 1;
+                      if (!aAdmin && bAdmin) return -1;
+                      return (a.nombre_completo ?? '').localeCompare(b.nombre_completo ?? '');
+                    })
+                    .map((u) => (
+                      <option key={u.id_usuario} value={u.id_usuario}>
+                        {u.nombre_completo} — {u.correo}
+                      </option>
+                    ))}
                 </select>
                 {errors.id_usuario && <p className="text-xs text-gm-red mt-1">{errors.id_usuario.message}</p>}
               </>

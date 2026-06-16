@@ -33,17 +33,19 @@ export default function AppLayout() {
   const roleColor = isAdmin ? '#E11428' : isMecanico ? '#3B82F6' : '#10B981';
 
   const NAV = [
-    { label: 'Dashboard',    to: '/dashboard'   },
-    ...((isAdmin || isMecanico) ? [{ label: 'Registros',  to: '/registros'  }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Motos',      to: '/motos'      }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Clientes',   to: '/clientes'   }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Inventario', to: '/inventario' }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Alertas',    to: '/alertas'    }] : []),
-    { label: 'Puntos',       to: '/puntos'      },
-    { label: 'Combustible',  to: '/combustible' },
-    ...(isCliente             ? [{ label: 'Mi Moto',    to: '/mi-moto'    }] : []),
-    ...(isCliente             ? [{ label: 'Mi Portal',  to: '/portal'     }] : []),
-    ...(isAdmin               ? [{ label: 'Perfiles',   to: '/perfiles'   }] : []),
+    { label: 'Dashboard',    to: '/dashboard'    },
+    ...((isAdmin || isMecanico) ? [{ label: 'Registros',   to: '/registros'   }] : []),
+    ...((isAdmin || isMecanico) ? [{ label: 'Motos',       to: '/motos'       }] : []),
+    ...((isAdmin || isMecanico) ? [{ label: 'Diagnóstico', to: '/diagnostico' }] : []),
+    ...((isAdmin || isMecanico) ? [{ label: 'Inventario',  to: '/inventario'  }] : []),
+    ...((isAdmin || isMecanico) ? [{ label: 'Alertas',     to: '/alertas'     }] : []),
+    ...((isAdmin || isMecanico) ? [{ label: 'Proveedores', to: '/proveedores' }] : []),
+    ...(isAdmin               ? [{ label: 'Pagos',       to: '/pagos'       }] : []),
+    { label: 'Puntos',        to: '/puntos'       },
+    { label: 'Combustible',   to: '/combustible'  },
+    ...(isCliente             ? [{ label: 'Mi Moto',     to: '/mi-moto'     }] : []),
+    ...(isCliente             ? [{ label: 'Mi Portal',   to: '/portal'      }] : []),
+    ...(isAdmin               ? [{ label: 'Perfiles',    to: '/perfiles'    }] : []),
   ];
 
   const handleLogout = () => { setMobileOpen(false); logout(); navigate('/login'); };
