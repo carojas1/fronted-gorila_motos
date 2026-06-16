@@ -270,6 +270,7 @@ export default function MotosPage() {
   const [saving,       setSaving]       = useState(false);
   const [search,       setSearch]       = useState('');
   const [filterTipo,   setFilterTipo]   = useState('');
+  const [filterCC,     setFilterCC]     = useState('');
   const [modalOpen,    setModalOpen]    = useState(false);
   const [editTarget,   setEditTarget]   = useState<Moto | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Moto | null>(null);
@@ -371,12 +372,16 @@ export default function MotosPage() {
 
   const filtered = motos.filter((m) => {
     const q = search.toLowerCase();
+    const owner = ownerName(m.id_usuario).toLowerCase();
     const matchQ =
       m.placa.toLowerCase().includes(q) ||
       m.marca.toLowerCase().includes(q) ||
-      m.modelo.toLowerCase().includes(q);
+      m.modelo.toLowerCase().includes(q) ||
+      owner.includes(q) ||
+      String(m.cilindraje).includes(q);
     const matchTipo = filterTipo === '' || m.tipo_moto === filterTipo;
-    return matchQ && matchTipo;
+    const matchCC   = filterCC === '' || getCCRange(m.cilindraje).label === filterCC;
+    return matchQ && matchTipo && matchCC;
   });
 
   /* Stats summary */
@@ -449,7 +454,7 @@ export default function MotosPage() {
           <Search size={14} />
           <input
             className="gm-input-d mp-search-input"
-            placeholder="Buscar placa, marca o modelo..."
+            placeholder="Buscar por placa, marca, modelo, dueño o cc..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -476,6 +481,31 @@ export default function MotosPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* ─── Filtro por cilindraje (categoría) ─── */}
+      <div className="mp-filters mp-header-el" style={{ marginTop: -8 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', marginRight: 4 }}>
+          Cilindraje:
+        </span>
+        <button
+          className={`filter-chip ${filterCC === '' ? 'active' : ''}`}
+          onClick={() => setFilterCC('')}
+        >
+          Todos
+        </button>
+        {CC_RANGES.map((r) => (
+          <button
+            key={r.label}
+            className={`filter-chip ${filterCC === r.label ? 'active' : ''}`}
+            onClick={() => setFilterCC(filterCC === r.label ? '' : r.label)}
+            style={filterCC === r.label ? { '--chip-color': r.color } as React.CSSProperties : {}}
+          >
+            {r.label} <span style={{ opacity: 0.55, fontSize: '0.85em' }}>
+              {r.max === Infinity ? '651+' : `≤${r.max}`}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* ─── Grid ─── */}

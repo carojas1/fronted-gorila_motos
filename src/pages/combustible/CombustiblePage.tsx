@@ -248,8 +248,8 @@ export default function CombustiblePage() {
               Evolución del consumo (L / 100 km)
             </p>
           </div>
-          <div style={{ width: '100%', height: 240 }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ width: '100%', height: 240, minWidth: 0 }}>
+            <ResponsiveContainer width="100%" height={240} minWidth={0}>
               <AreaChart data={chartData} margin={{ top: 6, right: 8, left: -18, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradConsumo" x1="0" y1="0" x2="0" y2="1">

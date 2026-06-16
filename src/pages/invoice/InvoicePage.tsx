@@ -7,7 +7,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import { registrosApi, motosApi, usuariosApi, tiposApi } from '../../lib/api';
-import { fmtDate, fmtMoney, extractCedula, extractPhone } from '../../lib/utils';
+import { fmtDate, fmtMoney, extractCedula, extractPhone, toIsoStr } from '../../lib/utils';
 import type { RegistroDetalle, Moto, Usuario, Tipo } from '../../types';
 
 /* ── Datos del emisor (taller) ── */
@@ -30,9 +30,11 @@ function genFacturaNum(id: number): string {
   return `001-001-${seq}`;
 }
 
-/* ── Genera número de autorización SRI (simulado 49 dígitos) ── */
-function genAutorizacion(id: number, fecha: string): string {
-  const base = fecha.replace(/-/g, '') + String(id).padStart(8, '0') + '001' + '1792345678001' + '18';
+/* ── Genera número de autorización SRI (simulado 49 dígitos) ──
+   fecha puede venir como string "YYYY-MM-DD" o array [y,m,d] del backend Java */
+function genAutorizacion(id: number, fecha: unknown): string {
+  const f = toIsoStr(fecha); // normaliza array/string → "YYYY-MM-DD"
+  const base = f.replace(/-/g, '') + String(id).padStart(8, '0') + '001' + '1792345678001' + '18';
   const padded = base.padEnd(49, '0').slice(0, 49);
   return padded;
 }
@@ -265,8 +267,8 @@ export default function InvoicePage() {
                 <td className="px-3 py-2.5 text-xs font-mono text-gray-500">SRV-{String(reg.id_registro).padStart(4,'0')}</td>
                 <td className="px-3 py-2.5 text-sm font-semibold">
                   {reg.tipo_servicio || 'Servicio de mantenimiento'}
-                  {reg.observaciones && (
-                    <p className="text-xs text-gray-500 font-normal mt-0.5">{reg.observaciones}</p>
+                  {reg.descripcion && (
+                    <p className="text-xs text-gray-500 font-normal mt-0.5">{reg.descripcion}</p>
                   )}
                 </td>
                 <td className="px-3 py-2.5 text-sm text-right">{fmtMoney(subtotal)}</td>

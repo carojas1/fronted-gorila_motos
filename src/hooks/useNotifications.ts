@@ -6,6 +6,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motosApi, productosApi, registrosApi } from '../lib/api';
 import { toIsoStr } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 import type { Moto, Producto, RegistroDetalle } from '../types';
 
 export type NotifPriority = 'high' | 'medium' | 'low';
@@ -40,14 +41,23 @@ function genId(prefix: string, id: number | string) {
 function oilThreshold(cc: number) { return cc >= 300 ? 5000 : 1000; }
 
 export function useNotifications() {
+  const { user, isAdmin, isMecanico, isCliente } = useAuth();
+  const canManage = isAdmin || isMecanico;
   const [notifications, setNotifications] = useState<Notification[]>(loadStored);
   const [loading, setLoading]             = useState(false);
 
   const refresh = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     try {
+      /* Cliente: solo sus motos. Admin/mecánico: todo. */
+      const motosReq = (isCliente && !canManage)
+        ? motosApi.byUser(user.id_usuario)
+        : motosApi.list();
       const [mr, pr, rr] = await Promise.allSettled([
-        motosApi.list(), productosApi.list(), registrosApi.list(),
+        motosReq,
+        canManage ? productosApi.list() : Promise.reject(),
+        canManage ? registrosApi.list() : Promise.reject(),
       ]);
       const motos:    Moto[]            = mr.status === 'fulfilled' ? mr.value.data : [];
       const productos:Producto[]        = pr.status === 'fulfilled' ? pr.value.data : [];
@@ -58,7 +68,7 @@ export function useNotifications() {
       const stored = loadStored();
       const storedIds = new Set(stored.map(n => n.id));
 
-      /* ── Alertas de aceite ── */
+      /* ── Alertas de aceite (cliente: solo sus motos; admin/mec: todas) ── */
       const OIL_KW = ['cambio de aceite', 'aceite', 'oil'];
       motos.forEach(m => {
         const oilRecs = registros
@@ -120,7 +130,7 @@ export function useNotifications() {
             newNotifs.push({
               id: nid, type: 'pending_order', priority: 'low', read: false, createdAt: today,
               title: `Orden pendiente sin atender`,
-              message: `${r.placa} — ${r.nombre_cliente} desde ${r.fecha}`,
+              message: `${r.placa} — ${r.nombre_cliente} desde ${toIsoStr(r.fecha)}`,
               link: '/registros',
             });
           }
@@ -133,7 +143,8 @@ export function useNotifications() {
       }
     } catch { /* silent */ }
     finally { setLoading(false); }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id_usuario, isCliente, canManage]);
 
   /* Refresco inicial + polling en tiempo real cada 30 s (solo con pestaña visible) */
   useEffect(() => {

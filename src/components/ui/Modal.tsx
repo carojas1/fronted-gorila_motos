@@ -37,6 +37,12 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
     }
   }, [open]);
 
+  /* Salvaguarda: si el modal se desmonta estando abierto (ej. cambio de ruta),
+     liberar SIEMPRE el scroll del body para que la página no quede congelada. */
+  useEffect(() => {
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   const handleClose = () => {
     if (!backdropRef.current || !panelRef.current) { onClose(); return; }
     gsap.to(panelRef.current,    { opacity: 0, y: 14, scale: 0.96, duration: 0.18 });
