@@ -4,7 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Truck, Package, AlertTriangle, Phone, Mail, CheckCircle2, X, Edit2, Save } from 'lucide-react';
+import { Truck, Package, AlertTriangle, Phone, Mail, CheckCircle2, X, Edit2, Save, MessageCircle } from 'lucide-react';
 import { productosApi } from '../../lib/api';
 import { fmtMoney } from '../../lib/utils';
 import { useToast } from '../../components/ui/Toast';
@@ -121,19 +121,37 @@ function ProveedorCard({ codigo, productos, contacto, onEdit }: ProveedorCardPro
         </div>
       </div>
 
-      {/* Alerta principal */}
+      {/* Alerta principal + WhatsApp */}
       {tieneAlerta && (
         <div className="px-4 py-3"
              style={{ background: `${cardColor}08`, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-          <div className="flex items-start gap-2">
-            <AlertTriangle size={12} style={{ color: cardColor, marginTop: 2, flexShrink: 0 }} />
-            <p className="text-[11px] font-semibold leading-snug" style={{ color: `${cardColor}cc` }}>
-              {sinStock > 0
-                ? `Deberías contactar con ${contacto?.nombre || `el proveedor ${codigo}`} — tenemos ${sinStock} producto${sinStock > 1 ? 's' : ''} sin stock.`
-                : `Stock bajo detectado. Contacta a ${contacto?.nombre || `el proveedor ${codigo}`} para reponer.`
-              }
-              {contacto?.producto && ` Producto principal: ${contacto.producto}.`}
-            </p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2 flex-1 min-w-0">
+              <AlertTriangle size={12} style={{ color: cardColor, marginTop: 2, flexShrink: 0 }} />
+              <p className="text-[11px] font-semibold leading-snug" style={{ color: `${cardColor}cc` }}>
+                {sinStock > 0
+                  ? `${sinStock} producto${sinStock > 1 ? 's' : ''} sin stock — contacta al proveedor.`
+                  : `Stock bajo — reponer con ${contacto?.nombre || `proveedor ${codigo}`}.`
+                }
+              </p>
+            </div>
+            {contacto?.telefono && (() => {
+              const raw = contacto.telefono.replace(/\D/g, '');
+              const intl = raw.startsWith('0') ? `593${raw.slice(1)}` : raw.startsWith('593') ? raw : `593${raw}`;
+              const items = productos.filter(p => p.stock <= 5).map(p => `• ${p.nombre} (${p.stock} u.)`).join('\n');
+              const msg = encodeURIComponent(`Hola! Soy Gorila Motos\n\nNecesitamos reponer:\n${items}\n\nGracias.`);
+              return (
+                <a
+                  href={`https://wa.me/${intl}?text=${msg}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black shrink-0 transition-all hover:-translate-y-0.5"
+                  style={{ background: 'rgba(37,211,102,0.15)', border: '1px solid rgba(37,211,102,0.3)', color: '#25D366' }}
+                >
+                  <MessageCircle size={11} /> WhatsApp
+                </a>
+              );
+            })()}
           </div>
         </div>
       )}

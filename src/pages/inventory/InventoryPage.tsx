@@ -4,7 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, Search, Pencil, Trash2, Package, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -328,92 +328,114 @@ export default function InventoryPage() {
         </form>
       </Modal>
 
-      {/* ─── Modal desglose de stock ─── */}
-      <Modal
-        open={showStockModal}
-        onClose={() => setShowStockModal(false)}
-        title="Estado del inventario"
-        size="lg"
-        footer={<Button onClick={() => setShowStockModal(false)}>Cerrar</Button>}
-      >
-        <div className="space-y-5 max-h-[58vh] overflow-y-auto pr-1 dark-scroll">
+      {/* ─── Panel completo de stock (inline, no modal) ─── */}
+      {showStockModal && (
+        <div className="section-enter gm-card-d rounded-2xl overflow-hidden">
+          {/* Header del panel */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.05]">
+            <div className="flex items-center gap-3">
+              <Package size={16} className="text-white/40" />
+              <h2 className="text-[15px] font-black text-white">Estado del inventario</h2>
+              <span className="text-[11px] text-white/25 font-mono">{productos.length} productos totales</span>
+            </div>
+            <button
+              onClick={() => setShowStockModal(false)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              <X size={14} className="text-white/50" />
+            </button>
+          </div>
 
-          {/* Sin stock — Rojo */}
-          {productos.filter(p => p.stock === 0).length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-gm-red" />
-                <span className="text-[10px] font-black text-gm-red uppercase tracking-[0.25em]">
-                  Sin stock — {productos.filter(p => p.stock === 0).length} producto(s)
-                </span>
+          {/* Tres columnas */}
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x"
+               style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+
+            {/* Sin stock — Rojo */}
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-gm-red animate-pulse" />
+                  <span className="text-[10px] font-black text-gm-red uppercase tracking-[0.25em]">Sin stock</span>
+                </div>
+                <span className="text-xl font-black text-gm-red">{productos.filter(p => p.stock === 0).length}</span>
               </div>
-              <div className="space-y-1.5">
-                {productos.filter(p => p.stock === 0).map(p => (
-                  <div key={p.id_producto}
-                       className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                       style={{ background: 'rgba(225,20,40,0.07)', border: '1px solid rgba(225,20,40,0.18)' }}>
-                    <div>
-                      <p className="text-[13px] font-semibold text-white/75">{p.nombre}</p>
-                      <p className="text-[10px] text-white/30 font-mono mt-0.5">{p.codigo_personal}</p>
+              <div className="space-y-2">
+                {productos.filter(p => p.stock === 0).length === 0
+                  ? <p className="text-[12px] text-white/20 text-center py-6">Todo con stock</p>
+                  : productos.filter(p => p.stock === 0).map(p => (
+                    <div key={p.id_producto}
+                         className="flex items-center justify-between p-3 rounded-xl"
+                         style={{ background: 'rgba(225,20,40,0.07)', border: '1px solid rgba(225,20,40,0.18)' }}>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-white/80 truncate">{p.nombre}</p>
+                        <p className="text-[10px] text-white/30 font-mono mt-0.5">{p.codigo_personal}</p>
+                      </div>
+                      <span className="text-[12px] font-black text-gm-red ml-3 shrink-0">0 u.</span>
                     </div>
-                    <Badge variant="danger">0 u.</Badge>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
-          )}
 
-          {/* Stock bajo — Amarillo */}
-          {productos.filter(p => p.stock > 0 && p.stock <= 5).length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                <span className="text-[10px] font-black text-amber-400 uppercase tracking-[0.25em]">
-                  Stock bajo — {productos.filter(p => p.stock > 0 && p.stock <= 5).length} producto(s)
-                </span>
+            {/* Stock bajo — Amarillo */}
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-[0.25em]">Stock bajo</span>
+                </div>
+                <span className="text-xl font-black text-amber-400">{productos.filter(p => p.stock > 0 && p.stock <= 5).length}</span>
               </div>
-              <div className="space-y-1.5">
-                {productos.filter(p => p.stock > 0 && p.stock <= 5).map(p => (
-                  <div key={p.id_producto}
-                       className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                       style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.18)' }}>
-                    <div>
-                      <p className="text-[13px] font-semibold text-white/75">{p.nombre}</p>
-                      <p className="text-[10px] text-white/30 font-mono mt-0.5">{p.codigo_personal}</p>
+              <div className="space-y-2">
+                {productos.filter(p => p.stock > 0 && p.stock <= 5).length === 0
+                  ? <p className="text-[12px] text-white/20 text-center py-6">Sin alertas</p>
+                  : productos.filter(p => p.stock > 0 && p.stock <= 5).map(p => (
+                    <div key={p.id_producto}
+                         className="flex items-center justify-between p-3 rounded-xl"
+                         style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.18)' }}>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-semibold text-white/80 truncate">{p.nombre}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <div className="flex-1 h-1 rounded-full bg-white/[0.08]">
+                            <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${(p.stock / 5) * 100}%` }} />
+                          </div>
+                          <span className="text-[10px] text-white/30 font-mono shrink-0">{p.codigo_personal}</span>
+                        </div>
+                      </div>
+                      <span className="text-[12px] font-black text-amber-400 ml-3 shrink-0">{p.stock} u.</span>
                     </div>
-                    <Badge variant="warning">{p.stock} u.</Badge>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
-          )}
 
-          {/* Stock OK — Verde */}
-          {productos.filter(p => p.stock > 5).length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.25em]">
-                  Stock OK — {productos.filter(p => p.stock > 5).length} producto(s)
-                </span>
+            {/* Stock OK — Verde */}
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.25em]">Stock OK</span>
+                </div>
+                <span className="text-xl font-black text-emerald-400">{productos.filter(p => p.stock > 5).length}</span>
               </div>
-              <div className="space-y-1.5">
-                {productos.filter(p => p.stock > 5).map(p => (
-                  <div key={p.id_producto}
-                       className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                       style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
-                    <div>
-                      <p className="text-[13px] font-medium text-white/60">{p.nombre}</p>
-                      <p className="text-[10px] text-white/25 font-mono mt-0.5">{p.codigo_personal}</p>
+              <div className="space-y-2 max-h-72 overflow-y-auto dark-scroll pr-1">
+                {productos.filter(p => p.stock > 5).length === 0
+                  ? <p className="text-[12px] text-white/20 text-center py-6">Sin productos</p>
+                  : productos.filter(p => p.stock > 5).map(p => (
+                    <div key={p.id_producto}
+                         className="flex items-center justify-between p-3 rounded-xl"
+                         style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.12)' }}>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-white/65 truncate">{p.nombre}</p>
+                        <p className="text-[10px] text-white/25 font-mono mt-0.5">{p.codigo_personal}</p>
+                      </div>
+                      <span className="text-[12px] font-black text-emerald-400 ml-3 shrink-0">{p.stock} u.</span>
                     </div>
-                    <Badge variant="success">{p.stock} u.</Badge>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </Modal>
+      )}
 
       {/* ─── Modal eliminar ─── */}
       <Modal

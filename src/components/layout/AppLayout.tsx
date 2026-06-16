@@ -5,6 +5,7 @@
 
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+// AnimatePresence kept for mobile drawer only — main content uses plain motion.div to avoid scroll freeze
 import { useAuth } from '../../contexts/AuthContext';
 import { LogOut, ChevronDown, Menu, X } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
@@ -410,18 +411,15 @@ export default function AppLayout() {
 
       {/* ══ CONTENIDO ═══════════════════════════════════════════════ */}
       <main className="flex-1">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
+        <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
             className="p-4 md:p-6 lg:p-8 max-w-screen-2xl mx-auto"
           >
             <Outlet />
           </motion.div>
-        </AnimatePresence>
       </main>
     </div>
   );

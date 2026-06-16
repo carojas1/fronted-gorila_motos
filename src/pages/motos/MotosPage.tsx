@@ -3,9 +3,10 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Plus, Search, Pencil, Trash2, Bike, Gauge, User,
-  Calendar, Zap, Shield, ChevronRight, SlidersHorizontal,
+  Calendar, Zap, Shield, ChevronRight, SlidersHorizontal, ClipboardList,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,6 +36,15 @@ const TIPO_CONFIG: Record<string, { color: string; bg: string; dot: string }> = 
 };
 const getTipoConfig = (tipo: string) =>
   TIPO_CONFIG[tipo] ?? TIPO_CONFIG['Otro'];
+
+const CC_RANGES = [
+  { max: 125,  label: 'Urbana',           color: '#10B981' },
+  { max: 200,  label: 'Semideportiva',    color: '#3B82F6' },
+  { max: 400,  label: 'Deportiva',        color: '#F59E0B' },
+  { max: 650,  label: 'Alto rendimiento', color: '#FF8C00' },
+  { max: Infinity, label: 'Supersport',   color: '#E11428' },
+];
+const getCCRange = (cc: number) => CC_RANGES.find(r => cc <= r.max) ?? CC_RANGES[CC_RANGES.length - 1];
 
 const schema = z.object({
   placa:       z.string().min(6, 'Mínimo 6 caracteres').transform((v) => v.toUpperCase()),
@@ -198,7 +208,23 @@ function MotoCard({
         </div>
       </div>
 
-      {/* Footer owner */}
+      {/* CC range badge */}
+      {(() => {
+        const range = getCCRange(moto.cilindraje);
+        return (
+          <div style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{
+              fontSize: 9.5, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase',
+              color: range.color, background: `${range.color}15`,
+              border: `1px solid ${range.color}30`, borderRadius: 99, padding: '2px 8px',
+            }}>
+              {moto.cilindraje} cc — {range.label}
+            </span>
+          </div>
+        );
+      })()}
+
+      {/* Footer owner + diagnostic */}
       <div className="moto-card-footer">
         <div className="moto-owner">
           <div className="moto-owner-avatar">
@@ -206,7 +232,16 @@ function MotoCard({
           </div>
           <span className="moto-owner-name">{ownerName}</span>
         </div>
-        <ChevronRight size={13} className="moto-chevron" />
+        <Link
+          to={`/diagnostico?moto_id=${moto.id_moto}`}
+          title="Ver / crear diagnóstico"
+          onClick={e => e.stopPropagation()}
+          style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: 'rgba(59,130,246,0.7)', textDecoration: 'none' }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#3B82F6'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'rgba(59,130,246,0.7)'}
+        >
+          <ClipboardList size={11} /> Diagnóstico
+        </Link>
       </div>
     </div>
   );
@@ -511,7 +546,7 @@ export default function MotosPage() {
               /* Admin / Mecánico — elige cualquier propietario */
               <>
                 <select className="gm-input-d" {...register('id_usuario')}>
-                  <option value="">Seleccionar propietario</option>
+                  <option value="0">Seleccionar propietario</option>
                   {[...usuarios]
                     .sort((a, b) => {
                       const aAdmin = a.correo === 'gorilamotos2026@gmail.com';

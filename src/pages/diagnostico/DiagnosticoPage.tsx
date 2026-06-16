@@ -3,7 +3,8 @@
    Registro clínico al ingreso de cada vehículo
    ───────────────────────────────────────────── */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   ClipboardList, Search, Bike, CheckCircle, AlertTriangle, XCircle,
   ChevronDown, ChevronUp, Gauge, Save, Clock, User,
@@ -120,8 +121,10 @@ function DiagnosticoCard({ d, motos, usuarios }: { d: DiagnosticoMoto; motos: Mo
 
 /* ══════════════════════════════════════════════════════════════ */
 export default function DiagnosticoPage() {
-  const { user } = useAuth();
-  const toast    = useToast();
+  const { user }    = useAuth();
+  const toast       = useToast();
+  const [params]    = useSearchParams();
+  const preselected = useRef(params.get('moto_id'));
 
   const [motos,    setMotos]    = useState<Moto[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -144,7 +147,14 @@ export default function DiagnosticoPage() {
       usuariosApi.list(),
       user ? diagnosticosApi.byMecanico(user.id_usuario) : Promise.reject(),
     ]).then(([m, u, h]) => {
-      if (m.status === 'fulfilled') setMotos(m.value.data as Moto[]);
+      if (m.status === 'fulfilled') {
+        const lista = m.value.data as Moto[];
+        setMotos(lista);
+        if (preselected.current) {
+          const found = lista.find(mo => mo.id_moto === parseInt(preselected.current!));
+          if (found) { setMotoSel(found); setBusqueda(`${found.marca} ${found.modelo}`); }
+        }
+      }
       if (u.status === 'fulfilled') setUsuarios(u.value.data as Usuario[]);
       if (h.status === 'fulfilled') setHistorial(h.value.data as DiagnosticoMoto[]);
     }).finally(() => setLoading(false));
