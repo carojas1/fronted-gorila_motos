@@ -20,7 +20,7 @@ import { getErrorMsg, extractPhone, extractCedula } from '../../lib/utils';
 import Input from '../../components/ui/Input';
 import type { Moto } from '../../types';
 import { EstadoMotoLive } from '../../components/mantenimiento/EstadoMantenimiento';
-import { calcularEstadoLocal } from '../../lib/mantenimiento';
+import { calcularEstadoLocal, serviciosDeMoto } from '../../lib/mantenimiento';
 
 /* ─── Tipos de moto disponibles ─── */
 const TIPOS = ['Sport', 'Naked', 'Touring', 'Enduro', 'Scrambler', 'Cruiser', 'Scooter', 'Otro'];
@@ -375,7 +375,7 @@ export default function MiMotoPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {motos.map(moto => {
             const color   = TIPO_COLOR[moto.tipo_moto ?? 'Otro'] ?? '#8A8A9E';
-            const estLocal = calcularEstadoLocal(moto.cilindraje, moto.kilometraje);
+            const estLocal = calcularEstadoLocal(moto.cilindraje, moto.kilometraje, serviciosDeMoto(moto.id_moto));
             const hasVenc = estLocal.some(s => s.estado === 'VENCIDO');
             const hasPrx  = estLocal.some(s => s.estado === 'PROXIMO');
             return (

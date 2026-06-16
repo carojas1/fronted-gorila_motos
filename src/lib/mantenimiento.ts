@@ -153,22 +153,57 @@ export interface EstadoCalculado {
   estado:             'OK' | 'PROXIMO' | 'VENCIDO';
 }
 
-export function calcularEstadoLocal(cc: number, kmActual: number): EstadoCalculado[] {
+/* El desgaste se mide desde el ÚLTIMO MANTENIMIENTO REAL registrado por el
+   mecánico (no desde un múltiplo asumido). Si nunca se registró, parte de 0 km
+   → la pieza acumula desgaste y se pone en rojo hasta que alguien la cambie.
+   `servicios` = { TIPO: km_en_que_se_hizo }. */
+export function calcularEstadoLocal(
+  cc: number,
+  kmActual: number,
+  servicios: Record<string, number> = {},
+): EstadoCalculado[] {
   return parametrosDeCC(cc).map(p => {
     const intervalo     = p.intervaloKm;
-    const ultimoUmbral  = Math.floor(kmActual / intervalo) * intervalo;
-    const proximoUmbral = ultimoUmbral + intervalo;
-    const kmDesdeUltimo = kmActual - ultimoUmbral;
-    const porcentaje    = Math.min(100, Math.round((kmDesdeUltimo / intervalo) * 100));
-    const kmRestante    = proximoUmbral - kmActual;
+    const ultimoCambio  = servicios[p.tipo] ?? 0;            // km del último cambio real (0 = nunca)
+    const kmDesdeUltimo = Math.max(0, kmActual - ultimoCambio);
+    const proximoCambio = ultimoCambio + intervalo;
+    const porcentaje    = Math.round((kmDesdeUltimo / intervalo) * 100); // puede superar 100% (vencido)
+    const kmRestante    = proximoCambio - kmActual;
     const estado: EstadoCalculado['estado'] =
       porcentaje >= 100 ? 'VENCIDO' : porcentaje >= 80 ? 'PROXIMO' : 'OK';
     return {
       tipo: p.tipo, label: p.label, intervaloKm: intervalo, kmActual,
-      ultimoCambioKm: ultimoUmbral, proximoCambioKm: proximoUmbral,
+      ultimoCambioKm: ultimoCambio, proximoCambioKm: proximoCambio,
       kmDesdeUltimo, kmRestante, porcentajeDesgaste: porcentaje, estado,
     };
   });
+}
+
+/* ── Registro de mantenimientos REALES (por moto, por pieza) ──
+   Persistencia local: el mecánico marca "ya cambié X a los Y km".
+   { [id_moto]: { TIPO: km_servicio } } */
+const SERVICIOS_KEY = 'gm_mantenimiento_realizado';
+
+export function loadServicios(): Record<number, Record<string, number>> {
+  try { return JSON.parse(localStorage.getItem(SERVICIOS_KEY) ?? '{}'); }
+  catch { return {}; }
+}
+
+export function serviciosDeMoto(idMoto: number): Record<string, number> {
+  return loadServicios()[idMoto] ?? {};
+}
+
+/** Marca una pieza como cambiada al kilometraje indicado (la resetea a 0%). */
+export function registrarServicio(idMoto: number, tipo: string, kmServicio: number): void {
+  const all = loadServicios();
+  all[idMoto] = { ...(all[idMoto] ?? {}), [tipo]: kmServicio };
+  localStorage.setItem(SERVICIOS_KEY, JSON.stringify(all));
+}
+
+/** Deshace el registro de una pieza (vuelve a acumular desde 0 / último previo). */
+export function quitarServicio(idMoto: number, tipo: string): void {
+  const all = loadServicios();
+  if (all[idMoto]) { delete all[idMoto][tipo]; localStorage.setItem(SERVICIOS_KEY, JSON.stringify(all)); }
 }
 
 /* ── Colores de estado consistentes en toda la app ── */

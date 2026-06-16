@@ -17,7 +17,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   fmtDate, fmtMoney, getErrorMsg, ESTADO_REGISTRO, extractPhone, toIsoStr,
 } from '../../lib/utils';
-import { calcularEstadoLocal } from '../../lib/mantenimiento';
+import { calcularEstadoLocal, serviciosDeMoto } from '../../lib/mantenimiento';
 import type { RegistroDetalle, Usuario, Moto, Tipo } from '../../types';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -472,7 +472,7 @@ export default function RecordsPage() {
 
   /* Mantenimientos recomendados (vencidos/próximos) para la moto seleccionada */
   const recomendaciones = nMoto
-    ? calcularEstadoLocal(nMoto.cilindraje, nMoto.kilometraje)
+    ? calcularEstadoLocal(nMoto.cilindraje, nMoto.kilometraje, serviciosDeMoto(nMoto.id_moto))
         .filter(e => e.estado !== 'OK')
         .sort((a, b) => b.porcentajeDesgaste - a.porcentajeDesgaste)
     : [];
