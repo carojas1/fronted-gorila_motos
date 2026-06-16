@@ -141,8 +141,13 @@ function MotoCard({
         )}
       </div>
 
-      {/* Plate + Main info */}
+      {/* Photo + Plate + Main info */}
       <div className="moto-card-body">
+        {moto.ruta_imagen_motos && moto.ruta_imagen_motos !== 'Desconocido' ? (
+          <div style={{ width: '100%', height: 110, borderRadius: 10, overflow: 'hidden', marginBottom: 10, border: `1px solid ${tc.color}20` }}>
+            <img src={moto.ruta_imagen_motos} alt={`${moto.marca} ${moto.modelo}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
+        ) : null}
         <div className="moto-plate-wrap">
           <span className="plate-tag">{moto.placa}</span>
         </div>

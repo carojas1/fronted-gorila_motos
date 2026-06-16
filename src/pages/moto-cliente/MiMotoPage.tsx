@@ -11,13 +11,14 @@ import { z } from 'zod';
 import {
   Bike, Camera, Plus, User, Phone, CreditCard,
   CheckCircle, AlertTriangle, Pencil, X, Save,
+  Gauge, RefreshCw, Activity,
 } from 'lucide-react';
-import { motosApi, usuariosApi } from '../../lib/api';
+import { motosApi, usuariosApi, alertasApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg, extractPhone, extractCedula } from '../../lib/utils';
 import Input from '../../components/ui/Input';
-import type { Moto } from '../../types';
+import type { Moto, EstadoMantenimiento } from '../../types';
 
 /* ─── Tipos de moto disponibles ─── */
 const TIPOS = ['Sport', 'Naked', 'Touring', 'Enduro', 'Scrambler', 'Cruiser', 'Scooter', 'Otro'];
@@ -65,6 +66,12 @@ export default function MiMotoPage() {
   const [editingPerfil, setEditingPerfil] = useState(false);
   const [savingPerfil,  setSavingPerfil]  = useState(false);
 
+  /* Actualización de km + salud */
+  const [kmMoto,       setKmMoto]       = useState<Record<number, string>>({});
+  const [savingKm,     setSavingKm]     = useState<number | null>(null);
+  const [saludMoto,    setSaludMoto]    = useState<Record<number, EstadoMantenimiento[]>>({});
+  const [loadingSalud, setLoadingSalud] = useState<number | null>(null);
+
   const cedula   = extractCedula(user?.descripcion ?? '');
   const telefono = extractPhone(user?.descripcion  ?? '');
   const perfilOk = !!cedula && !!telefono;
@@ -90,10 +97,45 @@ export default function MiMotoPage() {
     if (!user?.id_usuario) return;
     setLoadingMotos(true);
     motosApi.byUser(user.id_usuario)
-      .then(({ data }) => setMotos(Array.isArray(data) ? data : []))
+      .then(({ data }) => {
+        const lista = Array.isArray(data) ? data as Moto[] : [];
+        setMotos(lista);
+        setKmMoto(Object.fromEntries(lista.map(m => [m.id_moto, String(m.kilometraje)])));
+      })
       .catch(() => setMotos([]))
       .finally(() => setLoadingMotos(false));
   }, [user?.id_usuario]);
+
+  /* Cargar salud de una moto */
+  const cargarSalud = async (idMoto: number) => {
+    if (saludMoto[idMoto]) return; // ya cargado
+    setLoadingSalud(idMoto);
+    try {
+      const { data } = await alertasApi.estadoMoto(idMoto);
+      setSaludMoto(prev => ({ ...prev, [idMoto]: data as EstadoMantenimiento[] }));
+    } catch { /* silent */ }
+    finally { setLoadingSalud(null); }
+  };
+
+  /* Actualizar km */
+  const actualizarKm = async (moto: Moto) => {
+    const km = parseInt(kmMoto[moto.id_moto] ?? '');
+    if (isNaN(km) || km < 0) { toast.error('Ingresa un kilómetro válido', 'Error'); return; }
+    setSavingKm(moto.id_moto);
+    try {
+      await motosApi.update(moto.id_moto, { kilometraje: km });
+      setMotos(prev => prev.map(m => m.id_moto === moto.id_moto ? { ...m, kilometraje: km } : m));
+      // Invalidar salud para que se recargue con nuevo km
+      setSaludMoto(prev => { const n = { ...prev }; delete n[moto.id_moto]; return n; });
+      toast.success('Kilometraje actualizado · Revisando alertas…', 'Mi Moto');
+      // Cargar nueva salud
+      setTimeout(() => cargarSalud(moto.id_moto), 1500);
+    } catch (err) {
+      toast.error(getErrorMsg(err), 'Error');
+    } finally {
+      setSavingKm(null);
+    }
+  };
 
   /* Pre-rellenar form perfil con datos actuales */
   useEffect(() => {
@@ -342,51 +384,116 @@ export default function MiMotoPage() {
         /* ── Cards de motos ── */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {motos.map(moto => {
-            const color = TIPO_COLOR[moto.tipo_moto ?? 'Otro'] ?? '#8A8A9E';
+            const color   = TIPO_COLOR[moto.tipo_moto ?? 'Otro'] ?? '#8A8A9E';
+            const salud   = saludMoto[moto.id_moto];
+            const hasVenc = salud?.some(s => s.estado === 'VENCIDO');
+            const hasPrx  = salud?.some(s => s.estado === 'PROXIMO');
             return (
-              <div key={moto.id_moto} style={{
-                ...card,
-                borderLeft: `3px solid ${color}`,
-                display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap',
-              }}>
-                {moto.ruta_imagen_motos && moto.ruta_imagen_motos !== 'Desconocido' ? (
-                  <img
-                    src={moto.ruta_imagen_motos}
-                    alt={`${moto.marca} ${moto.modelo}`}
-                    style={{
-                      width: 56, height: 56, borderRadius: 12, flexShrink: 0,
-                      objectFit: 'cover', border: `1px solid ${color}30`,
-                    }}
-                  />
-                ) : (
-                  <div style={{
-                    width: 56, height: 56, borderRadius: 12, flexShrink: 0,
-                    background: `${color}18`, border: `1px solid ${color}30`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Bike size={24} color={color} />
+              <div key={moto.id_moto} style={{ ...card, borderLeft: `3px solid ${color}` }}>
+
+                {/* ── Cabecera info moto ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap', marginBottom: 16 }}>
+                  {moto.ruta_imagen_motos && moto.ruta_imagen_motos !== 'Desconocido' ? (
+                    <img src={moto.ruta_imagen_motos} alt={`${moto.marca} ${moto.modelo}`} style={{ width: 56, height: 56, borderRadius: 12, flexShrink: 0, objectFit: 'cover', border: `1px solid ${color}30` }} />
+                  ) : (
+                    <div style={{ width: 56, height: 56, borderRadius: 12, flexShrink: 0, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Bike size={24} color={color} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ color: '#EBEBEB', fontWeight: 800, fontSize: 16, margin: '0 0 2px', letterSpacing: '-0.02em' }}>
+                      {moto.marca} {moto.modelo}
+                      {moto.nombre_moto && <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 500, fontSize: 13 }}> — {moto.nombre_moto}</span>}
+                    </p>
+                    <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>Placa: <b style={{ color: '#EBEBEB' }}>{moto.placa}</b></span>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>Año: <b style={{ color: '#EBEBEB' }}>{moto.anio}</b></span>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>CC: <b style={{ color: '#EBEBEB' }}>{moto.cilindraje}</b></span>
+                    </div>
                   </div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ color: '#EBEBEB', fontWeight: 800, fontSize: 16, margin: '0 0 2px', letterSpacing: '-0.02em' }}>
-                    {moto.marca} {moto.modelo}
-                    {moto.nombre_moto && <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 500, fontSize: 13 }}> — {moto.nombre_moto}</span>}
-                  </p>
-                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>Placa: <b style={{ color: '#EBEBEB' }}>{moto.placa}</b></span>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>Año: <b style={{ color: '#EBEBEB' }}>{moto.anio}</b></span>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>CC: <b style={{ color: '#EBEBEB' }}>{moto.cilindraje}</b></span>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>KM: <b style={{ color: '#EBEBEB' }}>{moto.kilometraje?.toLocaleString()}</b></span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color, padding: '3px 10px', background: `${color}15`, border: `1px solid ${color}25`, borderRadius: 99 }}>{moto.tipo_moto}</span>
+                    {hasVenc && <span style={{ fontSize: 10, color: '#E11428', background: 'rgba(225,20,40,0.1)', border: '1px solid rgba(225,20,40,0.2)', borderRadius: 99, padding: '2px 8px', fontWeight: 700 }}>⚠ Mantenimiento vencido</span>}
+                    {!hasVenc && hasPrx && <span style={{ fontSize: 10, color: '#F59E0B', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 99, padding: '2px 8px', fontWeight: 700 }}>Próximo mantenimiento</span>}
+                    {salud && !hasVenc && !hasPrx && <span style={{ fontSize: 10, color: '#10B981', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 99, padding: '2px 8px', fontWeight: 700 }}><CheckCircle size={9} style={{ verticalAlign: 'middle', marginRight: 3 }} />Todo en orden</span>}
                   </div>
                 </div>
-                <span style={{
-                  fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
-                  textTransform: 'uppercase', color, padding: '3px 10px',
-                  background: `${color}15`, border: `1px solid ${color}25`, borderRadius: 99,
-                }}>
-                  {moto.tipo_moto}
-                </span>
-                <CheckCircle size={16} color="#10B981" style={{ flexShrink: 0 }} />
+
+                {/* ── Actualizar kilometraje ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 14 }}>
+                  <Gauge size={14} color="rgba(255,255,255,0.4)" />
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>Odómetro actual:</span>
+                  <input
+                    type="number" min="0"
+                    value={kmMoto[moto.id_moto] ?? ''}
+                    onChange={e => setKmMoto(prev => ({ ...prev, [moto.id_moto]: e.target.value }))}
+                    style={{ flex: 1, height: 34, borderRadius: 8, padding: '0 10px', background: '#1A1A22', border: '1px solid rgba(255,255,255,0.1)', color: '#EBEBEB', fontSize: 13, outline: 'none' }}
+                  />
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>km</span>
+                  <button
+                    onClick={() => actualizarKm(moto)}
+                    disabled={savingKm === moto.id_moto}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#fff', background: savingKm === moto.id_moto ? 'rgba(225,20,40,0.4)' : '#E11428', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: savingKm === moto.id_moto ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
+                    <Save size={12} /> {savingKm === moto.id_moto ? 'Guardando…' : 'Actualizar'}
+                  </button>
+                </div>
+
+                {/* ── Salud de la moto ── */}
+                {!salud ? (
+                  <button
+                    onClick={() => cargarSalud(moto.id_moto)}
+                    disabled={loadingSalud === moto.id_moto}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.35)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    {loadingSalud === moto.id_moto
+                      ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin .7s linear infinite', display: 'inline-block' }} /> Cargando salud…</>
+                      : <><Activity size={13} /> Ver estado de mantenimiento</>}
+                  </button>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <Activity size={13} color="rgba(255,255,255,0.4)" />
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)' }}>Estado de mantenimiento</span>
+                      <button onClick={() => { setSaludMoto(prev => { const n = { ...prev }; delete n[moto.id_moto]; return n; }); setTimeout(() => cargarSalud(moto.id_moto), 100); }}
+                        style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)', padding: 4 }}>
+                        <RefreshCw size={11} />
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      {salud.map(s => {
+                        const ec = s.estado === 'VENCIDO' ? { color: '#E11428', bg: 'rgba(225,20,40,0.1)' }
+                                 : s.estado === 'PROXIMO' ? { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' }
+                                 :                          { color: '#10B981', bg: 'rgba(16,185,129,0.1)' };
+                        const barColor = s.estado === 'VENCIDO' ? '#E11428' : s.estado === 'PROXIMO' ? '#F59E0B' : '#10B981';
+                        const label = {
+                          ACEITE: 'Aceite', FILTRO_AIRE: 'Filtro aire', BUJIA: 'Bujía',
+                          CADENA: 'Cadena', LLANTA_TRASERA: 'Llanta trasera',
+                          FRENOS: 'Frenos', REVISION_GENERAL: 'Revisión general',
+                        }[s.tipo] ?? s.tipo;
+                        return (
+                          <div key={s.tipo} style={{ background: ec.bg, borderRadius: 9, padding: '9px 12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#EBEBEB', flex: 1 }}>{label}</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: ec.color }}>
+                                {s.estado === 'VENCIDO' ? '¡Vencido!' : s.estado === 'PROXIMO' ? `${s.kmRestante.toLocaleString()} km` : `${s.kmRestante.toLocaleString()} km`}
+                              </span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: ec.color, background: 'rgba(0,0,0,0.2)', borderRadius: 99, padding: '2px 6px' }}>
+                                {s.porcentajeDesgaste}%
+                              </span>
+                            </div>
+                            {/* Barra de progreso */}
+                            <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${Math.min(100, s.porcentajeDesgaste)}%`, background: barColor, borderRadius: 99, transition: 'width 0.6s ease' }} />
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Cada {s.intervaloKm.toLocaleString()} km</span>
+                              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Próximo: {s.proximoCambioKm.toLocaleString()} km</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

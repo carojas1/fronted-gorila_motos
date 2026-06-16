@@ -33,6 +33,7 @@ import CombustiblePage   from './pages/combustible/CombustiblePage';
 import InvoicePage       from './pages/invoice/InvoicePage';
 import PortalClientePage from './pages/portal/PortalClientePage';
 import MiMotoPage        from './pages/moto-cliente/MiMotoPage';
+import DiagnosticoPage  from './pages/diagnostico/DiagnosticoPage';
 
 /* ─── Guarda de roles ─────────────────────────────────────────────────────────
    Redirige a /dashboard si el usuario no tiene ninguno de los roles indicados.
@@ -77,10 +78,11 @@ export default function App() {
 
                 {/* Solo ADMIN + MECÁNICO */}
                 <Route element={<RequireRole roles={['admin', 'mecanico']} />}>
-                  <Route path="/registros"  element={<RecordsPage />}   />
-                  <Route path="/inventario" element={<InventoryPage />}  />
-                  <Route path="/clientes"   element={<ClientesPage />}   />
-                  <Route path="/alertas"    element={<AlertasPage />}    />
+                  <Route path="/registros"    element={<RecordsPage />}     />
+                  <Route path="/inventario"   element={<InventoryPage />}   />
+                  <Route path="/clientes"     element={<ClientesPage />}    />
+                  <Route path="/alertas"      element={<AlertasPage />}     />
+                  <Route path="/diagnostico"  element={<DiagnosticoPage />} />
                 </Route>
 
                 {/* Solo ADMIN */}

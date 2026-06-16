@@ -7,18 +7,19 @@ import { useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Wrench, Package, Users,
-  Bike, LogOut, ChevronRight, UserCheck,
+  Bike, LogOut, ChevronRight, UserCheck, ClipboardList,
 } from 'lucide-react';
 import { useAuth, type RoleName } from '../../contexts/AuthContext';
 import { initials, cn } from '../../lib/utils';
 
 const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles?: RoleName[] }[] = [
-  { to: '/dashboard',  label: 'Dashboard',  icon: LayoutDashboard                          },
-  { to: '/registros',  label: 'Registros',  icon: Wrench,       roles: ['ADMIN','MECANICO'] },
-  { to: '/motos',      label: 'Motos',      icon: Bike                                      },
-  { to: '/clientes',   label: 'Clientes',   icon: UserCheck,    roles: ['ADMIN','MECANICO'] },
-  { to: '/inventario', label: 'Inventario', icon: Package,      roles: ['ADMIN','MECANICO'] },
-  { to: '/perfiles',   label: 'Perfiles',   icon: Users,        roles: ['ADMIN']             },
+  { to: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard                          },
+  { to: '/registros',   label: 'Registros',   icon: Wrench,       roles: ['ADMIN','MECANICO'] },
+  { to: '/diagnostico', label: 'Diagnóstico', icon: ClipboardList, roles: ['ADMIN','MECANICO'] },
+  { to: '/motos',       label: 'Motos',       icon: Bike                                      },
+  { to: '/clientes',    label: 'Clientes',    icon: UserCheck,    roles: ['ADMIN','MECANICO'] },
+  { to: '/inventario',  label: 'Inventario',  icon: Package,      roles: ['ADMIN','MECANICO'] },
+  { to: '/perfiles',    label: 'Perfiles',    icon: Users,        roles: ['ADMIN']             },
 ];
 
 export default function Sidebar() {

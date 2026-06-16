@@ -154,6 +154,20 @@ export const rutasApi = {
   remove: (id: number)  => api.delete(`/rutas/${id}`),
 };
 
+/* ── Diagnósticos mecánicos ── */
+export const diagnosticosApi = {
+  create:     (data: Record<string, unknown>) => api.post('/diagnosticos', data),
+  byMoto:     (idMoto: number)     => api.get(`/diagnosticos/moto/${idMoto}`),
+  byMecanico: (idMecanico: number) => api.get(`/diagnosticos/mecanico/${idMecanico}`),
+  get:        (id: number)         => api.get(`/diagnosticos/${id}`),
+};
+
+/* ── Alertas y estado de mantenimiento ── */
+export const alertasApi = {
+  estadoMoto: (idMoto: number) => api.get(`/alertas/moto/${idMoto}`),
+  verificar:  (idMoto: number) => api.post(`/alertas/verificar/${idMoto}`, {}),
+};
+
 /* ── Health check (keep-alive para Render) ──────────────────────────────────
    GET /tipos es un endpoint liviano con CORS. El actuator (/actuator/health)
    está fuera del filtro CORS de Spring Security → CORS error en el navegador.

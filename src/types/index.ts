@@ -175,6 +175,36 @@ export interface MotoAlerta {
   pct:              number;
 }
 
+/* ─── Diagnóstico mecánico ─── */
+export interface DetalleDiagnostico {
+  id_detalle?:  number;
+  parte:        string;   // MOTOR | TRANSMISION | FRENOS | LLANTAS | SUSPENSION | ELECTRICO | CARROCERIA | REFRIGERACION
+  estado:       1 | 2 | 3; // 1=BUENO 2=REGULAR 3=MALO
+  observacion?: string | null;
+}
+
+export interface DiagnosticoMoto {
+  id_diagnostico?:         number;
+  id_moto:                 number;
+  id_mecanico:             number;
+  fecha?:                  string;
+  kilometraje_ingreso:     number;
+  observaciones_generales?: string | null;
+  detalles:                DetalleDiagnostico[];
+}
+
+/* ─── Estado de mantenimiento (calculado por el backend) ─── */
+export interface EstadoMantenimiento {
+  tipo:                string;
+  descripcion:         string;
+  intervaloKm:         number;
+  kmActual:            number;
+  proximoCambioKm:     number;
+  kmRestante:          number;
+  porcentajeDesgaste:  number;
+  estado:              'OK' | 'PROXIMO' | 'VENCIDO';
+}
+
 /* ─── API generic wrapper ─── */
 export interface ApiError {
   message: string;
