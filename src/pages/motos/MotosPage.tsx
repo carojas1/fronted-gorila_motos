@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Pencil, Trash2, Bike, Gauge, User,
-  Calendar, Zap, Shield, ChevronRight, SlidersHorizontal, ClipboardList, ImageIcon,
+  Calendar, Zap, Shield, ChevronRight, SlidersHorizontal, ClipboardList, ImageIcon, BookOpen,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -402,9 +402,22 @@ export default function MotosPage() {
             }
           </h1>
         </div>
-        <Button icon={<Plus size={14} />} onClick={openCreate}>
-          {canManage ? 'Nueva moto' : 'Agregar moto'}
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {canManage && (
+            <Link
+              to="/metodologia"
+              title="Cómo calculamos el mantenimiento"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'rgba(59,130,246,0.85)', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.22)', borderRadius: 10, padding: '8px 14px', textDecoration: 'none' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.16)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.08)')}
+            >
+              <BookOpen size={13} /> Metodología
+            </Link>
+          )}
+          <Button icon={<Plus size={14} />} onClick={openCreate}>
+            {canManage ? 'Nueva moto' : 'Agregar moto'}
+          </Button>
+        </div>
       </div>
 
       {/* ─── KPI Strip ─── */}

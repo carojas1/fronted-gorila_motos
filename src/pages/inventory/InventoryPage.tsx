@@ -57,7 +57,7 @@ export default function InventoryPage() {
   const [modalOpen,      setModalOpen]      = useState(false);
   const [editTarget,     setEditTarget]     = useState<Producto | null>(null);
   const [deleteTarget,   setDeleteTarget]   = useState<Producto | null>(null);
-  const [showStockModal, setShowStockModal] = useState(false);
+  const [stockView,      setStockView]      = useState<'all' | 'ok' | 'low' | 'out'>('all');
 
   /* Categorías (CRUD por el admin) */
   const [catModalOpen,  setCatModalOpen]  = useState(false);
@@ -206,7 +206,12 @@ export default function InventoryPage() {
     const q        = search.toLowerCase();
     const matchQ   = p.nombre.toLowerCase().includes(q) || p.codigo_personal.toLowerCase().includes(q);
     const matchCat = catFilter === 0 || p.id_categoria === catFilter;
-    return matchQ && matchCat;
+    const matchStock =
+      stockView === 'all' ? true :
+      stockView === 'out' ? p.stock === 0 :
+      stockView === 'low' ? (p.stock > 0 && p.stock <= 5) :
+      /* ok */              p.stock > 5;
+    return matchQ && matchCat && matchStock;
   });
 
   /* KPI cards */
@@ -238,32 +243,37 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* ─── KPI mini cards ─── */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: 'Productos',       value: productos.length, color: 'text-blue-400',    glowColor: 'rgba(59,130,246,0.12)', borderActive: 'rgba(59,130,246,0.35)' },
-          { label: 'Stock bajo (≤5)', value: lowStock,         color: 'text-amber-400',   glowColor: 'rgba(245,158,11,0.12)', borderActive: 'rgba(245,158,11,0.35)' },
-          { label: 'Sin stock',       value: outStock,         color: 'text-gm-red',      glowColor: 'rgba(225,20,40,0.15)', borderActive: 'rgba(225,20,40,0.4)', warn: outStock > 0 },
-        ].map(({ label, value, color, glowColor, borderActive, warn }) => (
-          <div
-            key={label}
-            onClick={() => setShowStockModal(true)}
-            title="Ver desglose de stock"
-            className="card-enter gm-card-d rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 group cursor-pointer"
-            style={{
-              borderColor: warn ? borderActive : 'rgba(255,255,255,0.05)',
-              boxShadow: warn ? `0 0 0 1px ${borderActive}40, 0 0 40px ${glowColor}` : 'none'
-            }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                {warn ? <AlertTriangle size={15} className="text-gm-red animate-pulse" /> : <Package size={15} className="text-white/30" />}
-                <span className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">{label}</span>
+      {/* ─── KPI mini cards (clic = filtrar la tabla) ─── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {([
+          { view: 'all', label: 'Todos',        value: productos.length, color: 'text-blue-400',    borderActive: 'rgba(59,130,246,0.5)',  warn: false },
+          { view: 'ok',  label: 'Stock OK (>5)', value: productos.filter(p => p.stock > 5).length, color: 'text-emerald-400', borderActive: 'rgba(16,185,129,0.5)', warn: false },
+          { view: 'low', label: 'Stock bajo (≤5)', value: lowStock,      color: 'text-amber-400',   borderActive: 'rgba(245,158,11,0.5)',  warn: lowStock > 0 },
+          { view: 'out', label: 'Sin stock',     value: outStock,        color: 'text-gm-red',      borderActive: 'rgba(225,20,40,0.5)',   warn: outStock > 0 },
+        ] as const).map(({ view, label, value, color, borderActive, warn }) => {
+          const isActive = stockView === view;
+          return (
+            <div
+              key={view}
+              onClick={() => setStockView(isActive ? 'all' : view)}
+              title={`Filtrar: ${label}`}
+              className="card-enter gm-card-d rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+              style={{
+                borderColor: isActive ? borderActive : (warn ? borderActive : 'rgba(255,255,255,0.05)'),
+                boxShadow: isActive ? `0 0 0 2px ${borderActive}, 0 0 30px ${borderActive}40` : 'none',
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {warn ? <AlertTriangle size={15} className="text-gm-red animate-pulse" /> : <Package size={15} className="text-white/30" />}
+                  <span className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">{label}</span>
+                </div>
+                {isActive && <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ background: borderActive, color: '#fff' }}>Activo</span>}
               </div>
+              <p className={`text-4xl font-black ${color}`}>{value}</p>
             </div>
-            <p className={`text-4xl font-black ${warn ? 'text-gm-red drop-shadow-[0_0_15px_rgba(225,20,40,0.8)]' : color}`}>{value}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ─── Filtros ─── */}
@@ -406,112 +416,16 @@ export default function InventoryPage() {
         </form>
       </Modal>
 
-      {/* ─── Panel completo de stock (inline, no modal) ─── */}
-      {showStockModal && (
-        <div className="section-enter gm-card-d rounded-2xl overflow-hidden">
-          {/* Header del panel */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.05]">
-            <div className="flex items-center gap-3">
-              <Package size={16} className="text-white/40" />
-              <h2 className="text-[15px] font-black text-white">Estado del inventario</h2>
-              <span className="text-[11px] text-white/25 font-mono">{productos.length} productos totales</span>
-            </div>
-            <button
-              onClick={() => setShowStockModal(false)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
-            >
-              <X size={14} className="text-white/50" />
-            </button>
-          </div>
-
-          {/* Tres columnas */}
-          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x"
-               style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-
-            {/* Sin stock — Rojo */}
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-gm-red animate-pulse" />
-                  <span className="text-[10px] font-black text-gm-red uppercase tracking-[0.25em]">Sin stock</span>
-                </div>
-                <span className="text-xl font-black text-gm-red">{productos.filter(p => p.stock === 0).length}</span>
-              </div>
-              <div className="space-y-2">
-                {productos.filter(p => p.stock === 0).length === 0
-                  ? <p className="text-[12px] text-white/20 text-center py-6">Todo con stock</p>
-                  : productos.filter(p => p.stock === 0).map(p => (
-                    <div key={p.id_producto}
-                         className="flex items-center justify-between p-3 rounded-xl"
-                         style={{ background: 'rgba(225,20,40,0.07)', border: '1px solid rgba(225,20,40,0.18)' }}>
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-semibold text-white/80 truncate">{p.nombre}</p>
-                        <p className="text-[10px] text-white/30 font-mono mt-0.5">{p.codigo_personal}</p>
-                      </div>
-                      <span className="text-[12px] font-black text-gm-red ml-3 shrink-0">0 u.</span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            {/* Stock bajo — Amarillo */}
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-[0.25em]">Stock bajo</span>
-                </div>
-                <span className="text-xl font-black text-amber-400">{productos.filter(p => p.stock > 0 && p.stock <= 5).length}</span>
-              </div>
-              <div className="space-y-2">
-                {productos.filter(p => p.stock > 0 && p.stock <= 5).length === 0
-                  ? <p className="text-[12px] text-white/20 text-center py-6">Sin alertas</p>
-                  : productos.filter(p => p.stock > 0 && p.stock <= 5).map(p => (
-                    <div key={p.id_producto}
-                         className="flex items-center justify-between p-3 rounded-xl"
-                         style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.18)' }}>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-semibold text-white/80 truncate">{p.nombre}</p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <div className="flex-1 h-1 rounded-full bg-white/[0.08]">
-                            <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${(p.stock / 5) * 100}%` }} />
-                          </div>
-                          <span className="text-[10px] text-white/30 font-mono shrink-0">{p.codigo_personal}</span>
-                        </div>
-                      </div>
-                      <span className="text-[12px] font-black text-amber-400 ml-3 shrink-0">{p.stock} u.</span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            {/* Stock OK — Verde */}
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                  <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.25em]">Stock OK</span>
-                </div>
-                <span className="text-xl font-black text-emerald-400">{productos.filter(p => p.stock > 5).length}</span>
-              </div>
-              <div className="space-y-2 max-h-72 overflow-y-auto dark-scroll pr-1">
-                {productos.filter(p => p.stock > 5).length === 0
-                  ? <p className="text-[12px] text-white/20 text-center py-6">Sin productos</p>
-                  : productos.filter(p => p.stock > 5).map(p => (
-                    <div key={p.id_producto}
-                         className="flex items-center justify-between p-3 rounded-xl"
-                         style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.12)' }}>
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-white/65 truncate">{p.nombre}</p>
-                        <p className="text-[10px] text-white/25 font-mono mt-0.5">{p.codigo_personal}</p>
-                      </div>
-                      <span className="text-[12px] font-black text-emerald-400 ml-3 shrink-0">{p.stock} u.</span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
+      {/* Indicador de filtro activo */}
+      {stockView !== 'all' && (
+        <div className="flex items-center gap-2 -mt-3">
+          <span className="text-[11px] text-white/40">
+            Mostrando: <strong className="text-white/70">{filtered.length}</strong>{' '}
+            {stockView === 'out' ? 'sin stock' : stockView === 'low' ? 'con stock bajo' : 'con stock OK'}
+          </span>
+          <button onClick={() => setStockView('all')} className="text-[11px] font-bold text-gm-red hover:underline">
+            Ver todos
+          </button>
         </div>
       )}
 

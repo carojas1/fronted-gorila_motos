@@ -4,7 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Truck, Package, AlertTriangle, Phone, Mail, CheckCircle2, X, Edit2, Save, MessageCircle } from 'lucide-react';
+import { Truck, Package, AlertTriangle, Phone, Mail, CheckCircle2, X, Edit2, Save, MessageCircle, Plus } from 'lucide-react';
 import { productosApi } from '../../lib/api';
 import { fmtMoney } from '../../lib/utils';
 import { useToast } from '../../components/ui/Toast';
@@ -190,16 +190,25 @@ function ProveedorCard({ codigo, productos, contacto, onEdit }: ProveedorCardPro
 }
 
 /* ── Modal de contacto ─────────────────────────────────────────────────────── */
-function ContactoModal({ codigo, contacto, onSave, onClose }: {
+function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose }: {
   codigo:   string;
   contacto: Contacto | null;
+  isNew?:   boolean;
   onSave:   (codigo: string, data: Contacto) => void;
   onClose:  () => void;
 }) {
+  const [codigoState, setCodigoState] = useState(codigo);
   const [nombre,   setNombre]   = useState(contacto?.nombre   ?? '');
   const [telefono, setTelefono] = useState(contacto?.telefono ?? '');
   const [email,    setEmail]    = useState(contacto?.email    ?? '');
   const [producto, setProducto] = useState(contacto?.producto ?? '');
+
+  const save = () => {
+    const cod = codigoState.trim().toUpperCase();
+    if (!cod)    { return; }
+    if (!nombre.trim()) { return; }
+    onSave(cod, { nombre, telefono, email, producto });
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -208,13 +217,31 @@ function ContactoModal({ codigo, contacto, onSave, onClose }: {
            style={{ background: '#131318', border: '1px solid rgba(255,255,255,0.1)' }}>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-black text-white">Datos de contacto</h3>
-            <p className="text-[11px] text-white/35 mt-0.5 font-mono">Proveedor: {codigo}</p>
+            <h3 className="text-base font-black text-white">{isNew ? 'Nuevo proveedor' : 'Datos de contacto'}</h3>
+            {!isNew && <p className="text-[11px] text-white/35 mt-0.5 font-mono">Proveedor: {codigo}</p>}
           </div>
           <button onClick={onClose} className="text-white/30 hover:text-white/70 transition-colors">
             <X size={18} />
           </button>
         </div>
+
+        {isNew && (
+          <div>
+            <label className="text-[10px] font-black text-white/35 uppercase tracking-widest block mb-1">
+              Código del proveedor *
+            </label>
+            <input
+              className="gm-input-d w-full font-mono uppercase"
+              placeholder="Ej. MOTUL, NGK, PROV-001"
+              value={codigoState}
+              onChange={e => setCodigoState(e.target.value)}
+              autoFocus
+            />
+            <p className="text-[10px] text-white/25 mt-1">
+              Úsalo como "Código proveedor" al crear productos para agruparlos aquí.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-3">
           {[
@@ -245,7 +272,7 @@ function ContactoModal({ codigo, contacto, onSave, onClose }: {
             Cancelar
           </button>
           <button
-            onClick={() => onSave(codigo, { nombre, telefono, email, producto })}
+            onClick={save}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black transition-all"
             style={{ background: '#E11428', color: '#fff' }}
           >
@@ -265,6 +292,7 @@ export default function ProveedoresPage() {
   const [loading,     setLoading]     = useState(true);
   const [contactos,   setContactos]   = useState<Record<string, Contacto>>(loadContactos);
   const [editCodigo,  setEditCodigo]  = useState<string | null>(null);
+  const [creatingNew, setCreatingNew] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -277,7 +305,7 @@ export default function ProveedoresPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  /* Agrupar por codigo_proveedor */
+  /* Agrupar por codigo_proveedor (incluye proveedores guardados sin productos) */
   const grupos = useMemo(() => {
     const map: Record<string, Producto[]> = {};
     productos.forEach(p => {
@@ -285,13 +313,17 @@ export default function ProveedoresPage() {
       if (!map[key]) map[key] = [];
       map[key].push(p);
     });
+    /* Proveedores creados manualmente que aún no tienen productos */
+    Object.keys(contactos).forEach(cod => {
+      if (!map[cod]) map[cod] = [];
+    });
     /* Ordenar: primero los que tienen alertas */
     return Object.entries(map).sort(([, a], [, b]) => {
       const aAlert = a.some(p => p.stock <= 5) ? 0 : 1;
       const bAlert = b.some(p => p.stock <= 5) ? 0 : 1;
       return aAlert - bAlert;
     });
-  }, [productos]);
+  }, [productos, contactos]);
 
   const totalAlertas = useMemo(
     () => grupos.filter(([, ps]) => ps.some(p => p.stock <= 5)).length,
@@ -303,7 +335,8 @@ export default function ProveedoresPage() {
     setContactos(updated);
     saveContactos(updated);
     setEditCodigo(null);
-    toast.success('Contacto guardado');
+    setCreatingNew(false);
+    toast.success('Proveedor guardado');
   };
 
   return (
@@ -323,18 +356,27 @@ export default function ProveedoresPage() {
           </p>
         </div>
 
-        {totalAlertas > 0 && (
-          <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl animate-pulse"
-               style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
-            <AlertTriangle size={16} className="text-amber-400 shrink-0" />
-            <div>
-              <p className="text-sm font-black text-amber-400">
-                {totalAlertas} proveedor{totalAlertas > 1 ? 'es' : ''} con stock bajo
-              </p>
-              <p className="text-[11px] text-amber-400/60">Revisar y contactar</p>
+        <div className="flex items-center gap-3">
+          {totalAlertas > 0 && (
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl animate-pulse"
+                 style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
+              <AlertTriangle size={16} className="text-amber-400 shrink-0" />
+              <div>
+                <p className="text-sm font-black text-amber-400">
+                  {totalAlertas} proveedor{totalAlertas > 1 ? 'es' : ''} con stock bajo
+                </p>
+                <p className="text-[11px] text-amber-400/60">Revisar y contactar</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          <button
+            onClick={() => setCreatingNew(true)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white shrink-0"
+            style={{ background: '#E11428', boxShadow: '0 0 20px rgba(225,20,40,0.35)' }}
+          >
+            <Plus size={16} /> Nuevo proveedor
+          </button>
+        </div>
       </div>
 
       {/* ─── Resumen KPI ─── */}
@@ -385,13 +427,24 @@ export default function ProveedoresPage() {
         </div>
       )}
 
-      {/* ─── Modal de contacto ─── */}
+      {/* ─── Modal de contacto (editar) ─── */}
       {editCodigo !== null && (
         <ContactoModal
           codigo={editCodigo}
           contacto={contactos[editCodigo] ?? null}
           onSave={handleSave}
           onClose={() => setEditCodigo(null)}
+        />
+      )}
+
+      {/* ─── Modal nuevo proveedor ─── */}
+      {creatingNew && (
+        <ContactoModal
+          codigo=""
+          contacto={null}
+          isNew
+          onSave={handleSave}
+          onClose={() => setCreatingNew(false)}
         />
       )}
     </div>

@@ -165,6 +165,11 @@ export default function RecordsPage() {
   const [qCc,           setQCc]           = useState('');
   const [qTipoMoto,     setQTipoMoto]     = useState('Otro');
 
+  /* ─── Completar con precio ─── */
+  const [priceTarget,   setPriceTarget]   = useState<RegistroDetalle | null>(null);
+  const [priceValue,    setPriceValue]    = useState('');
+  const [savingPrice,   setSavingPrice]   = useState(false);
+
   /* ─── Historial cliente ─── */
   const [historyOpen,   setHistoryOpen]   = useState(false);
   const [historyName,   setHistoryName]   = useState('');
@@ -204,6 +209,15 @@ export default function RecordsPage() {
 
   /* ─── Avanzar estado ─── */
   const cambiarEstado = async (id: number, nuevoEstado: number) => {
+    // Al pasar a Completado (2): pedir el precio del servicio → genera la factura
+    if (nuevoEstado === 2) {
+      const reg = registros.find(r => r.id_registro === id);
+      if (reg) {
+        setPriceTarget(reg);
+        setPriceValue(reg.costo_total ? String(reg.costo_total) : '');
+        return;
+      }
+    }
     setUpdating(id);
     try {
       await registrosApi.estado(id, nuevoEstado);
@@ -213,6 +227,27 @@ export default function RecordsPage() {
       toast.success('Estado actualizado');
     } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setUpdating(null); }
+  };
+
+  /* ─── Completar con precio → factura ─── */
+  const confirmCompletar = async () => {
+    if (!priceTarget) return;
+    const precio = parseFloat(priceValue);
+    if (isNaN(precio) || precio < 0) { toast.error('Ingresa un precio válido'); return; }
+    setSavingPrice(true);
+    try {
+      // 1. Guardar el precio del servicio en la factura
+      await registrosApi.update(priceTarget.id_registro, [
+        { idProducto: null, cantidad: 1, descripcion: priceTarget.tipo_servicio || 'Servicio de taller', precioUnitario: precio },
+      ] as unknown as Record<string, unknown>);
+      // 2. Marcar como Completado
+      await registrosApi.estado(priceTarget.id_registro, 2);
+      setRegistros(prev => prev.map(r =>
+        r.id_registro === priceTarget.id_registro ? { ...r, estado: 2, costo_total: precio } : r));
+      toast.success('Servicio completado · factura lista para cobro');
+      setPriceTarget(null); setPriceValue('');
+    } catch (err) { toast.error(getErrorMsg(err)); }
+    finally { setSavingPrice(false); }
   };
 
   /* ─── Crear nueva orden ─── */
@@ -855,6 +890,50 @@ export default function RecordsPage() {
           </div>
 
         </div>
+      </Modal>
+
+      {/* ══════ MODAL COMPLETAR CON PRECIO ══════ */}
+      <Modal
+        open={!!priceTarget}
+        onClose={() => { setPriceTarget(null); setPriceValue(''); }}
+        title="Completar servicio"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setPriceTarget(null); setPriceValue(''); }}>Cancelar</Button>
+            <Button onClick={confirmCompletar} loading={savingPrice} disabled={!priceValue}>
+              <CheckCircle size={14} /> Completar y facturar
+            </Button>
+          </>
+        }
+      >
+        {priceTarget && (
+          <div className="space-y-4">
+            <p className="text-[12px] text-white/45 leading-relaxed">
+              Ingresa el <strong className="text-white/70">precio del servicio</strong>. Con esto se genera la factura
+              a nombre de <strong className="text-white/70">{priceTarget.nombre_cliente}</strong>.
+            </p>
+            <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <p className="text-[13px] font-bold text-white/85">{priceTarget.marca_moto} {priceTarget.modelo_moto}</p>
+              <p className="text-[11px] text-white/40 mt-0.5">
+                <span className="plate-tag">{priceTarget.placa}</span> · {priceTarget.tipo_servicio}
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Precio del servicio (USD)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 font-bold">$</span>
+                <input
+                  type="number" min={0} step="0.01" autoFocus
+                  value={priceValue}
+                  onChange={(e) => setPriceValue(e.target.value)}
+                  placeholder="0.00"
+                  className="gm-input-d w-full pl-7"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* ══════ MODAL HISTORIAL CLIENTE ══════ */}

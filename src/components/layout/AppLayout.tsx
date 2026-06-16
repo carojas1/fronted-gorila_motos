@@ -26,6 +26,8 @@ export default function AppLayout() {
   const menuRef                         = useRef<HTMLDivElement>(null);
   const [showTerms, setShowTerms]       = useState(!useTermsAccepted());
   const [mobileMenuOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen]         = useState(false);
+  const moreRef                         = useRef<HTMLDivElement>(null);
 
   const hour      = new Date().getHours();
   const greeting  = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches';
@@ -33,20 +35,26 @@ export default function AppLayout() {
   const roleLabel = isAdmin ? 'Administrador' : isMecanico ? 'Mecánico' : 'Cliente';
   const roleColor = isAdmin ? '#E11428' : isMecanico ? '#3B82F6' : '#10B981';
 
+  /* Navegación principal — limpia. Diagnóstico y Metodología viven DENTRO de Motos.
+     Combustible y Alertas van en el menú "Más" para no saturar la barra. */
   const NAV = [
     { label: 'Dashboard',    to: '/dashboard'    },
     ...((isAdmin || isMecanico) ? [{ label: 'Registros',   to: '/registros'   }] : []),
     ...((isAdmin || isMecanico) ? [{ label: 'Motos',       to: '/motos'       }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Diagnóstico', to: '/diagnostico' }] : []),
     ...((isAdmin || isMecanico) ? [{ label: 'Inventario',  to: '/inventario'  }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Alertas',     to: '/alertas'     }] : []),
     ...((isAdmin || isMecanico) ? [{ label: 'Proveedores', to: '/proveedores' }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Metodología', to: '/metodologia' }] : []),
     ...(isAdmin               ? [{ label: 'Pagos',       to: '/pagos'       }] : []),
-    { label: 'Puntos',        to: '/puntos'       },
-    { label: 'Combustible',   to: '/combustible'  },
     ...(isCliente             ? [{ label: 'Mi Moto',     to: '/mi-moto'     }] : []),
     ...(isCliente             ? [{ label: 'Mi Portal',   to: '/portal'      }] : []),
+    ...(isCliente             ? [{ label: 'Puntos',      to: '/puntos'      }] : []),
+  ];
+
+  /* Menú "Más" — secundarios, no saturan la barra principal */
+  const NAV_MORE = [
+    ...((isAdmin || isMecanico) ? [{ label: 'Alertas',     to: '/alertas'     }] : []),
+    ...((isAdmin || isMecanico) ? [{ label: 'Metodología', to: '/metodologia' }] : []),
+    ...((isAdmin || isMecanico) ? [{ label: 'Puntos',      to: '/puntos'      }] : []),
+    { label: 'Combustible',   to: '/combustible'  },
     ...(isAdmin               ? [{ label: 'Perfiles',    to: '/perfiles'    }] : []),
   ];
 
@@ -61,8 +69,17 @@ export default function AppLayout() {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  /* Cerrar menú móvil al cambiar de ruta */
-  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+  /* Cerrar menú móvil y "Más" al cambiar de ruta */
+  useEffect(() => { setMobileOpen(false); setMoreOpen(false); }, [location.pathname]);
+
+  /* Cerrar dropdown "Más" al hacer clic fuera */
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
 
   /* Bloquear scroll del body cuando el drawer está abierto */
   useEffect(() => {
@@ -161,7 +178,7 @@ export default function AppLayout() {
               <nav className="flex-1 px-3 py-3 overflow-y-auto dark-scroll">
                 <p className="px-3 mb-2 text-[9px] font-black tracking-[0.3em] text-white/20 uppercase">Navegación</p>
                 <div className="space-y-0.5">
-                  {NAV.map(({ label, to }) => {
+                  {[...NAV, ...NAV_MORE].map(({ label, to }) => {
                     const active = location.pathname === to || location.pathname.startsWith(to + '/');
                     return (
                       <Link
@@ -300,6 +317,49 @@ export default function AppLayout() {
                 </Link>
               );
             })}
+
+            {/* Menú "Más" — secundarios */}
+            {NAV_MORE.length > 0 && (
+              <div className="relative" ref={moreRef}>
+                <button
+                  onClick={() => setMoreOpen(v => !v)}
+                  className="relative flex items-center gap-1 px-3 py-2 rounded-lg text-[11.5px] font-bold tracking-[0.12em] uppercase transition-all duration-150"
+                  style={{
+                    color: moreOpen ? '#fff' : 'rgba(255,255,255,0.38)',
+                    background: moreOpen ? 'rgba(255,255,255,0.06)' : 'transparent',
+                  }}
+                >
+                  Más <ChevronDown size={12} style={{ transform: moreOpen ? 'rotate(180deg)' : '', transition: 'transform 180ms' }} />
+                </button>
+                {moreOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-2 w-48 rounded-xl overflow-hidden z-50 py-1"
+                    style={{
+                      background: 'linear-gradient(150deg, #1E1E28 0%, #16161E 100%)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
+                    }}
+                  >
+                    {NAV_MORE.map(({ label, to }) => {
+                      const active = location.pathname === to || location.pathname.startsWith(to + '/');
+                      return (
+                        <Link
+                          key={to}
+                          to={to}
+                          onClick={() => setMoreOpen(false)}
+                          className="block px-4 py-2.5 text-[12px] font-bold tracking-[0.08em] uppercase transition-colors"
+                          style={{ color: active ? '#FF6470' : 'rgba(255,255,255,0.55)', background: active ? 'rgba(225,20,40,0.1)' : 'transparent' }}
+                          onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                          onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                        >
+                          {label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </nav>
 
           {/* Derecha: notif + saludo + avatar */}
