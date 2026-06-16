@@ -8,14 +8,16 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Search, Wrench, CheckCircle, Clock, Loader, ChevronRight,
   Plus, Printer, Phone, Package, FileText, History, X, Gauge,
+  Bike, UserPlus, Zap, AlertTriangle,
 } from 'lucide-react';
 import gsap from 'gsap';
-import { registrosApi, usuariosApi, motosApi, tiposApi } from '../../lib/api';
+import { registrosApi, usuariosApi, motosApi, tiposApi, authApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   fmtDate, fmtMoney, getErrorMsg, ESTADO_REGISTRO, extractPhone, toIsoStr,
 } from '../../lib/utils';
+import { calcularEstadoLocal } from '../../lib/mantenimiento';
 import type { RegistroDetalle, Usuario, Moto, Tipo } from '../../types';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -151,6 +153,18 @@ export default function RecordsPage() {
   const [nPartes,        setNPartes]        = useState<string[]>([]);
   const [creatingOrder,  setCreatingOrder]  = useState(false);
 
+  /* ─── Búsqueda por placa + creación rápida ─── */
+  const [plateQuery,    setPlateQuery]    = useState('');
+  const [showQuick,     setShowQuick]     = useState(false);
+  const [creatingQuick, setCreatingQuick] = useState(false);
+  const [qNombre,       setQNombre]       = useState('');
+  const [qTelefono,     setQTelefono]     = useState('');
+  const [qCedula,       setQCedula]       = useState('');
+  const [qMarca,        setQMarca]        = useState('');
+  const [qModelo,       setQModelo]       = useState('');
+  const [qCc,           setQCc]           = useState('');
+  const [qTipoMoto,     setQTipoMoto]     = useState('Otro');
+
   /* ─── Historial cliente ─── */
   const [historyOpen,   setHistoryOpen]   = useState(false);
   const [historyName,   setHistoryName]   = useState('');
@@ -205,30 +219,112 @@ export default function RecordsPage() {
   const resetNewOrder = () => {
     setNCliente(null); setNMoto(null); setNTipo(null);
     setNKm(''); setNObs(''); setNManCustom(''); setNPartes([]);
+    setPlateQuery(''); setShowQuick(false);
+    setQNombre(''); setQTelefono(''); setQCedula('');
+    setQMarca(''); setQModelo(''); setQCc(''); setQTipoMoto('Otro');
   };
 
   const togglePartes = (parte: string) =>
     setNPartes(prev => prev.includes(parte) ? prev.filter(p => p !== parte) : [...prev, parte]);
 
+  /* Selecciona una moto por placa → fija moto + su propietario */
+  const selectMotoByPlate = (m: Moto) => {
+    setNMoto(m);
+    setNKm(String(m.kilometraje ?? ''));
+    setNCliente(usuarios.find(u => u.id_usuario === m.id_usuario) ?? null);
+    setPlateQuery('');
+    setShowQuick(false);
+  };
+
+  /* Tipo por defecto cuando no se elige uno (DB exige id_tipo): Diagnóstico/Revisión/primero */
+  const tipoPorDefecto = (): Tipo | null => {
+    if (!tipos.length) return null;
+    const pref = ['diagn', 'revis', 'general', 'mantenim'];
+    for (const p of pref) {
+      const t = tipos.find(x => x.nombre.toLowerCase().includes(p));
+      if (t) return t;
+    }
+    return tipos[0];
+  };
+
+  /* Crear cliente + moto al instante (cliente sin tiempo) */
+  const crearRapido = async () => {
+    if (!plateQuery.trim() || !qNombre.trim() || !qMarca.trim() || !qModelo.trim() || !qCc) {
+      toast.error('Completa: placa, nombre del cliente, marca, modelo y cilindraje');
+      return;
+    }
+    setCreatingQuick(true);
+    try {
+      const base = (qNombre.trim().split(' ')[0] || 'cliente').toLowerCase().replace(/[^a-z0-9]/gi, '').slice(0, 12);
+      const correo = `${base}.${plateQuery.trim().toLowerCase().replace(/[^a-z0-9]/gi, '')}@gmotors.local`;
+      const pass   = qCedula.trim() || qTelefono.trim() || 'gorila123';
+
+      // 1. Crear cliente
+      await authApi.register({
+        nombre_completo: qNombre.trim(),
+        nombre_usuario:  `${base}_${Math.floor(Math.random() * 9000 + 1000)}`,
+        correo,
+        contrasena:      pass,
+        descripcion:     `CEDULA: ${qCedula.trim() || 'N/A'} | TELEFONO: ${qTelefono.trim() || 'N/A'}`,
+        pais: 'Ecuador', ciudad: 'Ecuador',
+      });
+
+      // 2. Recuperar el nuevo cliente
+      const { data: freshUsers } = await usuariosApi.list();
+      const nuevo = (freshUsers as Usuario[]).find(u => u.correo === correo);
+      if (!nuevo?.id_usuario) throw new Error('No se pudo crear el cliente');
+
+      // 3. Crear la moto a su nombre
+      const { data: nuevaMoto } = await motosApi.create({
+        placa:       plateQuery.trim().toUpperCase(),
+        marca:       qMarca.trim(),
+        modelo:      qModelo.trim(),
+        anio:        new Date().getFullYear(),
+        tipo_moto:   qTipoMoto,
+        cilindraje:  parseInt(qCc, 10),
+        kilometraje: 0,
+        id_usuario:  nuevo.id_usuario,
+      });
+
+      toast.success('Cliente y moto creados — el cliente puede completar sus datos luego');
+      // Refrescar listas y seleccionar
+      const [uRes, mRes] = await Promise.allSettled([usuariosApi.list(), motosApi.list()]);
+      if (uRes.status === 'fulfilled') setUsuarios(uRes.value.data as Usuario[]);
+      if (mRes.status === 'fulfilled') setTodasMotos(mRes.value.data as Moto[]);
+      setNMoto(nuevaMoto as Moto);
+      setNCliente(nuevo);
+      setNKm('0');
+      setShowQuick(false);
+      setPlateQuery('');
+    } catch (err) { toast.error(getErrorMsg(err)); }
+    finally { setCreatingQuick(false); }
+  };
+
   const createOrder = async () => {
-    if (!nCliente || !nMoto || !nTipo || !nKm || !me) {
-      toast.error('Completa: cliente, moto, tipo de servicio y kilometraje');
+    if (!nMoto || !nKm || !me) {
+      toast.error('Selecciona una moto (por placa) e ingresa el kilometraje');
+      return;
+    }
+    const cliente = nCliente ?? usuarios.find(u => u.id_usuario === nMoto.id_usuario);
+    const tipo    = nTipo ?? tipoPorDefecto();
+    if (!cliente || !tipo) {
+      toast.error('Falta el propietario de la moto o no hay tipos de servicio configurados');
       return;
     }
     setCreatingOrder(true);
     try {
       const fallaTxt = nPartes.length ? `Fallas reportadas: ${nPartes.join(', ')}.` : '';
       const descripcionDetalle = nManCustom
-        ? `${nTipo.nombre} — ${nManCustom}`
-        : nTipo.nombre;
+        ? `${tipo.nombre} — ${nManCustom}`
+        : (nTipo ? tipo.nombre : 'Ingreso / diagnóstico');
       const obsFinal = [fallaTxt, (nObs || nManCustom)].filter(Boolean).join(' ')
         || 'Sin observaciones adicionales';
 
       await registrosApi.create({
-        idCliente:   nCliente.id_usuario,
+        idCliente:   cliente.id_usuario,
         idEncargado: me.id_usuario,
         idMoto:      nMoto.id_moto,
-        idTipo:      nTipo.id_tipo,
+        idTipo:      tipo.id_tipo,
         estado:      1, // arranca En proceso — el precio se agrega después
         observaciones: obsFinal,
         kilometraje: parseInt(nKm, 10),
@@ -333,6 +429,18 @@ export default function RecordsPage() {
     : [];
 
   const clientPhone = isAdmin && nCliente ? extractPhone(nCliente.descripcion) : null;
+
+  /* Motos que coinciden con la placa buscada */
+  const plateMatches = plateQuery.trim().length >= 2
+    ? todasMotos.filter(m => m.placa.toLowerCase().includes(plateQuery.trim().toLowerCase())).slice(0, 6)
+    : [];
+
+  /* Mantenimientos recomendados (vencidos/próximos) para la moto seleccionada */
+  const recomendaciones = nMoto
+    ? calcularEstadoLocal(nMoto.cilindraje, nMoto.kilometraje)
+        .filter(e => e.estado !== 'OK')
+        .sort((a, b) => b.porcentajeDesgaste - a.porcentajeDesgaste)
+    : [];
 
   /* ─── Status cards config ─── */
   const STATUS_CARDS = [
@@ -508,7 +616,7 @@ export default function RecordsPage() {
             <Button
               onClick={createOrder}
               loading={creatingOrder}
-              disabled={!nCliente || !nMoto || !nTipo || !nKm}
+              disabled={!nMoto || !nKm}
             >
               <Plus size={14} /> Crear orden
             </Button>
@@ -517,62 +625,144 @@ export default function RecordsPage() {
       >
         <div className="space-y-5">
 
-          {/* Selección cliente */}
-          <SearchDropdown
-            label="1 · Cliente"
-            placeholder="Buscar por nombre o cédula..."
-            items={usuarios}
-            selected={nCliente}
-            onSelect={(u) => { setNCliente(u); setNMoto(null); setNKm(''); }}
-            getLabel={(u) => u.nombre_completo}
-            getSubLabel={(u) => u.correo}
-          />
+          {/* 1 · Buscar moto por PLACA (lo que manda) */}
+          {!nMoto ? (
+            <div>
+              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+                1 · Placa de la moto <span className="text-gm-red">*</span>
+                <span className="text-white/25 normal-case font-normal ml-2">lo principal — busca o registra al instante</span>
+              </label>
+              <div className="relative">
+                <Gauge size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+                <input
+                  className="gm-input-d w-full pl-8 uppercase"
+                  placeholder="Ej. ABC-1234"
+                  value={plateQuery}
+                  onChange={(e) => { setPlateQuery(e.target.value); setShowQuick(false); }}
+                  autoFocus
+                />
+              </div>
 
-          {/* Teléfono — solo admin */}
-          {isAdmin && nCliente && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-              <Phone size={13} className="text-gm-red shrink-0" />
-              <span className="text-[12px] text-white/50 font-medium">Teléfono (admin):</span>
-              <span className="text-[13px] font-bold text-white/80">
-                {clientPhone ?? <span className="text-white/25 font-normal">No registrado</span>}
-              </span>
+              {/* Resultados por placa */}
+              {plateQuery.trim().length >= 2 && (
+                <div className="mt-2 space-y-2">
+                  {plateMatches.length > 0 ? (
+                    plateMatches.map((m) => {
+                      const owner = usuarios.find(u => u.id_usuario === m.id_usuario);
+                      return (
+                        <button
+                          key={m.id_moto}
+                          onClick={() => selectMotoByPlate(m)}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all bg-white/[0.02] border-white/[0.06] hover:border-gm-red/40"
+                        >
+                          <span className="plate-tag text-[11px]">{m.placa}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-white/85 truncate">{m.marca} {m.modelo}</p>
+                            <p className="text-[11px] text-white/35 truncate">
+                              {m.cilindraje}cc · {owner?.nombre_completo ?? 'Sin propietario'}
+                            </p>
+                          </div>
+                          <ChevronRight size={15} className="text-white/25 shrink-0" />
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="p-3 rounded-xl border border-dashed border-white/[0.12] bg-white/[0.02]">
+                      <p className="text-[12px] text-white/40 mb-2">
+                        No existe ninguna moto con placa <strong className="text-white/70">{plateQuery.toUpperCase()}</strong>.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { setShowQuick(true); setQNombre(''); }}
+                        className="flex items-center gap-2 text-[12px] font-bold px-3 py-2 rounded-lg"
+                        style={{ background: 'rgba(225,20,40,0.12)', border: '1px solid rgba(225,20,40,0.35)', color: '#FF6470' }}
+                      >
+                        <UserPlus size={13} /> Registrar moto y cliente al instante
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Creación rápida (cliente sin tiempo) */}
+              {showQuick && (
+                <div className="mt-3 p-4 rounded-xl space-y-3" style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                  <p className="flex items-center gap-2 text-[12px] font-bold text-blue-300">
+                    <Zap size={13} /> Registro rápido — placa {plateQuery.toUpperCase()}
+                  </p>
+                  <p className="text-[11px] text-white/40 -mt-1">
+                    Crea la moto y un cliente básico ahora. El cliente podrá completar sus datos después con calma.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input className="gm-input-d" placeholder="Nombre del cliente *" value={qNombre} onChange={e => setQNombre(e.target.value)} />
+                    <input className="gm-input-d" placeholder="Teléfono / WhatsApp" value={qTelefono} onChange={e => setQTelefono(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input className="gm-input-d" placeholder="Cédula (opcional)" value={qCedula} onChange={e => setQCedula(e.target.value)} />
+                    <select className="gm-select-d" value={qTipoMoto} onChange={e => setQTipoMoto(e.target.value)}>
+                      {['Sport','Naked','Touring','Enduro','Scrambler','Cruiser','Scooter','Otro'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <input className="gm-input-d" placeholder="Marca *" value={qMarca} onChange={e => setQMarca(e.target.value)} />
+                    <input className="gm-input-d" placeholder="Modelo *" value={qModelo} onChange={e => setQModelo(e.target.value)} />
+                    <input className="gm-input-d" type="number" placeholder="Cilindraje *" value={qCc} onChange={e => setQCc(e.target.value)} />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setShowQuick(false)}
+                      className="text-[12px] font-semibold px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)' }}>
+                      Cancelar
+                    </button>
+                    <button type="button" onClick={crearRapido} disabled={creatingQuick}
+                      className="flex items-center gap-2 text-[12px] font-bold px-4 py-2 rounded-lg text-white"
+                      style={{ background: creatingQuick ? 'rgba(59,130,246,0.4)' : '#3B82F6' }}>
+                      {creatingQuick
+                        ? <><span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin .7s linear infinite', display: 'inline-block' }} /> Creando…</>
+                        : <><Plus size={13} /> Crear y continuar</>}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Moto seleccionada — tarjeta de confirmación */
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-gm-red/[0.07] border border-gm-red/25">
+              <span className="plate-tag text-[12px]">{nMoto.placa}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white/90 truncate">{nMoto.marca} {nMoto.modelo} · {nMoto.cilindraje}cc</p>
+                <p className="text-[11px] text-white/40 flex items-center gap-2">
+                  <span>{nCliente?.nombre_completo ?? 'Sin propietario'}</span>
+                  {isAdmin && clientPhone && <span className="flex items-center gap-1"><Phone size={9} /> {clientPhone}</span>}
+                </p>
+              </div>
+              <button onClick={() => { setNMoto(null); setNCliente(null); setNKm(''); setNPartes([]); }}
+                className="text-[11px] text-white/40 hover:text-white/80 flex items-center gap-1">
+                <X size={12} /> Cambiar
+              </button>
             </div>
           )}
 
-          {/* Selección moto (filtrada por cliente) */}
-          {nCliente && (
-            <div>
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
-                2 · Moto del cliente
-              </label>
-              {clientMotos.length === 0 ? (
-                <p className="text-sm text-white/30 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                  Este cliente no tiene motos registradas
-                </p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {clientMotos.map((m) => (
-                    <button
-                      key={m.id_moto}
-                      onClick={() => {
-                        setNMoto(m);
-                        setNKm(String(m.kilometraje ?? ''));
-                      }}
-                      className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
-                        nMoto?.id_moto === m.id_moto
-                          ? 'bg-gm-red/10 border-gm-red/40'
-                          : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]'
-                      }`}
-                    >
-                      <span className="plate-tag text-[11px]">{m.placa}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-white/85 truncate">{m.marca} {m.modelo}</p>
-                        <p className="text-[11px] text-white/35">{m.tipo_moto} · {m.anio}</p>
-                      </div>
+          {/* Recomendaciones de mantenimiento según km (upsell) */}
+          {nMoto && recomendaciones.length > 0 && (
+            <div className="p-3 rounded-xl" style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.2)' }}>
+              <p className="flex items-center gap-2 text-[12px] font-bold text-amber-300 mb-2">
+                <AlertTriangle size={13} /> Recomendado para esta moto ({nMoto.kilometraje.toLocaleString('es-EC')} km)
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {recomendaciones.map(r => {
+                  const active = nPartes.includes(r.label);
+                  return (
+                    <button key={r.tipo} type="button" onClick={() => togglePartes(r.label)}
+                      className="text-[11.5px] font-bold px-3 py-1.5 rounded-lg border transition-all"
+                      style={active
+                        ? { background: 'rgba(245,158,11,0.2)', borderColor: 'rgba(245,158,11,0.5)', color: '#FBBF24' }
+                        : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(245,158,11,0.25)', color: 'rgba(251,191,36,0.75)' }}>
+                      {r.label} · {r.estado === 'VENCIDO' ? 'vencido' : `${r.porcentajeDesgaste}%`}
                     </button>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
+              <p className="text-[10.5px] text-white/30 mt-2">Toca para sumarlos al servicio sugerido al cliente.</p>
             </div>
           )}
 
@@ -606,9 +796,9 @@ export default function RecordsPage() {
             )}
           </div>
 
-          {/* Tipo de mantenimiento */}
+          {/* Tipo de mantenimiento — OPCIONAL (se puede definir después) */}
           <SearchDropdown
-            label="4 · Tipo de servicio"
+            label="4 · Tipo de servicio (opcional — se define después)"
             placeholder="Buscar servicio..."
             items={tipos}
             selected={nTipo}

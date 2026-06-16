@@ -4,7 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, X, ShoppingCart, Tags, FolderPlus, Minus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -58,6 +58,18 @@ export default function InventoryPage() {
   const [editTarget,     setEditTarget]     = useState<Producto | null>(null);
   const [deleteTarget,   setDeleteTarget]   = useState<Producto | null>(null);
   const [showStockModal, setShowStockModal] = useState(false);
+
+  /* Categorías (CRUD por el admin) */
+  const [catModalOpen,  setCatModalOpen]  = useState(false);
+  const [newCatName,    setNewCatName]    = useState('');
+  const [newCatDesc,    setNewCatDesc]    = useState('');
+  const [editingCat,    setEditingCat]    = useState<Categoria | null>(null);
+  const [savingCat,     setSavingCat]     = useState(false);
+
+  /* Venta directa (consumidor final — solo baja stock, sin orden) */
+  const [sellTarget,    setSellTarget]    = useState<Producto | null>(null);
+  const [sellQty,       setSellQty]       = useState('1');
+  const [selling,       setSelling]       = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -133,6 +145,60 @@ export default function InventoryPage() {
     } catch (err) { toast.error(getErrorMsg(err)); }
   };
 
+  /* ─── Categorías ─── */
+  const saveCategoria = async () => {
+    if (!newCatName.trim()) { toast.error('Escribe el nombre de la categoría'); return; }
+    setSavingCat(true);
+    try {
+      if (editingCat) {
+        await categoriasApi.update(editingCat.id_categoria, { nombre: newCatName.trim(), descripcion: newCatDesc.trim() });
+        toast.success('Categoría actualizada');
+      } else {
+        await categoriasApi.create({ nombre: newCatName.trim(), descripcion: newCatDesc.trim() });
+        toast.success('Categoría creada');
+      }
+      setNewCatName(''); setNewCatDesc(''); setEditingCat(null);
+      fetchData();
+    } catch (err) { toast.error(getErrorMsg(err)); }
+    finally { setSavingCat(false); }
+  };
+
+  const editCategoria = (c: Categoria) => {
+    setEditingCat(c); setNewCatName(c.nombre); setNewCatDesc(c.descripcion ?? '');
+  };
+
+  const deleteCategoria = async (c: Categoria) => {
+    const enUso = productos.some(p => p.id_categoria === c.id_categoria);
+    if (enUso) { toast.error(`No se puede eliminar "${c.nombre}": tiene productos asignados`); return; }
+    try {
+      await categoriasApi.remove(c.id_categoria);
+      toast.success('Categoría eliminada');
+      if (editingCat?.id_categoria === c.id_categoria) { setEditingCat(null); setNewCatName(''); setNewCatDesc(''); }
+      fetchData();
+    } catch (err) { toast.error(getErrorMsg(err)); }
+  };
+
+  /* ─── Venta directa: baja stock sin crear orden ─── */
+  const confirmSell = async () => {
+    if (!sellTarget) return;
+    const qty = parseInt(sellQty, 10);
+    if (isNaN(qty) || qty <= 0) { toast.error('Cantidad inválida'); return; }
+    if (qty > sellTarget.stock) { toast.error(`Solo hay ${sellTarget.stock} unidades en stock`); return; }
+    setSelling(true);
+    try {
+      // El backend hace reemplazo completo → enviar el producto entero con el stock nuevo
+      await productosApi.update(sellTarget.id_producto, {
+        ...sellTarget,
+        stock:              sellTarget.stock - qty,
+        fecha_modificacion: new Date().toISOString().slice(0, 10),
+      });
+      toast.success(`Venta registrada · ${qty} u. de ${sellTarget.nombre} (quedan ${sellTarget.stock - qty})`);
+      setSellTarget(null); setSellQty('1');
+      fetchData();
+    } catch (err) { toast.error(getErrorMsg(err)); }
+    finally { setSelling(false); }
+  };
+
   const catName = (id: number) =>
     categorias.find((c) => c.id_categoria === id)?.nombre ?? '—';
 
@@ -166,7 +232,10 @@ export default function InventoryPage() {
           <h1 className="text-[1.9rem] font-black text-white leading-tight tracking-tight">Inventario</h1>
           <p className="text-white/35 text-sm mt-1">{productos.length} productos registrados</p>
         </div>
-        <Button icon={<Plus size={15} />} onClick={openCreate}>Nuevo producto</Button>
+        <div className="flex items-center gap-2.5">
+          <Button variant="secondary" icon={<Tags size={15} />} onClick={() => setCatModalOpen(true)}>Categorías</Button>
+          <Button icon={<Plus size={15} />} onClick={openCreate}>Nuevo producto</Button>
+        </div>
       </div>
 
       {/* ─── KPI mini cards ─── */}
@@ -272,6 +341,15 @@ export default function InventoryPage() {
                       <td className="font-bold text-white/85 tabular-nums">{fmtMoney(p.pvp)}</td>
                       <td>
                         <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => { setSellTarget(p); setSellQty('1'); }}
+                            className="icon-btn"
+                            title="Venta directa (baja stock sin orden)"
+                            disabled={p.stock <= 0}
+                            style={p.stock <= 0 ? { opacity: 0.3, cursor: 'not-allowed' } : { color: '#10B981' }}
+                          >
+                            <ShoppingCart size={13} />
+                          </button>
                           <button onClick={() => openEdit(p)} className="icon-btn" title="Editar">
                             <Pencil size={13} />
                           </button>
@@ -436,6 +514,102 @@ export default function InventoryPage() {
           </div>
         </div>
       )}
+
+      {/* ─── Modal gestionar categorías ─── */}
+      <Modal
+        open={catModalOpen}
+        onClose={() => { setCatModalOpen(false); setEditingCat(null); setNewCatName(''); setNewCatDesc(''); }}
+        title="Gestionar categorías"
+        size="md"
+      >
+        <div className="space-y-5">
+          {/* Form crear/editar */}
+          <div className="p-4 rounded-xl" style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.2)' }}>
+            <p className="flex items-center gap-2 text-[12px] font-bold text-blue-300 mb-3">
+              <FolderPlus size={14} /> {editingCat ? `Editando: ${editingCat.nombre}` : 'Nueva categoría'}
+            </p>
+            <div className="space-y-3">
+              <input className="gm-input-d w-full" placeholder="Nombre (ej. Lubricantes)" value={newCatName} onChange={e => setNewCatName(e.target.value)} />
+              <input className="gm-input-d w-full" placeholder="Descripción (opcional)" value={newCatDesc} onChange={e => setNewCatDesc(e.target.value)} />
+              <div className="flex justify-end gap-2">
+                {editingCat && (
+                  <button onClick={() => { setEditingCat(null); setNewCatName(''); setNewCatDesc(''); }}
+                    className="text-[12px] font-semibold px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)' }}>
+                    Cancelar edición
+                  </button>
+                )}
+                <button onClick={saveCategoria} disabled={savingCat}
+                  className="flex items-center gap-2 text-[12px] font-bold px-4 py-2 rounded-lg text-white"
+                  style={{ background: savingCat ? 'rgba(59,130,246,0.4)' : '#3B82F6' }}>
+                  <Plus size={13} /> {editingCat ? 'Guardar' : 'Crear categoría'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de categorías */}
+          <div className="space-y-2">
+            <p className="text-[10px] tracking-[0.2em] uppercase font-black text-white/25">Categorías existentes ({categorias.length})</p>
+            {categorias.length === 0 ? (
+              <p className="text-[12px] text-white/30 text-center py-4">Aún no hay categorías</p>
+            ) : categorias.map(c => {
+              const count = productos.filter(p => p.id_categoria === c.id_categoria).length;
+              return (
+                <div key={c.id_categoria} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-white/85 truncate">{c.nombre}</p>
+                    <p className="text-[11px] text-white/35 truncate">{c.descripcion || 'Sin descripción'} · {count} producto{count !== 1 ? 's' : ''}</p>
+                  </div>
+                  <button onClick={() => editCategoria(c)} className="icon-btn" title="Editar"><Pencil size={12} /></button>
+                  <button onClick={() => deleteCategoria(c)} className="icon-btn danger" title="Eliminar"><Trash2 size={12} /></button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ─── Modal venta directa ─── */}
+      <Modal
+        open={!!sellTarget}
+        onClose={() => { setSellTarget(null); setSellQty('1'); }}
+        title="Venta directa (mostrador)"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setSellTarget(null); setSellQty('1'); }}>Cancelar</Button>
+            <Button onClick={confirmSell} loading={selling}>
+              <ShoppingCart size={14} /> Registrar venta
+            </Button>
+          </>
+        }
+      >
+        {sellTarget && (
+          <div className="space-y-4">
+            <p className="text-[12px] text-white/45 leading-relaxed">
+              Venta a consumidor final — <strong className="text-white/70">solo descuenta el stock</strong>, sin crear orden de servicio.
+            </p>
+            <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <p className="text-[14px] font-bold text-white/90">{sellTarget.nombre}</p>
+              <p className="text-[11px] text-white/40 mt-0.5">
+                Stock actual: <strong style={{ color: '#10B981' }}>{sellTarget.stock} u.</strong> · PVP {fmtMoney(sellTarget.pvp)}
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Cantidad vendida</label>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setSellQty(q => String(Math.max(1, parseInt(q || '1', 10) - 1)))} className="icon-btn"><Minus size={14} /></button>
+                <input type="number" min={1} max={sellTarget.stock} value={sellQty} onChange={e => setSellQty(e.target.value)}
+                  className="gm-input-d text-center" style={{ width: 90 }} />
+                <button onClick={() => setSellQty(q => String(Math.min(sellTarget.stock, parseInt(q || '1', 10) + 1)))} className="icon-btn"><Plus size={14} /></button>
+                <span className="text-[13px] text-white/40 ml-2">
+                  Total: <strong className="text-emerald-400">{fmtMoney((parseInt(sellQty || '0', 10)) * sellTarget.pvp)}</strong>
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* ─── Modal eliminar ─── */}
       <Modal
