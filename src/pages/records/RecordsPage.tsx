@@ -36,6 +36,13 @@ const VARIANT_MAP: Record<number, BadgeVar> = {
   0: 'warning', 1: 'info', 2: 'success', 3: 'purple', 4: 'teal',
 };
 
+/* Partes que el cliente puede reportar con falla al ingresar la moto */
+const PARTES_FALLA = [
+  'Motor', 'Frenos', 'Llantas', 'Transmisión / Cadena', 'Suspensión',
+  'Sistema eléctrico', 'Carrocería', 'Refrigeración', 'Embrague',
+  'Luces', 'Batería', 'Escape',
+];
+
 function SkeletonRow() {
   return (
     <tr>
@@ -141,6 +148,7 @@ export default function RecordsPage() {
   const [nKm,            setNKm]            = useState('');
   const [nObs,           setNObs]           = useState('');
   const [nManCustom,     setNManCustom]     = useState('');
+  const [nPartes,        setNPartes]        = useState<string[]>([]);
   const [creatingOrder,  setCreatingOrder]  = useState(false);
 
   /* ─── Historial cliente ─── */
@@ -196,8 +204,11 @@ export default function RecordsPage() {
   /* ─── Crear nueva orden ─── */
   const resetNewOrder = () => {
     setNCliente(null); setNMoto(null); setNTipo(null);
-    setNKm(''); setNObs(''); setNManCustom('');
+    setNKm(''); setNObs(''); setNManCustom(''); setNPartes([]);
   };
+
+  const togglePartes = (parte: string) =>
+    setNPartes(prev => prev.includes(parte) ? prev.filter(p => p !== parte) : [...prev, parte]);
 
   const createOrder = async () => {
     if (!nCliente || !nMoto || !nTipo || !nKm || !me) {
@@ -206,26 +217,29 @@ export default function RecordsPage() {
     }
     setCreatingOrder(true);
     try {
+      const fallaTxt = nPartes.length ? `Fallas reportadas: ${nPartes.join(', ')}.` : '';
       const descripcionDetalle = nManCustom
         ? `${nTipo.nombre} — ${nManCustom}`
         : nTipo.nombre;
+      const obsFinal = [fallaTxt, (nObs || nManCustom)].filter(Boolean).join(' ')
+        || 'Sin observaciones adicionales';
 
       await registrosApi.create({
         idCliente:   nCliente.id_usuario,
         idEncargado: me.id_usuario,
         idMoto:      nMoto.id_moto,
         idTipo:      nTipo.id_tipo,
-        estado:      0,
-        observaciones: nObs || nManCustom || 'Sin observaciones adicionales',
+        estado:      1, // arranca En proceso — el precio se agrega después
+        observaciones: obsFinal,
         kilometraje: parseInt(nKm, 10),
         detalles: [{
           cantidad:        1,
           idProducto:      null,
-          descripcion:     descripcionDetalle,
+          descripcion:     fallaTxt ? `${descripcionDetalle} (${nPartes.join(', ')})` : descripcionDetalle,
           precioUnitario:  0,
         }],
       });
-      toast.success('Orden de servicio creada');
+      toast.success('Orden creada · En proceso');
       setNewOrderOpen(false);
       resetNewOrder();
       fetchData();
@@ -562,10 +576,40 @@ export default function RecordsPage() {
             </div>
           )}
 
+          {/* Partes con falla reportada */}
+          <div>
+            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+              3 · ¿Qué presenta falla? <span className="text-white/25 normal-case font-normal">(toca las partes reportadas por el cliente)</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {PARTES_FALLA.map((parte) => {
+                const active = nPartes.includes(parte);
+                return (
+                  <button
+                    key={parte}
+                    type="button"
+                    onClick={() => togglePartes(parte)}
+                    className="text-[12px] font-bold px-3 py-1.5 rounded-lg border transition-all"
+                    style={active
+                      ? { background: 'rgba(225,20,40,0.14)', borderColor: 'rgba(225,20,40,0.45)', color: '#FF6470' }
+                      : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}
+                  >
+                    {parte}
+                  </button>
+                );
+              })}
+            </div>
+            {nPartes.length > 0 && (
+              <p className="text-[11px] text-white/35 mt-2">
+                {nPartes.length} parte{nPartes.length !== 1 ? 's' : ''} con falla: <span className="text-white/55 font-semibold">{nPartes.join(', ')}</span>
+              </p>
+            )}
+          </div>
+
           {/* Tipo de mantenimiento */}
           <SearchDropdown
-            label="3 · Tipo de mantenimiento"
-            placeholder="Buscar mantenimiento..."
+            label="4 · Tipo de servicio"
+            placeholder="Buscar servicio..."
             items={tipos}
             selected={nTipo}
             onSelect={setNTipo}
@@ -576,7 +620,7 @@ export default function RecordsPage() {
           {/* Mantenimiento personalizado */}
           <div>
             <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
-              4 · Descripción específica <span className="text-white/25 normal-case font-normal">(opcional)</span>
+              5 · Descripción específica <span className="text-white/25 normal-case font-normal">(opcional)</span>
             </label>
             <input
               className="gm-input-d w-full"
@@ -589,7 +633,7 @@ export default function RecordsPage() {
           {/* Kilometraje — obligatorio */}
           <div>
             <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
-              5 · Kilometraje actual <span className="text-gm-red">*</span>
+              6 · Kilometraje actual <span className="text-gm-red">*</span>
               {nMoto && <span className="text-white/25 normal-case font-normal ml-2">(moto registrada: {nMoto.kilometraje.toLocaleString('es-EC')} km)</span>}
             </label>
             <div className="relative">
@@ -609,7 +653,7 @@ export default function RecordsPage() {
           {/* Observaciones generales */}
           <div>
             <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
-              6 · Observaciones generales <span className="text-white/25 normal-case font-normal">(opcional)</span>
+              7 · Observaciones generales <span className="text-white/25 normal-case font-normal">(opcional)</span>
             </label>
             <textarea
               className="gm-input-d w-full resize-none"
