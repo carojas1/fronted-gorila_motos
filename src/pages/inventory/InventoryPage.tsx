@@ -54,9 +54,10 @@ export default function InventoryPage() {
   const [saving,       setSaving]       = useState(false);
   const [search,       setSearch]       = useState('');
   const [catFilter,    setCatFilter]    = useState(0);
-  const [modalOpen,    setModalOpen]    = useState(false);
-  const [editTarget,   setEditTarget]   = useState<Producto | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Producto | null>(null);
+  const [modalOpen,      setModalOpen]      = useState(false);
+  const [editTarget,     setEditTarget]     = useState<Producto | null>(null);
+  const [deleteTarget,   setDeleteTarget]   = useState<Producto | null>(null);
+  const [showStockModal, setShowStockModal] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -177,7 +178,9 @@ export default function InventoryPage() {
         ].map(({ label, value, color, glowColor, borderActive, warn }) => (
           <div
             key={label}
-            className="card-enter gm-card-d rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 group"
+            onClick={() => setShowStockModal(true)}
+            title="Ver desglose de stock"
+            className="card-enter gm-card-d rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 group cursor-pointer"
             style={{
               borderColor: warn ? borderActive : 'rgba(255,255,255,0.05)',
               boxShadow: warn ? `0 0 0 1px ${borderActive}40, 0 0 40px ${glowColor}` : 'none'
@@ -323,6 +326,93 @@ export default function InventoryPage() {
             {errors.id_categoria && <p className="text-xs text-gm-red mt-1">{errors.id_categoria.message}</p>}
           </div>
         </form>
+      </Modal>
+
+      {/* ─── Modal desglose de stock ─── */}
+      <Modal
+        open={showStockModal}
+        onClose={() => setShowStockModal(false)}
+        title="Estado del inventario"
+        size="lg"
+        footer={<Button onClick={() => setShowStockModal(false)}>Cerrar</Button>}
+      >
+        <div className="space-y-5 max-h-[58vh] overflow-y-auto pr-1 dark-scroll">
+
+          {/* Sin stock — Rojo */}
+          {productos.filter(p => p.stock === 0).length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-gm-red" />
+                <span className="text-[10px] font-black text-gm-red uppercase tracking-[0.25em]">
+                  Sin stock — {productos.filter(p => p.stock === 0).length} producto(s)
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {productos.filter(p => p.stock === 0).map(p => (
+                  <div key={p.id_producto}
+                       className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                       style={{ background: 'rgba(225,20,40,0.07)', border: '1px solid rgba(225,20,40,0.18)' }}>
+                    <div>
+                      <p className="text-[13px] font-semibold text-white/75">{p.nombre}</p>
+                      <p className="text-[10px] text-white/30 font-mono mt-0.5">{p.codigo_personal}</p>
+                    </div>
+                    <Badge variant="danger">0 u.</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stock bajo — Amarillo */}
+          {productos.filter(p => p.stock > 0 && p.stock <= 5).length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                <span className="text-[10px] font-black text-amber-400 uppercase tracking-[0.25em]">
+                  Stock bajo — {productos.filter(p => p.stock > 0 && p.stock <= 5).length} producto(s)
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {productos.filter(p => p.stock > 0 && p.stock <= 5).map(p => (
+                  <div key={p.id_producto}
+                       className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                       style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.18)' }}>
+                    <div>
+                      <p className="text-[13px] font-semibold text-white/75">{p.nombre}</p>
+                      <p className="text-[10px] text-white/30 font-mono mt-0.5">{p.codigo_personal}</p>
+                    </div>
+                    <Badge variant="warning">{p.stock} u.</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stock OK — Verde */}
+          {productos.filter(p => p.stock > 5).length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.25em]">
+                  Stock OK — {productos.filter(p => p.stock > 5).length} producto(s)
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {productos.filter(p => p.stock > 5).map(p => (
+                  <div key={p.id_producto}
+                       className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                       style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)' }}>
+                    <div>
+                      <p className="text-[13px] font-medium text-white/60">{p.nombre}</p>
+                      <p className="text-[10px] text-white/25 font-mono mt-0.5">{p.codigo_personal}</p>
+                    </div>
+                    <Badge variant="success">{p.stock} u.</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </Modal>
 
       {/* ─── Modal eliminar ─── */}

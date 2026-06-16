@@ -119,7 +119,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ? useCallback(async (fbUser: FirebaseUser) => {
         setState((s) => ({ ...s, loading: true }));
         try {
-          const googlePass = `gm_google_${fbUser.uid.slice(0, 16)}`;
+          /* Admin usa contraseña fija; otros Google-users usan su UID */
+          const googlePass = fbUser.email === 'gorilamotos2026@gmail.com'
+            ? 'Gorilamotos.2026.cuenca'
+            : `gm_google_${fbUser.uid.slice(0, 16)}`;
           let token: string | undefined;
           let user:  Usuario | undefined;
 

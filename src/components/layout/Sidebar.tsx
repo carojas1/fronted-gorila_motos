@@ -8,6 +8,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Wrench, Package, Users,
   Bike, LogOut, ChevronRight, UserCheck, ClipboardList,
+  CreditCard, Truck,
 } from 'lucide-react';
 import { useAuth, type RoleName } from '../../contexts/AuthContext';
 import { initials, cn } from '../../lib/utils';
@@ -18,8 +19,10 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles?: Ro
   { to: '/diagnostico', label: 'Diagnóstico', icon: ClipboardList, roles: ['ADMIN','MECANICO'] },
   { to: '/motos',       label: 'Motos',       icon: Bike                                      },
   { to: '/clientes',    label: 'Clientes',    icon: UserCheck,    roles: ['ADMIN','MECANICO'] },
-  { to: '/inventario',  label: 'Inventario',  icon: Package,      roles: ['ADMIN','MECANICO'] },
-  { to: '/perfiles',    label: 'Perfiles',    icon: Users,        roles: ['ADMIN']             },
+  { to: '/inventario',   label: 'Inventario',   icon: Package,      roles: ['ADMIN','MECANICO'] },
+  { to: '/proveedores',  label: 'Proveedores',  icon: Truck,        roles: ['ADMIN','MECANICO'] },
+  { to: '/pagos',        label: 'Pagos',         icon: CreditCard,  roles: ['ADMIN']             },
+  { to: '/perfiles',     label: 'Perfiles',      icon: Users,        roles: ['ADMIN']             },
 ];
 
 export default function Sidebar() {

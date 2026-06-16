@@ -289,7 +289,7 @@ export default function DashboardPage() {
               <YAxis tick={{ fill: 'rgba(255,255,255,0.28)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<DarkTooltip />} />
               <Area type="monotone" dataKey="ordenes" name="Órdenes" stroke="#E11428" strokeWidth={2} fill="url(#gradOrdenes)" dot={false} />
-              <Area type="monotone" dataKey="ingresos" name="Ingresos $" stroke="#10B981" strokeWidth={2} fill="url(#gradIngresos)" dot={false} />
+              {isAdmin && <Area type="monotone" dataKey="ingresos" name="Ingresos $" stroke="#10B981" strokeWidth={2} fill="url(#gradIngresos)" dot={false} />}
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -388,7 +388,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-black text-white/70">{fmtMoney(r.costo_total)}</p>
+                  {isAdmin && <p className="text-sm font-black text-white/70">{fmtMoney(r.costo_total)}</p>}
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                         style={{
                           background: `${ESTADO_COLORS[r.estado]}18`,
@@ -405,13 +405,15 @@ export default function DashboardPage() {
         {/* Acciones + Alertas */}
         <div className="xl:col-span-2 flex flex-col gap-4">
 
-          {/* Ingresos totales facturados */}
-          <div className="gm-card-d rounded-2xl p-5"
-               style={{ background: 'linear-gradient(135deg, #17171E, rgba(16,185,129,0.06))' }}>
-            <p className="text-[10px] tracking-[0.28em] uppercase text-white/28 font-bold mb-2">Ingresos facturados</p>
-            <p className="kpi-mega text-3xl">{fmtMoney(ingresosTotal)}</p>
-            <p className="text-xs text-white/30 mt-1">Total acumulado · {registros.filter(r=>r.estado===4).length} facturas</p>
-          </div>
+          {/* Ingresos totales facturados — solo Admin */}
+          {isAdmin && (
+            <div className="gm-card-d rounded-2xl p-5"
+                 style={{ background: 'linear-gradient(135deg, #17171E, rgba(16,185,129,0.06))' }}>
+              <p className="text-[10px] tracking-[0.28em] uppercase text-white/28 font-bold mb-2">Ingresos facturados</p>
+              <p className="kpi-mega text-3xl">{fmtMoney(ingresosTotal)}</p>
+              <p className="text-xs text-white/30 mt-1">Total acumulado · {registros.filter(r=>r.estado===4).length} facturas</p>
+            </div>
+          )}
 
           {/* Alertas rápidas */}
           {stockCritico > 0 && (
@@ -438,10 +440,13 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-1.5">
               {[
-                { label: 'Nueva orden',    icon: Wrench,  to: '/registros',  desc: 'Crear servicio'   },
-                { label: 'Registrar moto', icon: Bike,    to: '/motos',      desc: 'Nuevo vehículo'   },
-                { label: 'Ver alertas',    icon: Bell,    to: '/alertas',    desc: 'Mantenimientos'   },
-                ...(isAdmin ? [{ label: 'Ver perfiles', icon: Users, to: '/perfiles', desc: 'Equipo' }] : []),
+                { label: 'Nueva orden',    icon: Wrench,  to: '/registros',   desc: 'Crear servicio'   },
+                { label: 'Registrar moto', icon: Bike,    to: '/motos',       desc: 'Nuevo vehículo'   },
+                { label: 'Ver alertas',    icon: Bell,    to: '/alertas',     desc: 'Mantenimientos'   },
+                ...(isAdmin ? [
+                  { label: 'Pagos',         icon: Activity, to: '/pagos',     desc: 'Cobros y facturas' },
+                  { label: 'Perfiles',      icon: Users,    to: '/perfiles',  desc: 'Equipo' },
+                ] : []),
               ].map(({ label, icon: Icon, to, desc }) => (
                 <Link key={to} to={to}
                       className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/[0.04] transition-all group border border-transparent hover:border-white/[0.06]">

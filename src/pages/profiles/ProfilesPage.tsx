@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Shield, Users, Mail, MapPin, UserPlus,
   ChevronRight, Wrench, Crown, User, X, TrendingUp,
-  Lock, Eye, Zap, Star, Activity,
+  Lock, Zap, Star, Activity, Trash2,
 } from "lucide-react";
 import { usuariosApi, rolesApi, authApi } from "../../lib/api";
 import { useToast } from "../../components/ui/Toast";
@@ -85,9 +85,10 @@ function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg"
 }
 
 /* ── Tarjeta de usuario premium ── */
-function UserCard({ u, roleName, onAssign }: {
-  u: Usuario; roleName: string; onAssign: (u: Usuario) => void;
+function UserCard({ u, roleName, onAssign, onDelete }: {
+  u: Usuario; roleName: string; onAssign: (u: Usuario) => void; onDelete?: (u: Usuario) => void;
 }) {
+  const isProtected = u.correo === 'gorilamotos2026@gmail.com';
   const tab    = TABS.find(t => t.key === roleName);
   const color  = tab?.color ?? "#8B8FA8";
   const cedula = extractCedula(u.descripcion);
@@ -184,17 +185,28 @@ function UserCard({ u, roleName, onAssign }: {
             >
               <Lock size={9} /> Cambiar rol
             </button>
-            {roleName === "MECANICO" && (
-              <Link
-                to={`/perfiles/${u.id_usuario}`}
-                className="flex items-center gap-1 text-[11px] font-bold transition-colors duration-150"
-                style={{ color: `${color}80` }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = color}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = `${color}80`}
-              >
-                Ver ficha <ChevronRight size={10} />
-              </Link>
-            )}
+            <div className="flex items-center gap-2">
+              {roleName === "MECANICO" && (
+                <Link
+                  to={`/perfiles/${u.id_usuario}`}
+                  className="flex items-center gap-1 text-[11px] font-bold transition-colors duration-150"
+                  style={{ color: `${color}80` }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = color}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = `${color}80`}
+                >
+                  Ver ficha <ChevronRight size={10} />
+                </Link>
+              )}
+              {onDelete && !isProtected && (
+                <button
+                  onClick={() => onDelete(u)}
+                  className="flex items-center gap-1 text-[11px] font-bold text-white/20 hover:text-red-400 transition-colors duration-150"
+                  title="Eliminar cuenta"
+                >
+                  <Trash2 size={10} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -233,10 +245,12 @@ export default function ProfilesPage() {
   const [loading,    setLoading]    = useState(true);
   const [search,     setSearch]     = useState("");
   const [activeTab,  setActiveTab]  = useState("ADMIN");
-  const [roleModal,  setRoleModal]  = useState<{ user: Usuario } | null>(null);
-  const [selectedRol,setSelectedRol]= useState(0);
-  const [saving,     setSaving]     = useState(false);
-  const [addModal,   setAddModal]   = useState(false);
+  const [roleModal,    setRoleModal]    = useState<{ user: Usuario } | null>(null);
+  const [selectedRol,  setSelectedRol]  = useState(0);
+  const [saving,       setSaving]       = useState(false);
+  const [addModal,     setAddModal]     = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Usuario | null>(null);
+  const [deleting,     setDeleting]     = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(regSchema),
@@ -288,6 +302,18 @@ export default function ProfilesPage() {
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setSaving(false); }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleteTarget.correo === 'gorilamotos2026@gmail.com') return;
+    setDeleting(true);
+    try {
+      await usuariosApi.remove(deleteTarget.id_usuario);
+      toast.success("Cuenta eliminada correctamente");
+      setDeleteTarget(null);
+      fetchData();
+    } catch (err) { toast.error(getErrorMsg(err)); }
+    finally { setDeleting(false); }
   };
 
   const onAddUser = async (data: Record<string, string>) => {
@@ -487,6 +513,7 @@ export default function ProfilesPage() {
                 u={u}
                 roleName={getRolName((u.roles ?? []) as unknown[])}
                 onAssign={(uu: Usuario) => setRoleModal({ user: uu })}
+                onDelete={isAdmin ? (uu: Usuario) => setDeleteTarget(uu) : undefined}
               />
             ))}
           </AnimatePresence>
@@ -566,12 +593,16 @@ export default function ProfilesPage() {
                   const isA  = sel === "ADMIN";
                   const isM  = sel === "MECANICO";
                   const mods = [
-                    { name: "Dashboard",  ok: true },
-                    { name: "Registros",  ok: isA || isM },
-                    { name: "Motos",      ok: true },
-                    { name: "Clientes",   ok: isA || isM },
-                    { name: "Inventario", ok: isA || isM },
-                    { name: "Perfiles",   ok: isA },
+                    { name: "Dashboard",     ok: true },
+                    { name: "Registros",     ok: isA || isM },
+                    { name: "Diagnóstico",   ok: isA || isM },
+                    { name: "Motos",         ok: true },
+                    { name: "Clientes",      ok: isA || isM },
+                    { name: "Inventario",    ok: isA || isM },
+                    { name: "Proveedores",   ok: isA || isM },
+                    { name: "Pagos",         ok: isA },
+                    { name: "Perfiles",      ok: isA },
+                    { name: "Ver precios",   ok: isA },
                   ];
                   return mods.map(m => (
                     <div key={m.name} className="flex items-center justify-between py-1.5 border-b border-white/[0.04] last:border-0">
@@ -643,6 +674,35 @@ export default function ProfilesPage() {
             </select>
             {errors.rol && <p className="text-xs text-gm-red mt-1">{errors.rol.message}</p>}
           </div>
+        </div>
+      </Modal>
+
+      {/* ══ MODAL: Confirmar eliminación ══ */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Eliminar cuenta"
+        size="sm"
+        footer={<>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+          <Button variant="danger" onClick={confirmDelete} loading={deleting}>
+            <Trash2 size={13} /> Eliminar
+          </Button>
+        </>}
+      >
+        <div className="space-y-3">
+          <div className="p-3.5 rounded-xl"
+               style={{ background: "rgba(225,20,40,0.06)", border: "1px solid rgba(225,20,40,0.18)" }}>
+            <p className="text-[12px] text-white/50 leading-relaxed">
+              Vas a eliminar la cuenta de{' '}
+              <strong className="text-white/85">{deleteTarget?.nombre_completo}</strong>
+              {' '}({deleteTarget?.correo}).
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+          <p className="text-[11px] text-white/30">
+            El usuario perderá acceso inmediatamente.
+          </p>
         </div>
       </Modal>
     </div>
