@@ -1,11 +1,13 @@
 /* ─────────────────────────────────────────────
-   GMotors — Rastreador de Combustible
+   GMotors — Rastreador de Combustible (galones)
    Registros en localStorage por moto
-   Calcula: litros/100km, costo/km, gasto mensual
+   Calcula: rendimiento km/galón, costo/km, gasto mensual
+   Vincula con la salud de la moto (caída de rendimiento → revisión)
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useMemo } from 'react';
-import { Fuel, Plus, Trash2, TrendingDown, DollarSign, Gauge, X, AlertTriangle, TrendingUp, Activity } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Fuel, Plus, Trash2, TrendingDown, DollarSign, Gauge, X, AlertTriangle, TrendingUp, Activity, Wrench } from 'lucide-react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
@@ -15,7 +17,7 @@ import type { Moto, CargaCombustible } from '../../types';
 import { fmtDate, fmtMoney } from '../../lib/utils';
 
 const STORAGE_KEY = 'gm_fuel_logs';
-const PRICE_PER_L  = 0.74; // precio extra gasolina Ecuador (USD/litro)
+const PRICE_PER_GAL = 2.72; // precio referencia extra/galón Ecuador (USD)
 
 function loadLogs(): CargaCombustible[] {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'); }
@@ -77,42 +79,42 @@ export default function CombustiblePage() {
   /* Métricas */
   const metrics = useMemo(() => {
     if (filtered.length < 2) return null;
-    const totalLitros = filtered.reduce((s, l) => s + l.litros, 0);
-    const totalCosto  = filtered.reduce((s, l) => s + l.costo_total, 0);
+    const totalGal   = filtered.reduce((s, l) => s + l.litros, 0); // l.litros guarda galones
+    const totalCosto = filtered.reduce((s, l) => s + l.costo_total, 0);
     const maxKm = Math.max(...filtered.map(l => l.km_actual));
     const minKm = Math.min(...filtered.map(l => l.km_anterior));
     const kmRec = maxKm - minKm;
-    const lx100 = kmRec > 0 ? (totalLitros / kmRec) * 100 : 0;
+    const kmGal = totalGal > 0 ? kmRec / totalGal : 0;       // rendimiento km/galón (mayor = mejor)
     const cpkm  = kmRec > 0 ? totalCosto / kmRec : 0;
-    return { totalLitros, totalCosto, kmRec, lx100, cpkm };
+    return { totalGal, totalCosto, kmRec, kmGal, cpkm };
   }, [filtered]);
 
-  /* Datos para la gráfica (orden ascendente) + consumo por carga */
+  /* Datos para la gráfica (orden ascendente) + rendimiento km/galón por carga */
   const chartData = useMemo(() => {
     return [...filtered]
       .sort((a, b) => a.fecha.localeCompare(b.fecha))
       .map(l => {
         const km = l.km_actual - (l.km_anterior ?? 0);
-        const consumo = km > 0 ? +(l.litros / km * 100).toFixed(2) : null;
+        const rendimiento = (km > 0 && l.litros > 0) ? +(km / l.litros).toFixed(1) : null;
         return {
-          fecha:   fmtDate(l.fecha),
-          consumo,
-          costo:   +l.costo_total.toFixed(2),
-          litros:  +l.litros.toFixed(1),
+          fecha:        fmtDate(l.fecha),
+          rendimiento,  // km por galón
+          costo:        +l.costo_total.toFixed(2),
+          galones:      +l.litros.toFixed(1),
         };
       });
   }, [filtered]);
 
-  /* Consumo anormal: última carga > 20% sobre el promedio previo → posible falla */
+  /* Anomalía: el rendimiento (km/gal) CAE >15% respecto al promedio → posible falla mecánica */
   const anomaly = useMemo(() => {
-    const cons = chartData.map(d => d.consumo).filter((v): v is number => v != null && v > 0);
-    if (cons.length < 3) return null;
-    const last = cons[cons.length - 1];
-    const prev = cons.slice(0, -1);
+    const rend = chartData.map(d => d.rendimiento).filter((v): v is number => v != null && v > 0);
+    if (rend.length < 3) return null;
+    const last = rend[rend.length - 1];
+    const prev = rend.slice(0, -1);
     const avg  = prev.reduce((s, v) => s + v, 0) / prev.length;
     if (avg <= 0) return null;
-    const pct = ((last - avg) / avg) * 100;
-    return pct >= 20 ? { last: +last.toFixed(1), avg: +avg.toFixed(1), pct: Math.round(pct) } : null;
+    const drop = ((avg - last) / avg) * 100; // cuánto bajó el rendimiento
+    return drop >= 15 ? { last: +last.toFixed(1), avg: +avg.toFixed(1), pct: Math.round(drop) } : null;
   }, [chartData]);
 
   const addLog = () => {
@@ -126,7 +128,7 @@ export default function CombustiblePage() {
       litros:      Number(form.litros),
       costo_total: form.costo_total
         ? Number(form.costo_total)
-        : Number(form.litros) * PRICE_PER_L,
+        : Number(form.litros) * PRICE_PER_GAL,
       km_actual:   Number(form.km_actual),
       km_anterior: form.km_anterior ? Number(form.km_anterior) : 0,
       notas:       form.notas || undefined,
@@ -159,7 +161,7 @@ export default function CombustiblePage() {
             Rastreador de <span className="text-gradient-red">Combustible</span>
           </h1>
           <p className="text-white/35 text-sm mt-1">
-            Precio referencia gasolina Ecuador: USD {PRICE_PER_L}/litro
+            Precio referencia gasolina Ecuador: USD {PRICE_PER_GAL}/galón
           </p>
         </div>
         <button
@@ -198,10 +200,10 @@ export default function CombustiblePage() {
       {metrics && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { icon: Fuel,         label: 'Litros cargados',  val: `${metrics.totalLitros.toFixed(1)} L`,       color: '#3B82F6' },
-            { icon: DollarSign,   label: 'Gasto en combustible', val: fmtMoney(metrics.totalCosto),              color: '#10B981' },
-            { icon: Gauge,        label: 'Consumo',           val: `${metrics.lx100.toFixed(1)} L/100km`,     color: '#F59E0B' },
-            { icon: TrendingDown, label: 'Costo por km',      val: `$${metrics.cpkm.toFixed(3)}/km`,          color: '#8B5CF6' },
+            { icon: Fuel,         label: 'Galones cargados', val: `${metrics.totalGal.toFixed(1)} gal`,      color: '#3B82F6' },
+            { icon: DollarSign,   label: 'Gasto en combustible', val: fmtMoney(metrics.totalCosto),          color: '#10B981' },
+            { icon: Gauge,        label: 'Rendimiento',      val: `${metrics.kmGal.toFixed(1)} km/gal`,      color: '#F59E0B' },
+            { icon: TrendingDown, label: 'Costo por km',     val: `$${metrics.cpkm.toFixed(3)}/km`,          color: '#8B5CF6' },
           ].map(({ icon: Icon, label, val, color }) => (
             <div key={label} className="gm-card-d rounded-2xl p-4">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3"
@@ -225,27 +227,34 @@ export default function CombustiblePage() {
           </div>
           <div className="flex-1">
             <p className="text-[13.5px] font-black text-white/90 flex items-center gap-2">
-              Consumo más alto de lo normal
+              El rendimiento bajó — posible falla
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }}>
-                +{anomaly.pct}%
+                −{anomaly.pct}%
               </span>
             </p>
             <p className="text-[12px] text-white/45 mt-1 leading-relaxed">
-              La última carga rinde <b style={{ color: '#F59E0B' }}>{anomaly.last} L/100km</b> contra un promedio de{' '}
-              <b className="text-white/70">{anomaly.avg} L/100km</b>. Un salto así puede indicar baja presión de llantas,
-              filtro de aire sucio, bujía gastada o una falla. Recomendamos una revisión con el mecánico.
+              La última carga rinde <b style={{ color: '#F59E0B' }}>{anomaly.last} km/gal</b> contra un promedio de{' '}
+              <b className="text-white/70">{anomaly.avg} km/gal</b>. Una caída así suele indicar baja presión de llantas,
+              filtro de aire sucio, bujía gastada o una falla mecánica.
             </p>
+            {selMoto && (
+              <Link to={`/motos/${selMoto}`}
+                className="inline-flex items-center gap-1.5 mt-2 text-[12px] font-bold"
+                style={{ color: '#F59E0B' }}>
+                <Wrench size={12} /> Ver salud y diagnóstico de esta moto →
+              </Link>
+            )}
           </div>
         </div>
       )}
 
-      {/* ── Gráfica de consumo ── */}
-      {chartData.filter(d => d.consumo != null).length >= 2 && (
+      {/* ── Gráfica de rendimiento ── */}
+      {chartData.filter(d => d.rendimiento != null).length >= 2 && (
         <div className="gm-card-d rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Activity size={15} className="text-gm-red/70" />
             <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
-              Evolución del consumo (L / 100 km)
+              Rendimiento (km por galón)
             </p>
           </div>
           <div style={{ width: '100%', height: 240, minWidth: 0 }}>
@@ -264,14 +273,14 @@ export default function CombustiblePage() {
                   contentStyle={{ background: '#16161E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12 }}
                   labelStyle={{ color: 'rgba(255,255,255,0.6)' }}
                   itemStyle={{ color: '#F59E0B' }}
-                  formatter={(v: number) => [`${v} L/100km`, 'Consumo']}
+                  formatter={(v: number) => [`${v} km/gal`, 'Rendimiento']}
                 />
-                <Area type="monotone" dataKey="consumo" stroke="#F59E0B" strokeWidth={2.5} fill="url(#gradConsumo)" connectNulls dot={{ r: 3, fill: '#F59E0B' }} activeDot={{ r: 5 }} />
+                <Area type="monotone" dataKey="rendimiento" stroke="#F59E0B" strokeWidth={2.5} fill="url(#gradConsumo)" connectNulls dot={{ r: 3, fill: '#F59E0B' }} activeDot={{ r: 5 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
           <p className="text-[11px] text-white/30 mt-3 flex items-center gap-1.5">
-            <TrendingUp size={11} /> Menor es mejor. Un alza sostenida sugiere revisar mantenimiento.
+            <TrendingUp size={11} /> Mayor es mejor. Una caída sostenida sugiere revisar mantenimiento.
           </p>
         </div>
       )}
@@ -305,29 +314,29 @@ export default function CombustiblePage() {
               <tr>
                 <th>Fecha</th>
                 <th>Placa</th>
-                <th className="text-right">Litros</th>
+                <th className="text-right">Galones</th>
                 <th className="text-right">Costo</th>
                 <th className="text-right">Km anterior</th>
                 <th className="text-right">Km actual</th>
                 <th className="text-right">Km recorridos</th>
-                <th className="text-right">Consumo</th>
+                <th className="text-right">Rendimiento</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(l => {
                 const km   = l.km_actual - (l.km_anterior ?? 0);
-                const cons = km > 0 ? (l.litros / km * 100).toFixed(1) : '—';
+                const rend = (km > 0 && l.litros > 0) ? (km / l.litros).toFixed(1) : '—';
                 return (
                   <tr key={l.id}>
                     <td className="text-white/50 text-[12px]">{fmtDate(l.fecha)}</td>
                     <td><span className="plate-tag">{l.placa}</span></td>
-                    <td className="text-right text-blue-400 font-bold">{l.litros.toFixed(1)} L</td>
+                    <td className="text-right text-blue-400 font-bold">{l.litros.toFixed(1)} gal</td>
                     <td className="text-right text-emerald-400 font-bold">{fmtMoney(l.costo_total)}</td>
                     <td className="text-right text-white/45">{(l.km_anterior ?? 0).toLocaleString()}</td>
                     <td className="text-right text-white/75 font-bold">{l.km_actual.toLocaleString()}</td>
                     <td className="text-right text-white/60">{km > 0 ? `${km.toLocaleString()} km` : '—'}</td>
-                    <td className="text-right text-yellow-400 font-bold">{cons !== '—' ? `${cons} L/100` : '—'}</td>
+                    <td className="text-right text-yellow-400 font-bold">{rend !== '—' ? `${rend} km/gal` : '—'}</td>
                     <td>
                       <button onClick={() => removeLog(l.id)} className="icon-btn danger ml-auto block">
                         <Trash2 size={12} />
@@ -382,14 +391,14 @@ export default function CombustiblePage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1.5">Litros *</label>
-                  <input type="number" step="0.1" placeholder="Ej. 5.5" className="gm-input-d w-full" value={form.litros} onChange={f('litros')} />
+                  <label className="block text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1.5">Galones *</label>
+                  <input type="number" step="0.1" placeholder="Ej. 2.5" className="gm-input-d w-full" value={form.litros} onChange={f('litros')} />
                 </div>
                 <div>
                   <label className="block text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1.5">
                     Costo total USD <span className="text-white/25">(auto)</span>
                   </label>
-                  <input type="number" step="0.01" placeholder={`~${form.litros ? (Number(form.litros) * PRICE_PER_L).toFixed(2) : '0.00'}`}
+                  <input type="number" step="0.01" placeholder={`~${form.litros ? (Number(form.litros) * PRICE_PER_GAL).toFixed(2) : '0.00'}`}
                          className="gm-input-d w-full" value={form.costo_total} onChange={f('costo_total')} />
                 </div>
               </div>
@@ -413,8 +422,8 @@ export default function CombustiblePage() {
               {/* Preview del costo si no se ingresó */}
               {form.litros && !form.costo_total && (
                 <p className="text-[11px] text-yellow-400/60">
-                  Costo estimado: USD {(Number(form.litros) * PRICE_PER_L).toFixed(2)}
-                  <span className="text-white/25 ml-1">(precio gasolina extra Ecuador)</span>
+                  Costo estimado: USD {(Number(form.litros) * PRICE_PER_GAL).toFixed(2)}
+                  <span className="text-white/25 ml-1">(precio gasolina extra Ecuador / galón)</span>
                 </p>
               )}
             </div>
