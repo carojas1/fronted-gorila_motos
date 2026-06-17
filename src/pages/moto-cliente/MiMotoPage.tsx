@@ -163,7 +163,14 @@ export default function MiMotoPage() {
         id_usuario: user.id_usuario,
       });
       const creada = nuevaMoto as Moto;
-      if (fotoBase64 && creada?.id_moto) guardarFoto(creada.id_moto, fotoBase64);
+      if (fotoBase64 && creada?.id_moto) {
+        try {
+          await motosApi.update(creada.id_moto, { ruta_imagen_motos: fotoBase64 });
+          creada.ruta_imagen_motos = fotoBase64;            // reflejar en la UI
+        } catch {
+          guardarFoto(creada.id_moto, fotoBase64);          // respaldo local (si el server aún no acepta TEXT)
+        }
+      }
       setMotos(prev => [...prev, creada]);
       resetMoto();
       setAddingMoto(false);

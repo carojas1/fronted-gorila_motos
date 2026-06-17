@@ -34,12 +34,12 @@ export function quitarFoto(idMoto: number): void {
   localStorage.setItem(FOTOS_KEY, JSON.stringify(all));
 }
 
-/** Imagen a mostrar para una moto: local primero, luego la del servidor. */
+/** Imagen a mostrar: la del servidor (BD) si existe, luego respaldo local. */
 export function imagenMoto(moto: { id_moto: number; ruta_imagen_motos?: string | null }): string | null {
-  const local = fotoDeMoto(moto.id_moto);
-  if (local) return local;
   const r = moto.ruta_imagen_motos;
-  if (r && r !== 'Desconocido' && r.trim() !== '') return r;
+  if (r && r !== 'Desconocido' && r.trim() !== '') return r;   // BD (base64 o URL)
+  const local = fotoDeMoto(moto.id_moto);
+  if (local) return local;                                      // respaldo local
   return null;
 }
 

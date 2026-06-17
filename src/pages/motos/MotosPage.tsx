@@ -338,13 +338,19 @@ export default function MotosPage() {
         try { fotoBase64 = await comprimirImagen(imageFile); } catch { /* se guarda sin foto */ }
       }
       if (editTarget) {
-        await motosApi.update(editTarget.id_moto, data);
-        if (fotoBase64) guardarFoto(editTarget.id_moto, fotoBase64);
+        await motosApi.update(editTarget.id_moto, fotoBase64 ? { ...data, ruta_imagen_motos: fotoBase64 } : data)
+          .catch(async (err) => {
+            if (fotoBase64) { await motosApi.update(editTarget.id_moto, data); guardarFoto(editTarget.id_moto, fotoBase64); }
+            else throw err;
+          });
         toast.success('Moto actualizada');
       } else {
         const { data: nueva } = await motosApi.create(data);
         const creada = nueva as Moto;
-        if (fotoBase64 && creada?.id_moto) guardarFoto(creada.id_moto, fotoBase64);
+        if (fotoBase64 && creada?.id_moto) {
+          try { await motosApi.update(creada.id_moto, { ruta_imagen_motos: fotoBase64 }); }
+          catch { guardarFoto(creada.id_moto, fotoBase64); }
+        }
         toast.success('Moto registrada');
       }
       setModalOpen(false);

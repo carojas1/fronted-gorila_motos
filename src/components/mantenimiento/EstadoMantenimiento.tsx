@@ -5,18 +5,21 @@
    Las piezas no cambiadas siguen acumulando desgaste (rojo).
    ───────────────────────────────────────────── */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Droplet, Wind, Zap, Link2, Circle, Disc, ClipboardCheck,
   Info, ChevronDown, ChevronUp, Check, RotateCcw, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { mantenimientosApi } from '../../lib/api';
 import {
   calcularEstadoLocal, etiquetaCC, rangoDeCC, parametrosDeCC,
   serviciosDeMoto, registrarServicio, quitarServicio,
   ESTADO_COLOR,
 } from '../../lib/mantenimiento';
 import type { Moto } from '../../types';
+
+interface MantenimientoApi { tipo: string; kmServicio: number }
 
 const ICON_BY_TIPO: Record<string, LucideIcon> = {
   ACEITE: Droplet, FILTRO_AIRE: Wind, BUJIA: Zap, CADENA: Link2,
@@ -39,17 +42,41 @@ function BarraDesgaste({ pct, color }: { pct: number; color: string }) {
 export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?: boolean }) {
   const { isAdmin, isMecanico } = useAuth();
   const canService = isAdmin || isMecanico;       // solo mecánico/admin marca cambios
-  const [tick, setTick]         = useState(0);    // fuerza recálculo tras registrar
-  const [showInfo, setShowInfo] = useState(false);
+  const [servicios, setServicios] = useState<Record<string, number>>(() => serviciosDeMoto(moto.id_moto));
+  const [showInfo, setShowInfo]   = useState(false);
+
+  /* Carga compartida desde el backend (fallback a localStorage si el server no responde) */
+  const cargarServicios = () => {
+    mantenimientosApi.byMoto(moto.id_moto)
+      .then(({ data }) => {
+        const map: Record<string, number> = {};
+        (data as MantenimientoApi[]).forEach(m => {
+          map[m.tipo] = Math.max(map[m.tipo] ?? 0, m.kmServicio);
+        });
+        setServicios(map);
+      })
+      .catch(() => setServicios(serviciosDeMoto(moto.id_moto)));
+  };
+  useEffect(cargarServicios, [moto.id_moto]);
 
   const estado = useMemo(
-    () => calcularEstadoLocal(moto.cilindraje, moto.kilometraje, serviciosDeMoto(moto.id_moto)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [moto.cilindraje, moto.kilometraje, moto.id_moto, tick],
+    () => calcularEstadoLocal(moto.cilindraje, moto.kilometraje, servicios),
+    [moto.cilindraje, moto.kilometraje, servicios],
   );
 
-  const marcarCambiado = (tipo: string) => { registrarServicio(moto.id_moto, tipo, moto.kilometraje); setTick(t => t + 1); };
-  const deshacer       = (tipo: string) => { quitarServicio(moto.id_moto, tipo); setTick(t => t + 1); };
+  const marcarCambiado = (tipo: string) => {
+    // Optimista
+    setServicios(s => ({ ...s, [tipo]: moto.kilometraje }));
+    mantenimientosApi.registrar({ id_moto: moto.id_moto, tipo, km_servicio: moto.kilometraje })
+      .then(cargarServicios)
+      .catch(() => { registrarServicio(moto.id_moto, tipo, moto.kilometraje); }); // fallback local
+  };
+  const deshacer = (tipo: string) => {
+    setServicios(s => { const n = { ...s }; delete n[tipo]; return n; });
+    mantenimientosApi.borrar(moto.id_moto, tipo)
+      .then(cargarServicios)
+      .catch(() => { quitarServicio(moto.id_moto, tipo); }); // fallback local
+  };
 
   const ordenado = [...estado].sort((a, b) => b.porcentajeDesgaste - a.porcentajeDesgaste);
   const vencidos = estado.filter(e => e.estado === 'VENCIDO').length;
