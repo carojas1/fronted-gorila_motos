@@ -14,14 +14,15 @@ import { motosApi, registrosApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Moto, RegistroDetalle } from '../../types';
 import { fmtDate, fmtMoney, toIsoStr } from '../../lib/utils';
+import { WORKSHOP_CONTACT } from '../../lib/constants';
 
 const TALLER = {
-  nombre:    'Gorila Motos',
-  direccion: 'Av. 6 de Diciembre N24-253, Quito',
-  telefono:  '(02) 234-5678',
-  whatsapp:  '593987654321',
-  email:     'info@gorilamoto.com',
-  horario:   'Lun–Vie 8:00–18:00 · Sáb 9:00–14:00',
+  nombre:    WORKSHOP_CONTACT.nombre,
+  direccion: `${WORKSHOP_CONTACT.direccion}, ${WORKSHOP_CONTACT.ciudad}`,
+  telefono:  WORKSHOP_CONTACT.telefono,
+  whatsapp:  WORKSHOP_CONTACT.whatsapp,
+  email:     WORKSHOP_CONTACT.email,
+  horario:   WORKSHOP_CONTACT.horario,
 };
 
 const PTS_TABLE = [125, 200, 400, 650].map((max, i) => ({

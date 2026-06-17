@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Shield, ArrowLeft, Wrench } from 'lucide-react';
+import { WORKSHOP_CONTACT } from '../../lib/constants';
 
 const SECTIONS = [
   {
@@ -61,7 +62,7 @@ Aplicamos medidas de seguridad técnicas y organizativas: cifrado de contraseña
 • Oposición: oponerte al tratamiento de tus datos en ciertos casos
 • Limitación: solicitar la restricción del tratamiento
 
-Para ejercer estos derechos, escríbenos a: privacidad@gorilamoto.ec`,
+Para ejercer estos derechos, escríbenos a: ${WORKSHOP_CONTACT.emailPrivacidad}`,
   },
   {
     title: '8. Retención de datos',
@@ -77,7 +78,7 @@ Para ejercer estos derechos, escríbenos a: privacidad@gorilamoto.ec`,
   },
   {
     title: '11. Contacto',
-    body: `Para cualquier consulta sobre privacidad o protección de datos:\n• Email: privacidad@gorilamoto.ec\n• Ecuador — Provincia de Pichincha\n• Teléfono: +593 98 XXX XXXX`,
+    body: `Para cualquier consulta sobre privacidad o protección de datos:\n• Email: ${WORKSHOP_CONTACT.emailPrivacidad}\n• ${WORKSHOP_CONTACT.razonSocial} — ${WORKSHOP_CONTACT.direccion}, ${WORKSHOP_CONTACT.ciudadCompleta}\n• Teléfono / WhatsApp: ${WORKSHOP_CONTACT.telefono}`,
   },
 ];
 

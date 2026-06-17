@@ -8,16 +8,17 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft, AlertCircle } from 'lucide-react';
 import { registrosApi, motosApi, usuariosApi, tiposApi } from '../../lib/api';
 import { fmtDate, fmtMoney, extractCedula, extractPhone } from '../../lib/utils';
+import { WORKSHOP_CONTACT } from '../../lib/constants';
 import type { RegistroDetalle, Moto, Usuario, Tipo } from '../../types';
 
-/* ── Datos del taller ── */
+/* ── Datos del taller (fuente única: lib/constants) ── */
 const TALLER = {
-  nombre:    'GORILA MOTOS S.A.S.',
-  direccion: 'Medardo A. Silva y Ángel Silva 1-666',
-  ciudad:    'Cuenca - Azuay - Ecuador',
-  telefono:  '+593 98 083 4367',
-  email:     'facturacion@gorilamoto.com',
-  web:       'www.gorilamoto.com',
+  nombre:    WORKSHOP_CONTACT.razonSocial,
+  direccion: WORKSHOP_CONTACT.direccion,
+  ciudad:    WORKSHOP_CONTACT.ciudadCompleta,
+  telefono:  WORKSHOP_CONTACT.telefono,
+  email:     WORKSHOP_CONTACT.emailFacturacion,
+  web:       WORKSHOP_CONTACT.web,
 };
 
 function genNumeroComprobante(id: number): string {

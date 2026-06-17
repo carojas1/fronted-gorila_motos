@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { FileText, ArrowLeft, Wrench } from 'lucide-react';
+import { WORKSHOP_CONTACT } from '../../lib/constants';
 
 const SECTIONS = [
   {
@@ -83,11 +84,11 @@ Puedes cancelar tu cuenta en cualquier momento. Tras la cancelación, tus datos 
   },
   {
     title: '10. Ley aplicable y jurisdicción',
-    body: `Estos Términos de Uso se rigen por las leyes de la República del Ecuador. Cualquier disputa se someterá a los tribunales competentes de la ciudad de Quito, Ecuador. Las partes acuerdan intentar resolver cualquier controversia de buena fe antes de acudir a instancias judiciales.`,
+    body: `Estos Términos de Uso se rigen por las leyes de la República del Ecuador. Cualquier disputa se someterá a los tribunales competentes de la ciudad de ${WORKSHOP_CONTACT.ciudad}, ${WORKSHOP_CONTACT.pais}. Las partes acuerdan intentar resolver cualquier controversia de buena fe antes de acudir a instancias judiciales.`,
   },
   {
     title: '11. Contacto',
-    body: `Para consultas sobre estos términos:\n• Email: legal@gorilamoto.ec\n• Ecuador — Provincia de Pichincha\n• Teléfono: +593 98 XXX XXXX`,
+    body: `Para consultas sobre estos términos:\n• Email: ${WORKSHOP_CONTACT.emailLegal}\n• ${WORKSHOP_CONTACT.razonSocial} — ${WORKSHOP_CONTACT.direccion}, ${WORKSHOP_CONTACT.ciudadCompleta}\n• Teléfono / WhatsApp: ${WORKSHOP_CONTACT.telefono}`,
   },
 ];
 
