@@ -179,32 +179,8 @@ export function calcularEstadoLocal(
   });
 }
 
-/* ── Registro de mantenimientos REALES (por moto, por pieza) ──
-   Persistencia local: el mecánico marca "ya cambié X a los Y km".
-   { [id_moto]: { TIPO: km_servicio } } */
-const SERVICIOS_KEY = 'gm_mantenimiento_realizado';
-
-export function loadServicios(): Record<number, Record<string, number>> {
-  try { return JSON.parse(localStorage.getItem(SERVICIOS_KEY) ?? '{}'); }
-  catch { return {}; }
-}
-
-export function serviciosDeMoto(idMoto: number): Record<string, number> {
-  return loadServicios()[idMoto] ?? {};
-}
-
-/** Marca una pieza como cambiada al kilometraje indicado (la resetea a 0%). */
-export function registrarServicio(idMoto: number, tipo: string, kmServicio: number): void {
-  const all = loadServicios();
-  all[idMoto] = { ...(all[idMoto] ?? {}), [tipo]: kmServicio };
-  localStorage.setItem(SERVICIOS_KEY, JSON.stringify(all));
-}
-
-/** Deshace el registro de una pieza (vuelve a acumular desde 0 / último previo). */
-export function quitarServicio(idMoto: number, tipo: string): void {
-  const all = loadServicios();
-  if (all[idMoto]) { delete all[idMoto][tipo]; localStorage.setItem(SERVICIOS_KEY, JSON.stringify(all)); }
-}
+/* Los mantenimientos realizados viven en el backend (tabla mantenimiento_realizado),
+   se consultan vía mantenimientosApi. No se guarda nada en el dispositivo. */
 
 /* ── Colores de estado consistentes en toda la app ── */
 export const ESTADO_COLOR: Record<EstadoCalculado['estado'], { label: string; color: string; bg: string; border: string }> = {

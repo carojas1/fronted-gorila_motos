@@ -14,7 +14,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { mantenimientosApi } from '../../lib/api';
 import {
   calcularEstadoLocal, etiquetaCC, rangoDeCC, parametrosDeCC,
-  serviciosDeMoto, registrarServicio, quitarServicio,
   ESTADO_COLOR,
 } from '../../lib/mantenimiento';
 import type { Moto } from '../../types';
@@ -42,10 +41,11 @@ function BarraDesgaste({ pct, color }: { pct: number; color: string }) {
 export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?: boolean }) {
   const { isAdmin, isMecanico } = useAuth();
   const canService = isAdmin || isMecanico;       // solo mecánico/admin marca cambios
-  const [servicios, setServicios] = useState<Record<string, number>>(() => serviciosDeMoto(moto.id_moto));
+  const [servicios, setServicios] = useState<Record<string, number>>({});
+  const [errorServ, setErrorServ] = useState(false);
   const [showInfo, setShowInfo]   = useState(false);
 
-  /* Carga compartida desde el backend (fallback a localStorage si el server no responde) */
+  /* Carga compartida desde el backend (100% nube, sin almacenamiento local) */
   const cargarServicios = () => {
     mantenimientosApi.byMoto(moto.id_moto)
       .then(({ data }) => {
@@ -54,8 +54,9 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
           map[m.tipo] = Math.max(map[m.tipo] ?? 0, m.kmServicio);
         });
         setServicios(map);
+        setErrorServ(false);
       })
-      .catch(() => setServicios(serviciosDeMoto(moto.id_moto)));
+      .catch(() => setErrorServ(true));
   };
   useEffect(cargarServicios, [moto.id_moto]);
 
@@ -65,17 +66,16 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
   );
 
   const marcarCambiado = (tipo: string) => {
-    // Optimista
-    setServicios(s => ({ ...s, [tipo]: moto.kilometraje }));
+    setServicios(s => ({ ...s, [tipo]: moto.kilometraje }));   // optimista
     mantenimientosApi.registrar({ id_moto: moto.id_moto, tipo, km_servicio: moto.kilometraje })
       .then(cargarServicios)
-      .catch(() => { registrarServicio(moto.id_moto, tipo, moto.kilometraje); }); // fallback local
+      .catch(() => { setErrorServ(true); cargarServicios(); }); // revierte si falla
   };
   const deshacer = (tipo: string) => {
     setServicios(s => { const n = { ...s }; delete n[tipo]; return n; });
     mantenimientosApi.borrar(moto.id_moto, tipo)
       .then(cargarServicios)
-      .catch(() => { quitarServicio(moto.id_moto, tipo); }); // fallback local
+      .catch(() => { setErrorServ(true); cargarServicios(); });
   };
 
   const ordenado = [...estado].sort((a, b) => b.porcentajeDesgaste - a.porcentajeDesgaste);
@@ -105,6 +105,12 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
         </div>
         <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{etiquetaCC(moto.cilindraje)}</span>
       </div>
+
+      {errorServ && (
+        <div style={{ fontSize: 11, color: '#F59E0B', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.22)', borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>
+          No se pudo conectar con el servidor para los mantenimientos. Verifica tu conexión o que el backend esté activo.
+        </div>
+      )}
 
       {/* Lista de componentes */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -1,45 +1,14 @@
 /* ─────────────────────────────────────────────
-   GMotors — Fotos de motos (local, sin servidor)
-   Comprime la imagen y la guarda como base64 en el
-   navegador. Funciona SIEMPRE (no depende de Supabase).
-   Para una versión compartida en la nube se requiere
-   columna TEXT en la BD (ver memoria del proyecto).
+   GMotors — Fotos de motos (100% nube)
+   La foto se guarda en la BD (columna ruta_imagen_motos, TEXT)
+   vía motosApi.update. Aquí solo se comprime y se decide qué mostrar.
+   No se usa almacenamiento local (la app será un APK).
    ───────────────────────────────────────────── */
 
-const FOTOS_KEY = 'gm_moto_fotos';
-
-export function loadFotos(): Record<number, string> {
-  try { return JSON.parse(localStorage.getItem(FOTOS_KEY) ?? '{}'); }
-  catch { return {}; }
-}
-
-export function fotoDeMoto(idMoto: number): string | null {
-  return loadFotos()[idMoto] ?? null;
-}
-
-export function guardarFoto(idMoto: number, dataUrl: string): void {
-  try {
-    const all = loadFotos();
-    all[idMoto] = dataUrl;
-    localStorage.setItem(FOTOS_KEY, JSON.stringify(all));
-  } catch (e) {
-    // Si se llena el localStorage, ignorar silenciosamente
-    console.warn('No se pudo guardar la foto localmente', e);
-  }
-}
-
-export function quitarFoto(idMoto: number): void {
-  const all = loadFotos();
-  delete all[idMoto];
-  localStorage.setItem(FOTOS_KEY, JSON.stringify(all));
-}
-
-/** Imagen a mostrar: la del servidor (BD) si existe, luego respaldo local. */
-export function imagenMoto(moto: { id_moto: number; ruta_imagen_motos?: string | null }): string | null {
+/** Imagen a mostrar para una moto (la de la BD). */
+export function imagenMoto(moto: { ruta_imagen_motos?: string | null }): string | null {
   const r = moto.ruta_imagen_motos;
-  if (r && r !== 'Desconocido' && r.trim() !== '') return r;   // BD (base64 o URL)
-  const local = fotoDeMoto(moto.id_moto);
-  if (local) return local;                                      // respaldo local
+  if (r && r !== 'Desconocido' && r.trim() !== '') return r;
   return null;
 }
 

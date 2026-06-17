@@ -13,15 +13,15 @@ import {
   CheckCircle, AlertTriangle, Pencil, X, Save,
   Gauge, Activity,
 } from 'lucide-react';
-import { motosApi, usuariosApi } from '../../lib/api';
-import { comprimirImagen, guardarFoto, imagenMoto } from '../../lib/fotos';
+import { motosApi, usuariosApi, mantenimientosApi } from '../../lib/api';
+import { comprimirImagen, imagenMoto } from '../../lib/fotos';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg, extractPhone, extractCedula } from '../../lib/utils';
 import Input from '../../components/ui/Input';
 import type { Moto } from '../../types';
 import { EstadoMotoLive } from '../../components/mantenimiento/EstadoMantenimiento';
-import { calcularEstadoLocal, serviciosDeMoto } from '../../lib/mantenimiento';
+import { calcularEstadoLocal } from '../../lib/mantenimiento';
 
 /* ─── Tipos de moto disponibles ─── */
 const TIPOS = ['Sport', 'Naked', 'Touring', 'Enduro', 'Scrambler', 'Cruiser', 'Scooter', 'Otro'];
@@ -73,6 +73,8 @@ export default function MiMotoPage() {
   const [kmMoto,       setKmMoto]       = useState<Record<number, string>>({});
   const [savingKm,     setSavingKm]     = useState<number | null>(null);
   const [uploadMsg,    setUploadMsg]    = useState<string | null>(null);
+  /* Mantenimientos por moto (desde el backend) para los badges */
+  const [serviciosMap, setServiciosMap] = useState<Record<number, Record<string, number>>>({});
 
   const cedula   = extractCedula(user?.descripcion ?? '');
   const telefono = extractPhone(user?.descripcion  ?? '');
@@ -103,6 +105,21 @@ export default function MiMotoPage() {
         const lista = Array.isArray(data) ? data as Moto[] : [];
         setMotos(lista);
         setKmMoto(Object.fromEntries(lista.map(m => [m.id_moto, String(m.kilometraje)])));
+        // Mantenimientos (nube) para los badges de cada moto
+        Promise.allSettled(lista.map(m => mantenimientosApi.byMoto(m.id_moto)))
+          .then(res => {
+            const map: Record<number, Record<string, number>> = {};
+            res.forEach((r, i) => {
+              if (r.status === 'fulfilled') {
+                const sm: Record<string, number> = {};
+                (r.value.data as { tipo: string; kmServicio: number }[]).forEach(x => {
+                  sm[x.tipo] = Math.max(sm[x.tipo] ?? 0, x.kmServicio);
+                });
+                map[lista[i].id_moto] = sm;
+              }
+            });
+            setServiciosMap(map);
+          });
       })
       .catch(() => setMotos([]))
       .finally(() => setLoadingMotos(false));
@@ -168,7 +185,7 @@ export default function MiMotoPage() {
           await motosApi.update(creada.id_moto, { ruta_imagen_motos: fotoBase64 });
           creada.ruta_imagen_motos = fotoBase64;            // reflejar en la UI
         } catch {
-          guardarFoto(creada.id_moto, fotoBase64);          // respaldo local (si el server aún no acepta TEXT)
+          toast.error('La moto se creó, pero la foto no se guardó. Actualiza el backend (columna foto a TEXT).', 'Foto');
         }
       }
       setMotos(prev => [...prev, creada]);
@@ -378,7 +395,7 @@ export default function MiMotoPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {motos.map(moto => {
             const color   = TIPO_COLOR[moto.tipo_moto ?? 'Otro'] ?? '#8A8A9E';
-            const estLocal = calcularEstadoLocal(moto.cilindraje, moto.kilometraje, serviciosDeMoto(moto.id_moto));
+            const estLocal = calcularEstadoLocal(moto.cilindraje, moto.kilometraje, serviciosMap[moto.id_moto] ?? {});
             const hasVenc = estLocal.some(s => s.estado === 'VENCIDO');
             const hasPrx  = estLocal.some(s => s.estado === 'PROXIMO');
             return (

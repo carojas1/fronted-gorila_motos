@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import gsap from 'gsap';
 import { motosApi, usuariosApi } from '../../lib/api';
-import { comprimirImagen, guardarFoto, imagenMoto } from '../../lib/fotos';
+import { comprimirImagen, imagenMoto } from '../../lib/fotos';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { getErrorMsg } from '../../lib/utils';
@@ -338,18 +338,18 @@ export default function MotosPage() {
         try { fotoBase64 = await comprimirImagen(imageFile); } catch { /* se guarda sin foto */ }
       }
       if (editTarget) {
-        await motosApi.update(editTarget.id_moto, fotoBase64 ? { ...data, ruta_imagen_motos: fotoBase64 } : data)
-          .catch(async (err) => {
-            if (fotoBase64) { await motosApi.update(editTarget.id_moto, data); guardarFoto(editTarget.id_moto, fotoBase64); }
-            else throw err;
-          });
+        await motosApi.update(editTarget.id_moto, data);
+        if (fotoBase64) {
+          try { await motosApi.update(editTarget.id_moto, { ruta_imagen_motos: fotoBase64 }); }
+          catch { toast.error('Datos guardados, pero la foto no (actualiza el backend a columna TEXT).'); }
+        }
         toast.success('Moto actualizada');
       } else {
         const { data: nueva } = await motosApi.create(data);
         const creada = nueva as Moto;
         if (fotoBase64 && creada?.id_moto) {
           try { await motosApi.update(creada.id_moto, { ruta_imagen_motos: fotoBase64 }); }
-          catch { guardarFoto(creada.id_moto, fotoBase64); }
+          catch { toast.error('Moto creada, pero la foto no se guardó (actualiza el backend a columna TEXT).'); }
         }
         toast.success('Moto registrada');
       }

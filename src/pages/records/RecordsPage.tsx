@@ -11,13 +11,13 @@ import {
   Bike, UserPlus, Zap, AlertTriangle,
 } from 'lucide-react';
 import gsap from 'gsap';
-import { registrosApi, usuariosApi, motosApi, tiposApi, authApi } from '../../lib/api';
+import { registrosApi, usuariosApi, motosApi, tiposApi, authApi, mantenimientosApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   fmtDate, fmtMoney, getErrorMsg, ESTADO_REGISTRO, extractPhone, toIsoStr,
 } from '../../lib/utils';
-import { calcularEstadoLocal, serviciosDeMoto } from '../../lib/mantenimiento';
+import { calcularEstadoLocal } from '../../lib/mantenimiento';
 import type { RegistroDetalle, Usuario, Moto, Tipo } from '../../types';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -164,6 +164,7 @@ export default function RecordsPage() {
   const [qModelo,       setQModelo]       = useState('');
   const [qCc,           setQCc]           = useState('');
   const [qTipoMoto,     setQTipoMoto]     = useState('Otro');
+  const [nMotoServicios, setNMotoServicios] = useState<Record<string, number>>({});
 
   /* ─── Completar con precio ─── */
   const [priceTarget,   setPriceTarget]   = useState<RegistroDetalle | null>(null);
@@ -194,6 +195,20 @@ export default function RecordsPage() {
   }, [toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  /* Mantenimientos (nube) de la moto seleccionada → para las recomendaciones por km */
+  useEffect(() => {
+    if (!nMoto) { setNMotoServicios({}); return; }
+    mantenimientosApi.byMoto(nMoto.id_moto)
+      .then(({ data }) => {
+        const sm: Record<string, number> = {};
+        (data as { tipo: string; kmServicio: number }[]).forEach(x => {
+          sm[x.tipo] = Math.max(sm[x.tipo] ?? 0, x.kmServicio);
+        });
+        setNMotoServicios(sm);
+      })
+      .catch(() => setNMotoServicios({}));
+  }, [nMoto?.id_moto]);
 
   /* ─── Animación ─── */
   useEffect(() => {
@@ -472,7 +487,7 @@ export default function RecordsPage() {
 
   /* Mantenimientos recomendados (vencidos/próximos) para la moto seleccionada */
   const recomendaciones = nMoto
-    ? calcularEstadoLocal(nMoto.cilindraje, nMoto.kilometraje, serviciosDeMoto(nMoto.id_moto))
+    ? calcularEstadoLocal(nMoto.cilindraje, nMoto.kilometraje, nMotoServicios)
         .filter(e => e.estado !== 'OK')
         .sort((a, b) => b.porcentajeDesgaste - a.porcentajeDesgaste)
     : [];
