@@ -13,7 +13,8 @@ import {
   CheckCircle, AlertTriangle, Pencil, X, Save,
   Gauge, Activity,
 } from 'lucide-react';
-import { motosApi, usuariosApi, uploadWithRetry } from '../../lib/api';
+import { motosApi, usuariosApi } from '../../lib/api';
+import { comprimirImagen, guardarFoto, imagenMoto } from '../../lib/fotos';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg, extractPhone, extractCedula } from '../../lib/utils';
@@ -151,24 +152,19 @@ export default function MiMotoPage() {
     if (!user?.id_usuario) return;
     setSavingMoto(true);
     try {
-      /* 1. Subir foto si se seleccionó (con reintentos si el servidor está dormido) */
-      let photoUrl: string | undefined;
+      /* 1. Comprimir la foto en el dispositivo (instantáneo, sin servidor) */
+      let fotoBase64: string | null = null;
       if (photoFile) {
-        try {
-          photoUrl = await uploadWithRetry('/motos/upload', photoFile, setUploadMsg);
-        } catch {
-          toast.error('No se pudo subir la foto — la moto se guardará sin imagen');
-        } finally {
-          setUploadMsg(null);
-        }
+        try { fotoBase64 = await comprimirImagen(photoFile); } catch { /* se guarda sin foto */ }
       }
       /* 2. Crear moto */
       const { data: nuevaMoto } = await motosApi.create({
         ...data,
         id_usuario: user.id_usuario,
-        ...(photoUrl ? { ruta_imagen_motos: photoUrl } : {}),
       });
-      setMotos(prev => [...prev, nuevaMoto as Moto]);
+      const creada = nuevaMoto as Moto;
+      if (fotoBase64 && creada?.id_moto) guardarFoto(creada.id_moto, fotoBase64);
+      setMotos(prev => [...prev, creada]);
       resetMoto();
       setAddingMoto(false);
       setPhotoFile(null);
@@ -383,8 +379,8 @@ export default function MiMotoPage() {
 
                 {/* ── Cabecera info moto ── */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap', marginBottom: 16 }}>
-                  {moto.ruta_imagen_motos && moto.ruta_imagen_motos !== 'Desconocido' ? (
-                    <img src={moto.ruta_imagen_motos} alt={`${moto.marca} ${moto.modelo}`} style={{ width: 56, height: 56, borderRadius: 12, flexShrink: 0, objectFit: 'cover', border: `1px solid ${color}30` }} />
+                  {imagenMoto(moto) ? (
+                    <img src={imagenMoto(moto)!} alt={`${moto.marca} ${moto.modelo}`} style={{ width: 56, height: 56, borderRadius: 12, flexShrink: 0, objectFit: 'cover', border: `1px solid ${color}30` }} />
                   ) : (
                     <div style={{ width: 56, height: 56, borderRadius: 12, flexShrink: 0, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Bike size={24} color={color} />

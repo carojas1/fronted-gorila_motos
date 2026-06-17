@@ -318,49 +318,50 @@ export default function AppLayout() {
               );
             })}
 
-            {/* Menú "Más" — secundarios */}
-            {NAV_MORE.length > 0 && (
-              <div className="relative" ref={moreRef}>
-                <button
-                  onClick={() => setMoreOpen(v => !v)}
-                  className="relative flex items-center gap-1 px-3 py-2 rounded-lg text-[11.5px] font-bold tracking-[0.12em] uppercase transition-all duration-150"
+          </nav>
+
+          {/* Menú "Más" — FUERA del <nav> (el overflow del nav recortaba el desplegable) */}
+          {NAV_MORE.length > 0 && (
+            <div className="relative hidden md:block shrink-0" ref={moreRef}>
+              <button
+                onClick={() => setMoreOpen(v => !v)}
+                className="relative flex items-center gap-1 px-3 py-2 rounded-lg text-[11.5px] font-bold tracking-[0.12em] uppercase transition-all duration-150"
+                style={{
+                  color: moreOpen ? '#fff' : 'rgba(255,255,255,0.38)',
+                  background: moreOpen ? 'rgba(255,255,255,0.06)' : 'transparent',
+                }}
+              >
+                Más <ChevronDown size={12} style={{ transform: moreOpen ? 'rotate(180deg)' : '', transition: 'transform 180ms' }} />
+              </button>
+              {moreOpen && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-48 rounded-xl overflow-hidden z-[60] py-1"
                   style={{
-                    color: moreOpen ? '#fff' : 'rgba(255,255,255,0.38)',
-                    background: moreOpen ? 'rgba(255,255,255,0.06)' : 'transparent',
+                    background: 'linear-gradient(150deg, #1E1E28 0%, #16161E 100%)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
                   }}
                 >
-                  Más <ChevronDown size={12} style={{ transform: moreOpen ? 'rotate(180deg)' : '', transition: 'transform 180ms' }} />
-                </button>
-                {moreOpen && (
-                  <div
-                    className="absolute right-0 top-full mt-2 w-48 rounded-xl overflow-hidden z-50 py-1"
-                    style={{
-                      background: 'linear-gradient(150deg, #1E1E28 0%, #16161E 100%)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
-                    }}
-                  >
-                    {NAV_MORE.map(({ label, to }) => {
-                      const active = location.pathname === to || location.pathname.startsWith(to + '/');
-                      return (
-                        <Link
-                          key={to}
-                          to={to}
-                          onClick={() => setMoreOpen(false)}
-                          className="block px-4 py-2.5 text-[12px] font-bold tracking-[0.08em] uppercase transition-colors"
-                          style={{ color: active ? '#FF6470' : 'rgba(255,255,255,0.55)', background: active ? 'rgba(225,20,40,0.1)' : 'transparent' }}
-                          onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
-                          onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                        >
-                          {label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </nav>
+                  {NAV_MORE.map(({ label, to }) => {
+                    const active = location.pathname === to || location.pathname.startsWith(to + '/');
+                    return (
+                      <Link
+                        key={to}
+                        to={to}
+                        onClick={() => setMoreOpen(false)}
+                        className="block px-4 py-2.5 text-[12px] font-bold tracking-[0.08em] uppercase transition-colors"
+                        style={{ color: active ? '#FF6470' : 'rgba(255,255,255,0.55)', background: active ? 'rgba(225,20,40,0.1)' : 'transparent' }}
+                        onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                        onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                      >
+                        {label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Derecha: notif + saludo + avatar */}
           <div className="flex items-center gap-2 ml-auto shrink-0" ref={menuRef}>

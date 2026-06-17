@@ -15,6 +15,7 @@ import { motosApi, diagnosticosApi, usuariosApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Moto, Usuario, DiagnosticoMoto } from '../../types';
 import { EstadoMotoLive } from '../../components/mantenimiento/EstadoMantenimiento';
+import { imagenMoto } from '../../lib/fotos';
 
 /* ── Constantes ── */
 const CC_RANGES = [
@@ -223,10 +224,10 @@ export default function MotoPerfilPage() {
       {/* ── Hero: foto + info principal ── */}
       <div style={{ ...s, marginBottom: 16, padding: 0, overflow: 'hidden' }}>
         {/* Foto o placeholder */}
-        {moto.ruta_imagen_motos && moto.ruta_imagen_motos !== 'Desconocido' ? (
+        {imagenMoto(moto) ? (
           <div style={{ width: '100%', height: 200, overflow: 'hidden', position: 'relative' }}>
             <img
-              src={moto.ruta_imagen_motos}
+              src={imagenMoto(moto)!}
               alt={`${moto.marca} ${moto.modelo}`}
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />

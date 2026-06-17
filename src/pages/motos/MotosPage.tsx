@@ -12,7 +12,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import gsap from 'gsap';
-import { motosApi, usuariosApi, uploadWithRetry } from '../../lib/api';
+import { motosApi, usuariosApi } from '../../lib/api';
+import { comprimirImagen, guardarFoto, imagenMoto } from '../../lib/fotos';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { getErrorMsg } from '../../lib/utils';
@@ -60,9 +61,6 @@ const schema = z.object({
 });
 type Form = z.infer<typeof schema>;
 
-async function uploadMotoImage(file: File, onMsg?: (m: string) => void): Promise<string> {
-  return uploadWithRetry('/motos/upload', file, onMsg);
-}
 
 /* ─── Skeleton Card ─── */
 function SkeletonCard() {
@@ -160,9 +158,9 @@ function MotoCard({
 
       {/* Photo + Plate + Main info */}
       <div className="moto-card-body">
-        {moto.ruta_imagen_motos && moto.ruta_imagen_motos !== 'Desconocido' ? (
+        {imagenMoto(moto) ? (
           <div style={{ width: '100%', height: 110, borderRadius: 10, overflow: 'hidden', marginBottom: 10, border: `1px solid ${tc.color}20` }}>
-            <img src={moto.ruta_imagen_motos} alt={`${moto.marca} ${moto.modelo}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <img src={imagenMoto(moto)!} alt={`${moto.marca} ${moto.modelo}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           </div>
         ) : null}
         <div className="moto-plate-wrap">
@@ -334,20 +332,19 @@ export default function MotosPage() {
   const onSubmit = async (data: Form) => {
     setSaving(true);
     try {
+      /* Foto comprimida en el dispositivo (instantáneo, sin servidor) */
+      let fotoBase64: string | null = null;
       if (imageFile) {
-        try {
-          data.ruta_imagen_motos = await uploadMotoImage(imageFile, setUploadMsg);
-        } catch {
-          toast.error('No se pudo subir la imagen — la moto se guardará sin foto');
-        } finally {
-          setUploadMsg(null);
-        }
+        try { fotoBase64 = await comprimirImagen(imageFile); } catch { /* se guarda sin foto */ }
       }
       if (editTarget) {
         await motosApi.update(editTarget.id_moto, data);
+        if (fotoBase64) guardarFoto(editTarget.id_moto, fotoBase64);
         toast.success('Moto actualizada');
       } else {
-        await motosApi.create(data);
+        const { data: nueva } = await motosApi.create(data);
+        const creada = nueva as Moto;
+        if (fotoBase64 && creada?.id_moto) guardarFoto(creada.id_moto, fotoBase64);
         toast.success('Moto registrada');
       }
       setModalOpen(false);
@@ -614,14 +611,14 @@ export default function MotosPage() {
               onKeyDown={e => e.key === 'Enter' && imgInput.current?.click()}
               className="relative border-2 border-dashed rounded-xl overflow-hidden cursor-pointer transition-all duration-200 focus:outline-none"
               style={{
-                borderColor: imagePreview || editTarget?.ruta_imagen_motos ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)',
+                borderColor: imagePreview || (editTarget && imagenMoto(editTarget)) ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)',
                 background: 'rgba(255,255,255,0.02)',
               }}
             >
-              {imagePreview || editTarget?.ruta_imagen_motos ? (
+              {imagePreview || (editTarget && imagenMoto(editTarget)) ? (
                 <div className="relative">
                   <img
-                    src={imagePreview ?? editTarget?.ruta_imagen_motos ?? ''}
+                    src={imagePreview ?? (editTarget ? imagenMoto(editTarget) ?? '' : '')}
                     alt="Preview"
                     className="w-full h-40 object-cover block"
                   />

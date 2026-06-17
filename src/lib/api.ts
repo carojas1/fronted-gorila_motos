@@ -173,7 +173,8 @@ export const alertasApi = {
    está fuera del filtro CORS de Spring Security → CORS error en el navegador.
    ──────────────────────────────────────────────────────────────────────────── */
 export const healthApi = {
-  check: () => api.get('/tipos'),
+  /** /health es público (sin auth) → no provoca 401 aunque el token esté vencido. */
+  check: () => api.get('/health'),
   /** Ping con timeout largo — despierta Render si estaba dormido. */
   wake:  () => api.get('/health', { timeout: 65_000 }),
 };
