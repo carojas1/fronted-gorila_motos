@@ -9,16 +9,17 @@ import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Fuel, Plus, Trash2, TrendingDown, DollarSign, Gauge, X,
-  AlertTriangle, TrendingUp, Activity, Wrench,
+  AlertTriangle, TrendingUp, Activity, Wrench, Search, Users, Mail,
 } from 'lucide-react';
 import {
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
+  ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
-import { motosApi, combustibleApi } from '../../lib/api';
+import { motosApi, combustibleApi, usuariosApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg, fmtDate, fmtMoney } from '../../lib/utils';
-import type { Moto, CargaCombustible } from '../../types';
+import type { Moto, CargaCombustible, Usuario } from '../../types';
 
 /* ── Tipos de combustible Ecuador (precios controlados 2026) ── */
 const COMBUSTIBLES = [
@@ -56,14 +57,18 @@ function emptyForm(): FormState {
 
 export default function CombustiblePage() {
   const { user, isAdmin, isMecanico } = useAuth();
+  const canManage = isAdmin || isMecanico;
   const toast = useToast();
-  const [motos,   setMotos]   = useState<Moto[]>([]);
-  const [logs,    setLogs]    = useState<CargaCombustible[]>([]);
+  const [motos,    setMotos]    = useState<Moto[]>([]);
+  const [logs,     setLogs]     = useState<CargaCombustible[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [open,    setOpen]    = useState(false);
   const [saving,  setSaving]  = useState(false);
   const [form,    setForm]    = useState<FormState>(emptyForm());
   const [selMoto, setSelMoto] = useState<number | null>(null);
   const [month,   setMonth]   = useState(() => new Date().toISOString().slice(0, 7));
+  /* Admin: buscador global (usuario, correo, placa) y vista de todos los registros */
+  const [adminSearch, setAdminSearch] = useState('');
 
   const cargarLogs = (misMotos: Moto[]) => {
     if (isAdmin || isMecanico) {
@@ -86,8 +91,39 @@ export default function CombustiblePage() {
       if (mine.length > 0) setSelMoto(mine[0].id_moto);
       cargarLogs(mine);
     }).catch(() => {});
+    /* Admin/mecánico: cargar usuarios para mostrar dueño + correo de cada carga */
+    if (isAdmin || isMecanico) {
+      usuariosApi.list().then(r => setUsuarios(r.data as Usuario[])).catch(() => {});
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin, isMecanico]);
+
+  /* Dueño (nombre + correo) por id_moto — para la vista de admin */
+  const ownerByMoto = useMemo(() => {
+    const uById = new Map(usuarios.map(u => [u.id_usuario, u]));
+    const map = new Map<number, { nombre: string; correo: string }>();
+    motos.forEach(m => {
+      const u = uById.get(m.id_usuario);
+      map.set(m.id_moto, { nombre: u?.nombre_completo ?? '—', correo: u?.correo ?? '—' });
+    });
+    return map;
+  }, [motos, usuarios]);
+
+  /* Todos los registros enriquecidos con dueño (admin) — con buscador */
+  const adminRows = useMemo(() => {
+    const q = adminSearch.toLowerCase().trim();
+    return logs
+      .map(l => ({ ...l, owner: ownerByMoto.get(l.id_moto) ?? { nombre: '—', correo: '—' } }))
+      .filter(r => {
+        if (!q) return true;
+        return (
+          r.owner.nombre.toLowerCase().includes(q) ||
+          r.owner.correo.toLowerCase().includes(q) ||
+          (r.placa ?? '').toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  }, [logs, ownerByMoto, adminSearch]);
 
   /* ── Manejadores del formulario ── */
   const f = (k: keyof FormState) =>
@@ -213,6 +249,24 @@ export default function CombustiblePage() {
     return drop >= 15 ? { last: +last.toFixed(1), avg: +avg.toFixed(1), pct: Math.round(drop) } : null;
   }, [chartData]);
 
+  /* ── Desglose por tipo de combustible (gráfica de torta) ── */
+  const tipoBreakdown = useMemo(() => {
+    const acc = new Map<string, { tipo: string; label: string; galones: number; costo: number; color: string }>();
+    filtered.forEach(l => {
+      const notas = l.notas ?? '';
+      const c = COMBUSTIBLES.find(cc => notas.startsWith(`[${cc.tipo.toUpperCase()}]`));
+      const key = c?.tipo ?? 'otro';
+      const prev = acc.get(key) ?? {
+        tipo: key, label: c ? c.label.split(' ')[0] : 'Otro',
+        galones: 0, costo: 0, color: c?.color ?? '#6B7280',
+      };
+      prev.galones += l.litros;
+      prev.costo   += l.costo_total;
+      acc.set(key, prev);
+    });
+    return Array.from(acc.values()).sort((a, b) => b.costo - a.costo);
+  }, [filtered]);
+
   const removeLog = async (id: number) => {
     try { await combustibleApi.remove(id); cargarLogs(motos); }
     catch (err) { toast.error(getErrorMsg(err)); }
@@ -274,6 +328,91 @@ export default function CombustiblePage() {
           value={month} onChange={e => setMonth(e.target.value)}
         />
       </div>
+
+      {/* ── ADMIN: registros de TODOS los usuarios (usuario · correo · placa) ── */}
+      {canManage && (
+        <div className="gm-card-d rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/[0.05] flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Users size={15} className="text-gm-red/70" />
+              <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+                Todos los usuarios ({adminRows.length})
+              </p>
+            </div>
+            <div className="search-d" style={{ minWidth: 240 }}>
+              <Search size={14} />
+              <input
+                className="gm-input-d"
+                placeholder="Buscar por usuario, correo o placa…"
+                value={adminSearch}
+                onChange={e => setAdminSearch(e.target.value)}
+              />
+            </div>
+          </div>
+          {adminRows.length === 0 ? (
+            <div className="py-12 text-center">
+              <Fuel size={28} className="mx-auto mb-2 text-white/10" />
+              <p className="text-white/30 text-sm">
+                {adminSearch ? 'Sin coincidencias para esa búsqueda' : 'Aún no hay cargas registradas'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto dark-scroll" style={{ maxHeight: 380 }}>
+              <table className="gm-table-d" style={{ minWidth: 820 }}>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Correo</th>
+                    <th>Placa</th>
+                    <th>Tipo</th>
+                    <th className="text-right">Galones</th>
+                    <th className="text-right">Costo</th>
+                    <th className="text-right">Rendimiento</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminRows.map(r => {
+                    const notas = r.notas ?? '';
+                    const tipoM = COMBUSTIBLES.find(c => notas.startsWith(`[${c.tipo.toUpperCase()}]`));
+                    const km    = r.km_actual > 0 && r.km_anterior ? r.km_actual - r.km_anterior : 0;
+                    const rend  = (km > 0 && r.litros > 0) ? (km / r.litros).toFixed(1) : '—';
+                    return (
+                      <tr key={r.id}>
+                        <td className="text-white/50 text-[12px]">{fmtDate(r.fecha)}</td>
+                        <td className="text-white/85 font-semibold text-[12px]">
+                          <span className="flex items-center gap-1.5"><Users size={11} className="text-white/25" />{r.owner.nombre}</span>
+                        </td>
+                        <td className="text-white/40 text-[12px]">
+                          <span className="flex items-center gap-1.5"><Mail size={10} className="text-white/20" />{r.owner.correo}</span>
+                        </td>
+                        <td><span className="plate-tag">{r.placa}</span></td>
+                        <td>
+                          {tipoM ? (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                                  style={{ background: `${colorXTipo(tipoM.tipo)}18`, color: colorXTipo(tipoM.tipo), border: `1px solid ${colorXTipo(tipoM.tipo)}35` }}>
+                              {tipoM.label.split(' ')[0]}
+                            </span>
+                          ) : <span className="text-white/30 text-[11px]">—</span>}
+                        </td>
+                        <td className="text-right text-blue-400 font-bold">{r.litros.toFixed(1)}</td>
+                        <td className="text-right text-emerald-400 font-bold">{fmtMoney(r.costo_total)}</td>
+                        <td className="text-right text-yellow-400 font-bold">{rend !== '—' ? `${rend} km/gal` : '—'}</td>
+                        <td>
+                          <button onClick={() => removeLog(r.id)} className="icon-btn danger ml-auto block">
+                            <Trash2 size={12} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Métricas ── */}
       {metrics && (
@@ -359,6 +498,69 @@ export default function CombustiblePage() {
           <p className="text-[11px] text-white/30 mt-2 flex items-center gap-1.5">
             <TrendingUp size={11} /> Mayor es mejor. Caída sostenida → revisar mantenimiento.
           </p>
+        </div>
+      )}
+
+      {/* ── Gasto por carga + desglose por tipo ── */}
+      {filtered.length >= 2 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Gasto por carga */}
+          <div className="gm-card-d rounded-2xl p-5 lg:col-span-2">
+            <div className="flex items-center gap-2 mb-4">
+              <DollarSign size={15} className="text-emerald-400/80" />
+              <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+                Gasto en combustible por carga
+              </p>
+            </div>
+            <div style={{ width: '100%', height: 220, minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height={220} minWidth={0}>
+                <AreaChart data={chartData} margin={{ top: 6, right: 8, left: -18, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradGasto" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%"   stopColor="#10B981" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis dataKey="fecha" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.08)' }} />
+                  <YAxis tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} tickLine={false} axisLine={false} width={42} />
+                  <Tooltip
+                    contentStyle={{ background: '#16161E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12 }}
+                    labelStyle={{ color: 'rgba(255,255,255,0.6)' }}
+                    itemStyle={{ color: '#10B981' }}
+                    formatter={(v: number) => [fmtMoney(v), 'Gasto']}
+                  />
+                  <Area type="monotone" dataKey="costo" stroke="#10B981" strokeWidth={2.5}
+                        fill="url(#gradGasto)" dot={{ r: 3, fill: '#10B981' }} activeDot={{ r: 5 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Desglose por tipo */}
+          <div className="gm-card-d rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Fuel size={15} className="text-gm-red/70" />
+              <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+                Gasto por tipo
+              </p>
+            </div>
+            <div style={{ width: '100%', height: 220, minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height={220} minWidth={0}>
+                <PieChart>
+                  <Pie data={tipoBreakdown} dataKey="costo" nameKey="label"
+                       cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3}>
+                    {tipoBreakdown.map((t) => <Cell key={t.tipo} fill={t.color} stroke="transparent" />)}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: '#16161E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12 }}
+                    formatter={(v: number, _n, p) => [fmtMoney(v), (p?.payload as { label?: string })?.label ?? '']}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       )}
 
