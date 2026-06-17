@@ -63,6 +63,7 @@ export default function MiMotoPage() {
 
   const [photoFile,    setPhotoFile]   = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [savingPhotoId, setSavingPhotoId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editingPerfil, setEditingPerfil] = useState(false);
@@ -147,12 +148,27 @@ export default function MiMotoPage() {
     }
   }, [editingPerfil]);
 
-  /* ── Seleccionar foto ── */
+  /* ── Seleccionar foto (formulario de nueva moto) ── */
   const onSelectPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  /* ── Cambiar la foto de una moto YA registrada (cada quien la suya) ── */
+  const cambiarFotoMoto = async (moto: Moto, file: File) => {
+    setSavingPhotoId(moto.id_moto);
+    try {
+      const base64 = await comprimirImagen(file);
+      await motosApi.update(moto.id_moto, { ruta_imagen_motos: base64 });
+      setMotos(prev => prev.map(m => m.id_moto === moto.id_moto ? { ...m, ruta_imagen_motos: base64 } : m));
+      toast.success('Foto actualizada', 'Mi Moto');
+    } catch {
+      toast.error('No se pudo guardar la foto (actualiza el backend a columna TEXT).', 'Foto');
+    } finally {
+      setSavingPhotoId(null);
+    }
   };
 
   /* ── Cancelar formulario + limpiar foto ── */
@@ -402,13 +418,23 @@ export default function MiMotoPage() {
 
                 {/* ── Cabecera info moto ── */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap', marginBottom: 16 }}>
-                  {imagenMoto(moto) ? (
-                    <img src={imagenMoto(moto)!} alt={`${moto.marca} ${moto.modelo}`} style={{ width: 56, height: 56, borderRadius: 12, flexShrink: 0, objectFit: 'cover', border: `1px solid ${color}30` }} />
-                  ) : (
-                    <div style={{ width: 56, height: 56, borderRadius: 12, flexShrink: 0, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Bike size={24} color={color} />
-                    </div>
-                  )}
+                  {/* Foto editable: cada cliente puede cambiar la de su moto */}
+                  <label style={{ position: 'relative', flexShrink: 0, cursor: 'pointer', display: 'block', width: 56, height: 56 }}
+                         title="Cambiar foto de tu moto">
+                    {imagenMoto(moto) ? (
+                      <img src={imagenMoto(moto)!} alt={`${moto.marca} ${moto.modelo}`} style={{ width: 56, height: 56, borderRadius: 12, objectFit: 'cover', border: `1px solid ${color}30`, display: 'block' }} />
+                    ) : (
+                      <div style={{ width: 56, height: 56, borderRadius: 12, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Bike size={24} color={color} />
+                      </div>
+                    )}
+                    <span style={{ position: 'absolute', right: -4, bottom: -4, width: 20, height: 20, borderRadius: '50%', background: savingPhotoId === moto.id_moto ? 'rgba(225,20,40,0.5)' : '#E11428', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #16161E' }}>
+                      <Camera size={10} color="#fff" />
+                    </span>
+                    <input type="file" accept="image/*" style={{ display: 'none' }}
+                           disabled={savingPhotoId === moto.id_moto}
+                           onChange={e => { const f = e.target.files?.[0]; if (f) cambiarFotoMoto(moto, f); e.target.value = ''; }} />
+                  </label>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ color: '#EBEBEB', fontWeight: 800, fontSize: 16, margin: '0 0 2px', letterSpacing: '-0.02em' }}>
                       {moto.marca} {moto.modelo}
