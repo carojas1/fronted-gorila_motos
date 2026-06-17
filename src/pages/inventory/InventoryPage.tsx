@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import gsap from 'gsap';
-import { productosApi, categoriasApi, usuariosApi, motosApi } from '../../lib/api';
+import { productosApi, categoriasApi, usuariosApi, motosApi, facturasApi, detallesFacturaApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { fmtMoney, getErrorMsg, nextProductCode } from '../../lib/utils';
 import type { Producto, Categoria, Usuario, Moto } from '../../types';
@@ -77,11 +77,10 @@ export default function InventoryPage() {
   const [vnMode,        setVnMode]        = useState<'email' | 'placa'>('email');
   const [vnQuery,       setVnQuery]       = useState('');
   const [vnSearching,   setVnSearching]   = useState(false);
-  const [vnCliente,     setVnCliente]     = useState<{ nombre: string; correo: string } | null>(null);
+  const [vnCliente,     setVnCliente]     = useState<{ nombre: string; correo: string; id_usuario: number } | null>(null);
   const [vnNotFound,    setVnNotFound]    = useState(false);
   const [vnQty,         setVnQty]         = useState('1');
   const [vnSending,     setVnSending]     = useState(false);
-  const [vnSendEmail,   setVnSendEmail]   = useState(true);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -225,7 +224,7 @@ export default function InventoryPage() {
           (u) => u.correo.toLowerCase() === q.toLowerCase()
         );
         if (found) {
-          setVnCliente({ nombre: found.nombre_completo, correo: found.correo });
+          setVnCliente({ nombre: found.nombre_completo, correo: found.correo, id_usuario: found.id_usuario });
           setVnStep('confirm');
         } else {
           setVnNotFound(true);
@@ -241,7 +240,7 @@ export default function InventoryPage() {
         if (!moto) { setVnNotFound(true); return; }
         const usuario = (usuarios as Usuario[]).find((u) => u.id_usuario === moto.id_usuario);
         if (usuario) {
-          setVnCliente({ nombre: usuario.nombre_completo, correo: usuario.correo });
+          setVnCliente({ nombre: usuario.nombre_completo, correo: usuario.correo, id_usuario: usuario.id_usuario });
           setVnStep('confirm');
         } else {
           setVnNotFound(true);
@@ -258,25 +257,52 @@ export default function InventoryPage() {
     if (isNaN(qty) || qty <= 0) { toast.error('Cantidad inválida'); return; }
     if (qty > vnTarget.stock) { toast.error(`Solo hay ${vnTarget.stock} unidades en stock`); return; }
     setVnSending(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const total = qty * vnTarget.pvp;
     try {
+      /* 1. Descontar stock */
       await productosApi.update(vnTarget.id_producto, {
         ...vnTarget,
         stock:              vnTarget.stock - qty,
-        fecha_modificacion: new Date().toISOString().slice(0, 10),
+        fecha_modificacion: today,
       });
-      if (vnSendEmail && vnCliente.correo) {
-        const total = qty * vnTarget.pvp;
-        const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
-        await productosApi.enviarComprobante({
+
+      /* 2. Crear factura + detalle (queda registrado para historial de cliente) */
+      let facturaId: number | null = null;
+      try {
+        const facRes = await facturasApi.create({
+          fecha_emision: today,
+          id_usuario:    vnCliente.id_usuario,
+          costo_total:   total,
+        });
+        facturaId = (facRes.data as { id_factura?: number }).id_factura ?? null;
+        if (facturaId) {
+          await detallesFacturaApi.create({
+            id_factura:  facturaId,
+            id_producto: vnTarget.id_producto,
+            cantidad:    qty,
+            subtotal:    total,
+            descripcion: vnTarget.nombre,
+          });
+        }
+      } catch { /* factura opcional — no bloquea la venta */ }
+
+      /* 3. Enviar comprobante por email (siempre, si el cliente tiene correo) */
+      if (vnCliente.correo) {
+        const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        productosApi.enviarComprobante({
           correo:         vnCliente.correo,
           nombreCliente:  vnCliente.nombre,
           nombreProducto: vnTarget.nombre,
+          codigoProducto: vnTarget.codigo_personal,
           cantidad:       qty,
           pvp:            vnTarget.pvp,
           total,
           fecha,
-        });
+          referencia:     facturaId ? `FAC-${String(facturaId).padStart(5, '0')}` : undefined,
+        }).catch(() => { /* no bloquear si email falla */ });
       }
+
       toast.success(`Venta registrada · ${qty} u. de ${vnTarget.nombre} → ${vnCliente.nombre}`);
       setVnTarget(null); setVnStep('search'); setVnQuery(''); setVnCliente(null); setVnQty('1');
       fetchData();
@@ -755,18 +781,16 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            {/* Opción de envío de email */}
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={vnSendEmail}
-                onChange={e => setVnSendEmail(e.target.checked)}
-                className="rounded"
-              />
-              <span className="text-[12px] text-white/60">
-                Enviar comprobante a <strong className="text-white/80">{vnCliente.correo}</strong>
-              </span>
-            </label>
+            {/* Auto-envío de comprobante */}
+            {vnCliente.correo && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                   style={{ background:'rgba(16,185,129,0.07)', border:'1px solid rgba(16,185,129,0.18)' }}>
+                <Mail size={12} className="text-emerald-400 shrink-0" />
+                <span className="text-[12px] text-emerald-400/80">
+                  Comprobante se enviará automáticamente a <strong>{vnCliente.correo}</strong>
+                </span>
+              </div>
+            )}
           </div>
         )}
       </Modal>
