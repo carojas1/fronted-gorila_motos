@@ -4,15 +4,15 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, X, ShoppingCart, Tags, FolderPlus, Minus } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, X, ShoppingCart, Tags, FolderPlus, Minus, UserCheck, Mail } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import gsap from 'gsap';
-import { productosApi, categoriasApi } from '../../lib/api';
+import { productosApi, categoriasApi, usuariosApi, motosApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { fmtMoney, getErrorMsg, nextProductCode } from '../../lib/utils';
-import type { Producto, Categoria } from '../../types';
+import type { Producto, Categoria, Usuario, Moto } from '../../types';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Badge from '../../components/ui/Badge';
@@ -70,6 +70,18 @@ export default function InventoryPage() {
   const [sellTarget,    setSellTarget]    = useState<Producto | null>(null);
   const [sellQty,       setSellQty]       = useState('1');
   const [selling,       setSelling]       = useState(false);
+
+  /* Venta Normal — con cliente registrado, busca por email o placa */
+  const [vnTarget,      setVnTarget]      = useState<Producto | null>(null);
+  const [vnStep,        setVnStep]        = useState<'search' | 'confirm'>('search');
+  const [vnMode,        setVnMode]        = useState<'email' | 'placa'>('email');
+  const [vnQuery,       setVnQuery]       = useState('');
+  const [vnSearching,   setVnSearching]   = useState(false);
+  const [vnCliente,     setVnCliente]     = useState<{ nombre: string; correo: string } | null>(null);
+  const [vnNotFound,    setVnNotFound]    = useState(false);
+  const [vnQty,         setVnQty]         = useState('1');
+  const [vnSending,     setVnSending]     = useState(false);
+  const [vnSendEmail,   setVnSendEmail]   = useState(true);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -197,6 +209,79 @@ export default function InventoryPage() {
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setSelling(false); }
+  };
+
+  /* ─── Venta Normal: buscar cliente ─── */
+  const buscarCliente = async () => {
+    const q = vnQuery.trim();
+    if (!q) { toast.error('Ingresa un ' + (vnMode === 'email' ? 'correo' : 'número de placa')); return; }
+    setVnSearching(true);
+    setVnCliente(null);
+    setVnNotFound(false);
+    try {
+      if (vnMode === 'email') {
+        const { data: usuarios } = await usuariosApi.list();
+        const found = (usuarios as Usuario[]).find(
+          (u) => u.correo.toLowerCase() === q.toLowerCase()
+        );
+        if (found) {
+          setVnCliente({ nombre: found.nombre_completo, correo: found.correo });
+          setVnStep('confirm');
+        } else {
+          setVnNotFound(true);
+        }
+      } else {
+        const [{ data: motos }, { data: usuarios }] = await Promise.all([
+          motosApi.list(),
+          usuariosApi.list(),
+        ]);
+        const moto = (motos as Moto[]).find(
+          (m) => m.placa.toUpperCase() === q.toUpperCase()
+        );
+        if (!moto) { setVnNotFound(true); return; }
+        const usuario = (usuarios as Usuario[]).find((u) => u.id_usuario === moto.id_usuario);
+        if (usuario) {
+          setVnCliente({ nombre: usuario.nombre_completo, correo: usuario.correo });
+          setVnStep('confirm');
+        } else {
+          setVnNotFound(true);
+        }
+      }
+    } catch { toast.error('Error buscando cliente'); }
+    finally { setVnSearching(false); }
+  };
+
+  /* ─── Venta Normal: confirmar venta ─── */
+  const confirmVentaNormal = async () => {
+    if (!vnTarget || !vnCliente) return;
+    const qty = parseInt(vnQty, 10);
+    if (isNaN(qty) || qty <= 0) { toast.error('Cantidad inválida'); return; }
+    if (qty > vnTarget.stock) { toast.error(`Solo hay ${vnTarget.stock} unidades en stock`); return; }
+    setVnSending(true);
+    try {
+      await productosApi.update(vnTarget.id_producto, {
+        ...vnTarget,
+        stock:              vnTarget.stock - qty,
+        fecha_modificacion: new Date().toISOString().slice(0, 10),
+      });
+      if (vnSendEmail && vnCliente.correo) {
+        const total = qty * vnTarget.pvp;
+        const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+        await productosApi.enviarComprobante({
+          correo:         vnCliente.correo,
+          nombreCliente:  vnCliente.nombre,
+          nombreProducto: vnTarget.nombre,
+          cantidad:       qty,
+          pvp:            vnTarget.pvp,
+          total,
+          fecha,
+        });
+      }
+      toast.success(`Venta registrada · ${qty} u. de ${vnTarget.nombre} → ${vnCliente.nombre}`);
+      setVnTarget(null); setVnStep('search'); setVnQuery(''); setVnCliente(null); setVnQty('1');
+      fetchData();
+    } catch (err) { toast.error(getErrorMsg(err)); }
+    finally { setVnSending(false); }
   };
 
   const catName = (id: number) =>
@@ -354,11 +439,23 @@ export default function InventoryPage() {
                           <button
                             onClick={() => { setSellTarget(p); setSellQty('1'); }}
                             className="icon-btn"
-                            title="Venta directa (baja stock sin orden)"
+                            title="Venta rápida (sin cliente)"
                             disabled={p.stock <= 0}
                             style={p.stock <= 0 ? { opacity: 0.3, cursor: 'not-allowed' } : { color: '#10B981' }}
                           >
                             <ShoppingCart size={13} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setVnTarget(p); setVnStep('search'); setVnQuery('');
+                              setVnCliente(null); setVnNotFound(false); setVnQty('1');
+                            }}
+                            className="icon-btn"
+                            title="Venta Normal (con cliente registrado)"
+                            disabled={p.stock <= 0}
+                            style={p.stock <= 0 ? { opacity: 0.3, cursor: 'not-allowed' } : { color: '#60A5FA' }}
+                          >
+                            <UserCheck size={13} />
                           </button>
                           <button onClick={() => openEdit(p)} className="icon-btn" title="Editar">
                             <Pencil size={13} />
@@ -544,6 +641,134 @@ export default function InventoryPage() {
           <br />
           <span className="text-white/30 text-xs mt-1 block">Esta acción no se puede deshacer.</span>
         </p>
+      </Modal>
+
+      {/* ─── Modal Venta Normal (con cliente registrado) ─── */}
+      <Modal
+        open={!!vnTarget}
+        onClose={() => { setVnTarget(null); setVnStep('search'); setVnQuery(''); setVnCliente(null); setVnNotFound(false); }}
+        title="Venta Normal — cliente registrado"
+        size="sm"
+        footer={
+          vnStep === 'search' ? (
+            <>
+              <Button variant="secondary" onClick={() => setVnTarget(null)}>Cancelar</Button>
+              <Button onClick={buscarCliente} loading={vnSearching}>
+                <Search size={14} /> Buscar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" onClick={() => { setVnStep('search'); setVnCliente(null); }}>
+                ← Volver
+              </Button>
+              <Button onClick={confirmVentaNormal} loading={vnSending}>
+                <UserCheck size={14} /> Registrar venta
+              </Button>
+            </>
+          )
+        }
+      >
+        {vnTarget && vnStep === 'search' && (
+          <div className="space-y-4">
+            <p className="text-[12px] text-white/45 leading-relaxed">
+              Busca al cliente en el sistema por <strong className="text-white/70">email</strong> o{' '}
+              <strong className="text-white/70">placa de su moto</strong>.
+            </p>
+
+            {/* Toggle modo */}
+            <div className="flex gap-2">
+              {(['email', 'placa'] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => { setVnMode(m); setVnQuery(''); setVnNotFound(false); setVnCliente(null); }}
+                  className="flex-1 py-2 rounded-lg text-[12px] font-bold transition-all"
+                  style={vnMode === m
+                    ? { background: 'rgba(96,165,250,0.2)', color: '#60A5FA', border: '1px solid rgba(96,165,250,0.4)' }
+                    : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.08)' }
+                  }
+                >
+                  {m === 'email' ? <><Mail size={12} className="inline mr-1" />Email</> : <><span className="mr-1">🏍️</span>Placa</>}
+                </button>
+              ))}
+            </div>
+
+            {/* Input búsqueda */}
+            <div>
+              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+                {vnMode === 'email' ? 'Correo electrónico' : 'Número de placa'}
+              </label>
+              <input
+                className="gm-input-d w-full"
+                placeholder={vnMode === 'email' ? 'cliente@correo.com' : 'ABC-1234'}
+                value={vnQuery}
+                onChange={(e) => { setVnQuery(e.target.value); setVnNotFound(false); }}
+                onKeyDown={(e) => e.key === 'Enter' && buscarCliente()}
+              />
+            </div>
+
+            {/* Producto seleccionado */}
+            <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <p className="text-[11px] text-white/35 uppercase tracking-wider mb-1">Producto</p>
+              <p className="text-[14px] font-bold text-white/90">{vnTarget.nombre}</p>
+              <p className="text-[11px] text-white/40">Stock: {vnTarget.stock} u. · PVP {fmtMoney(vnTarget.pvp)}</p>
+            </div>
+
+            {vnNotFound && (
+              <p className="text-[12px] text-amber-400 font-semibold text-center py-2">
+                No se encontró ningún cliente con ese {vnMode === 'email' ? 'correo' : 'número de placa'}.
+              </p>
+            )}
+          </div>
+        )}
+
+        {vnTarget && vnStep === 'confirm' && vnCliente && (
+          <div className="space-y-4">
+            {/* Cliente encontrado */}
+            <div className="p-3 rounded-xl" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)' }}>
+              <p className="text-[11px] text-emerald-400 font-bold uppercase tracking-wider mb-1">Cliente encontrado</p>
+              <p className="text-[14px] font-bold text-white/90">{vnCliente.nombre}</p>
+              <p className="text-[11px] text-white/50 mt-0.5">{vnCliente.correo}</p>
+            </div>
+
+            {/* Producto */}
+            <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <p className="text-[11px] text-white/35 uppercase tracking-wider mb-1">Producto</p>
+              <p className="text-[14px] font-bold text-white/90">{vnTarget.nombre}</p>
+              <p className="text-[11px] text-white/40">Stock: <strong style={{ color: '#10B981' }}>{vnTarget.stock} u.</strong> · PVP {fmtMoney(vnTarget.pvp)}</p>
+            </div>
+
+            {/* Cantidad */}
+            <div>
+              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Cantidad</label>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setVnQty(q => String(Math.max(1, parseInt(q || '1', 10) - 1)))} className="icon-btn"><Minus size={14} /></button>
+                <input
+                  type="number" min={1} max={vnTarget.stock} value={vnQty}
+                  onChange={e => setVnQty(e.target.value)}
+                  className="gm-input-d text-center" style={{ width: 90 }}
+                />
+                <button onClick={() => setVnQty(q => String(Math.min(vnTarget.stock, parseInt(q || '1', 10) + 1)))} className="icon-btn"><Plus size={14} /></button>
+                <span className="text-[13px] text-white/40 ml-2">
+                  Total: <strong className="text-emerald-400">{fmtMoney((parseInt(vnQty || '0', 10)) * vnTarget.pvp)}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Opción de envío de email */}
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={vnSendEmail}
+                onChange={e => setVnSendEmail(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-[12px] text-white/60">
+                Enviar comprobante a <strong className="text-white/80">{vnCliente.correo}</strong>
+              </span>
+            </label>
+          </div>
+        )}
       </Modal>
     </div>
   );

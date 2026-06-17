@@ -100,6 +100,8 @@ export const productosApi = {
   remove: (id: number)  => api.delete(`/productos/${id}`),
   upload: (form: FormData) =>
     api.post('/productos/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  enviarComprobante: (data: Record<string, unknown>) =>
+    api.post('/productos/venta-comprobante', data),
 };
 
 /* ── Categorías ── */
