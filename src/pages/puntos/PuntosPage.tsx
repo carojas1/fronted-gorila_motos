@@ -5,7 +5,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useMemo } from 'react';
-import { Star, Gift, Trophy, Zap, TrendingUp, Award } from 'lucide-react';
+import { Star, Gift, Trophy, Zap, TrendingUp, Award, Users } from 'lucide-react';
 import { registrosApi, motosApi, usuariosApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import type { RegistroDetalle, Moto, Usuario } from '../../types';
@@ -73,7 +73,7 @@ export default function PuntosPage() {
   const [data,    setData]    = useState<UserPoints[]>([]);
   const [loading, setLoading] = useState(true);
   const [selUser, setSelUser] = useState<number | null>(null);
-  const [tab,     setTab]     = useState<'resumen' | 'historia' | 'reglas'>('resumen');
+  const [tab,     setTab]     = useState<'resumen' | 'historia' | 'reglas' | 'ranking'>('resumen');
 
   useEffect(() => {
     async function load() {
@@ -243,6 +243,11 @@ export default function PuntosPage() {
             <button className={`tab-btn ${tab === 'historia' ? 'active' : ''}`} onClick={() => setTab('historia')}>
               Historial
             </button>
+            {(isAdmin || isMecanico) && (
+              <button className={`tab-btn ${tab === 'ranking' ? 'active' : ''}`} onClick={() => setTab('ranking')}>
+                Ranking
+              </button>
+            )}
             <button className={`tab-btn ${tab === 'reglas'   ? 'active' : ''}`} onClick={() => setTab('reglas')}>
               Reglas
             </button>
@@ -343,6 +348,91 @@ export default function PuntosPage() {
                 </table>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── Tab: Ranking ── */}
+          {tab === 'ranking' && (isAdmin || isMecanico) && (
+            <div className="gm-card-d rounded-2xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/[0.05] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users size={13} className="text-gm-red/60" />
+                  <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+                    Ranking de clientes ({data.length})
+                  </p>
+                </div>
+                <p className="text-[11px] text-white/35">
+                  Total puntos en circulación: <span className="text-white/70 font-bold">{data.reduce((s, d) => s + d.totales, 0)}</span>
+                </p>
+              </div>
+              {data.length === 0 ? (
+                <div className="py-14 text-center text-white/25 text-sm">Sin clientes registrados</div>
+              ) : (
+                <div className="overflow-x-auto dark-scroll">
+                  <table className="gm-table-d" style={{ minWidth: 560 }}>
+                    <thead>
+                      <tr>
+                        <th className="w-10">#</th>
+                        <th>Cliente</th>
+                        <th>Nivel</th>
+                        <th className="text-right">Puntos</th>
+                        <th className="text-right">Servicios</th>
+                        <th className="text-right">Cashback</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.map((d, i) => {
+                        const lvl      = getLevel(d.totales);
+                        const cb       = Math.floor(d.totales / 100) * 5;
+                        const isActive = d.usuario.id_usuario === selUser;
+                        return (
+                          <tr
+                            key={d.usuario.id_usuario}
+                            className="cursor-pointer"
+                            style={isActive ? { background: 'rgba(225,20,40,0.06)' } : undefined}
+                            onClick={() => { setSelUser(d.usuario.id_usuario); setTab('resumen'); }}
+                          >
+                            <td>
+                              <span className="text-[12px] font-black" style={{ color: i === 0 ? '#F59E0B' : i === 1 ? '#9CA3AF' : i === 2 ? '#CD7F32' : 'rgba(255,255,255,0.25)' }}>
+                                {i + 1}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shrink-0"
+                                     style={{ background: `${lvl.color}18`, color: lvl.color }}>
+                                  {d.usuario.nombre_completo.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="text-[13px] font-bold text-white/85 leading-tight">
+                                    {d.usuario.nombre_completo}
+                                  </p>
+                                  <p className="text-[10px] text-white/30">{d.usuario.correo}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="text-[11px] font-black px-2 py-0.5 rounded-full"
+                                    style={{ background: `${lvl.color}18`, color: lvl.color }}>
+                                {lvl.icon} {lvl.label}
+                              </span>
+                            </td>
+                            <td className="text-right">
+                              <span className="text-base font-black text-white">{d.totales}</span>
+                              <span className="text-[11px] text-white/30 ml-1">pts</span>
+                            </td>
+                            <td className="text-right text-white/55 font-semibold">{d.historia.length}</td>
+                            <td className="text-right text-emerald-400 font-black">${cb}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="px-5 py-3 border-t border-white/[0.04]">
+                <p className="text-[10px] text-white/22">Haz clic en un cliente para ver su detalle completo</p>
+              </div>
             </div>
           )}
 

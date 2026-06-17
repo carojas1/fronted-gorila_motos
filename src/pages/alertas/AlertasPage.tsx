@@ -5,8 +5,8 @@
    Grandes (≥300cc): cada 5000 km
    ───────────────────────────────────────────── */
 
-import { useEffect, useState } from 'react';
-import { Bell, CheckCircle, Bike, Search } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Bell, CheckCircle, Bike, Search, RefreshCw } from 'lucide-react';
 import { motosApi, registrosApi, usuariosApi } from '../../lib/api';
 import type { Moto, RegistroDetalle, Usuario, MotoAlerta } from '../../types';
 import { fmtDate } from '../../lib/utils';
@@ -35,19 +35,21 @@ const ORDER: Record<MotoAlerta['urgency'], number> = { overdue: 0, due: 1, soon:
 
 /* ── Componente ─────────────────────────────── */
 export default function AlertasPage() {
-  const [alertas,  setAlertas]  = useState<MotoAlerta[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [search,   setSearch]   = useState('');
-  const [filter,   setFilter]   = useState<'all' | MotoAlerta['urgency']>('all');
+  const [alertas,     setAlertas]     = useState<MotoAlerta[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [search,      setSearch]      = useState('');
+  const [filter,      setFilter]      = useState<'all' | MotoAlerta['urgency']>('all');
 
-  useEffect(() => {
-    async function load() {
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
       const [mr, rr, ur] = await Promise.allSettled([
         motosApi.list(), registrosApi.list(), usuariosApi.list(),
       ]);
-      const motos: Moto[]          = mr.status === 'fulfilled' ? mr.value.data  : [];
-      const records: RegistroDetalle[] = rr.status === 'fulfilled' ? rr.value.data : [];
-      const users: Usuario[]       = ur.status === 'fulfilled' ? ur.value.data  : [];
+      const motos: Moto[]               = mr.status === 'fulfilled' ? mr.value.data  : [];
+      const records: RegistroDetalle[]  = rr.status === 'fulfilled' ? rr.value.data  : [];
+      const users: Usuario[]            = ur.status === 'fulfilled' ? ur.value.data  : [];
 
       const userMap = new Map(users.map(u => [u.id_usuario, u.nombre_completo]));
 
@@ -61,11 +63,11 @@ export default function AlertasPage() {
         ).filter(r => r.kilometraje != null);
 
         oilRecs.sort((a, b) => (b.kilometraje ?? 0) - (a.kilometraje ?? 0));
-        const last       = oilRecs[0] ?? null;
-        const thr        = getThreshold(moto.cilindraje);
-        const kmSince    = last?.kilometraje != null ? moto.kilometraje - last.kilometraje : null;
-        const urgency    = getUrgency(kmSince, thr);
-        const pct        = kmSince != null ? Math.min(Math.round((kmSince / thr) * 100), 130) : 0;
+        const last    = oilRecs[0] ?? null;
+        const thr     = getThreshold(moto.cilindraje);
+        const kmSince = last?.kilometraje != null ? moto.kilometraje - last.kilometraje : null;
+        const urgency = getUrgency(kmSince, thr);
+        const pct     = kmSince != null ? Math.min(Math.round((kmSince / thr) * 100), 130) : 0;
 
         return {
           moto,
@@ -81,10 +83,13 @@ export default function AlertasPage() {
 
       list.sort((a, b) => ORDER[a.urgency] - ORDER[b.urgency]);
       setAlertas(list);
+      setLastUpdated(new Date());
+    } finally {
       setLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const counts = {
     overdue: alertas.filter(a => a.urgency === 'overdue').length,
@@ -132,8 +137,18 @@ export default function AlertasPage() {
           </p>
         </div>
 
-        {/* KPI bar */}
-        <div className="flex items-center bg-white/[0.025] border border-white/[0.06] rounded-2xl overflow-hidden">
+        {/* Refresh + KPI */}
+        <div className="flex flex-col items-end gap-2">
+          <button
+            onClick={load}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: loading ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.55)' }}
+          >
+            <RefreshCw size={11} className={loading ? 'animate-spin' : ''} />
+            {lastUpdated ? `Actualizado ${lastUpdated.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })}` : 'Actualizar'}
+          </button>
+          <div className="flex items-center bg-white/[0.025] border border-white/[0.06] rounded-2xl overflow-hidden">
           {([
             ['overdue', 'Vencidos', counts.overdue, '#EF4444'],
             ['due',     'Urgentes', counts.due,     '#F59E0B'],
@@ -148,6 +163,7 @@ export default function AlertasPage() {
               {i < arr.length - 1 && <div className="w-px h-8 bg-white/[0.07]" />}
             </div>
           ))}
+          </div>
         </div>
       </div>
 

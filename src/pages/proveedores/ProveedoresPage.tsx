@@ -4,7 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Truck, Package, AlertTriangle, Phone, Mail, CheckCircle2, X, Edit2, Save, MessageCircle, Plus } from 'lucide-react';
+import { Truck, Package, AlertTriangle, Phone, Mail, CheckCircle2, X, Edit2, Save, MessageCircle, Plus, Search, Info } from 'lucide-react';
 import { productosApi, proveedorContactosApi } from '../../lib/api';
 import { fmtMoney, getErrorMsg } from '../../lib/utils';
 import { useToast } from '../../components/ui/Toast';
@@ -282,6 +282,8 @@ export default function ProveedoresPage() {
   const [contactos,   setContactos]   = useState<Record<string, Contacto>>({});
   const [editCodigo,  setEditCodigo]  = useState<string | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
+  const [search,      setSearch]      = useState('');
+  const [filterAlert, setFilterAlert] = useState(false);
 
   const cargarContactos = () => {
     proveedorContactosApi.list()
@@ -325,6 +327,21 @@ export default function ProveedoresPage() {
       return aAlert - bAlert;
     });
   }, [productos, contactos]);
+
+  /* Filtrado por búsqueda y estado */
+  const gruposFiltrados = useMemo(() => {
+    return grupos.filter(([codigo, ps]) => {
+      if (filterAlert && !ps.some(p => p.stock <= 5)) return false;
+      if (!search) return true;
+      const q = search.toLowerCase();
+      const contacto = contactos[codigo];
+      return (
+        codigo.toLowerCase().includes(q) ||
+        (contacto?.nombre ?? '').toLowerCase().includes(q) ||
+        ps.some(p => p.nombre.toLowerCase().includes(q) || p.codigo_personal.toLowerCase().includes(q))
+      );
+    });
+  }, [grupos, search, filterAlert, contactos]);
 
   const totalAlertas = useMemo(
     () => grupos.filter(([, ps]) => ps.some(p => p.stock <= 5)).length,
@@ -380,6 +397,46 @@ export default function ProveedoresPage() {
         </div>
       </div>
 
+      {/* ─── Cómo funciona ─── */}
+      <div className="flex items-start gap-3 px-4 py-3 rounded-xl"
+           style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)' }}>
+        <Info size={14} className="text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-blue-300/70 leading-relaxed">
+          <span className="font-black text-blue-300">¿Cómo funciona?</span> &nbsp;
+          Al crear un producto en Inventario, asígnale un <span className="font-bold">Código de proveedor</span> (ej. MOTUL, NGK, PROV-001).
+          Ese código agrupa los productos en una tarjeta aquí. Luego añade el contacto del proveedor con el botón <span className="font-bold">"Editar"</span>.
+        </p>
+      </div>
+
+      {/* ─── Búsqueda ─── */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="search-d flex-1" style={{ maxWidth: 360 }}>
+          <Search size={14} />
+          <input
+            className="gm-input-d"
+            placeholder="Buscar proveedor, producto…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="text-white/30 hover:text-white/60 transition-colors">
+              <X size={12} />
+            </button>
+          )}
+        </div>
+        <button
+          onClick={() => setFilterAlert(f => !f)}
+          className={`filter-chip ${filterAlert ? 'active' : ''}`}
+        >
+          <AlertTriangle size={11} /> Solo con alertas
+        </button>
+        {(search || filterAlert) && (
+          <span className="text-[11px] text-white/35">
+            {gruposFiltrados.length} de {grupos.length} proveedor{grupos.length !== 1 ? 'es' : ''}
+          </span>
+        )}
+      </div>
+
       {/* ─── Resumen KPI ─── */}
       <div className="grid grid-cols-3 gap-4">
         {[
@@ -409,14 +466,24 @@ export default function ProveedoresPage() {
             <div key={i} className="skeleton-d h-64 rounded-2xl" />
           ))}
         </div>
-      ) : grupos.length === 0 ? (
+      ) : gruposFiltrados.length === 0 ? (
         <div className="py-20 text-center">
           <Truck size={40} className="text-white/12 mx-auto mb-3" />
-          <p className="text-sm font-bold text-white/30">No hay productos en inventario</p>
+          <p className="text-sm font-bold text-white/30">
+            {search || filterAlert ? 'Sin resultados para este filtro' : 'No hay productos en inventario'}
+          </p>
+          {(search || filterAlert) && (
+            <button
+              onClick={() => { setSearch(''); setFilterAlert(false); }}
+              className="mt-3 text-sm text-gm-red hover:text-gm-red-lt font-bold transition-colors"
+            >
+              Limpiar filtros
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-          {grupos.map(([codigo, ps]) => (
+          {gruposFiltrados.map(([codigo, ps]) => (
             <ProveedorCard
               key={codigo}
               codigo={codigo}
