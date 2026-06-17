@@ -32,15 +32,49 @@ api.interceptors.request.use(
   (err) => Promise.reject(err)
 );
 
-/* ── Response interceptor: manejo global de errores ── */
+/* ── Decodifica el "exp" de un JWT (segundos epoch). null si no se puede leer ── */
+function jwtExp(token: string): number | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const json = JSON.parse(
+      decodeURIComponent(
+        atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      )
+    );
+    return typeof json.exp === 'number' ? json.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/** true si el token está vencido (con 10s de margen). Si no tiene exp legible, se asume válido. */
+export function tokenVencido(token: string | null): boolean {
+  if (!token) return true;
+  const exp = jwtExp(token);
+  if (exp == null) return false; // no se pudo leer → no asumir vencido
+  return Date.now() >= exp * 1000 - 10_000;
+}
+
+/* ── Response interceptor: manejo global de errores ──
+   IMPORTANTE: solo cerramos sesión si el token está REALMENTE vencido.
+   Un 401 con token aún válido (rol, hipo transitorio del backend, etc.) NO
+   debe expulsar al usuario en medio de una acción (ej. guardar combustible).
+   Así el usuario nunca "se cae" de la app por un 401 puntual. */
 api.interceptors.response.use(
   (res) => res,
   (err: AxiosError) => {
-    // Solo forzar logout si había una sesión activa — evita redirect al intentar login
-    if (err.response?.status === 401 && localStorage.getItem('gm_token')) {
-      localStorage.removeItem('gm_token');
-      localStorage.removeItem('gm_user');
-      window.dispatchEvent(new Event('gm:unauthorized'));
+    if (err.response?.status === 401) {
+      const token = localStorage.getItem('gm_token');
+      if (token && tokenVencido(token)) {
+        localStorage.removeItem('gm_token');
+        localStorage.removeItem('gm_user');
+        window.dispatchEvent(new Event('gm:unauthorized'));
+      }
+      // token presente pero vigente → no cerramos sesión; el caller maneja el error
     }
     return Promise.reject(err);
   }

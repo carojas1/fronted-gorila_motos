@@ -22,18 +22,23 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 
-const TIPOS = ['Sport', 'Naked', 'Touring', 'Enduro', 'Scrambler', 'Cruiser', 'Scooter', 'Otro'];
+/* Tipos de moto usados en Ecuador (talleres) — sin Scooter/Cruiser/Scrambler */
+const TIPOS = ['Calle', 'Deportiva', 'Trabajo', 'Todoterreno', 'Touring', 'Otro'];
+
+/* Marcas comunes en Ecuador (datalist, no restringe texto libre) */
+const MARCAS_EC = [
+  'Honda', 'Yamaha', 'Suzuki', 'Bajaj', 'TVS', 'Shineray', 'Daytona',
+  'Motor Uno', 'Ranger', 'Hero', 'AKT', 'Sukida', 'Loncin', 'Galardi', 'KTM',
+];
 
 /* Color accent por tipo */
 const TIPO_CONFIG: Record<string, { color: string; bg: string; dot: string }> = {
-  Sport:    { color: '#FF3B47', bg: 'rgba(255,59,71,0.12)',   dot: '#FF3B47' },
-  Naked:    { color: '#FF8C00', bg: 'rgba(255,140,0,0.12)',   dot: '#FF8C00' },
-  Touring:  { color: '#00C9FF', bg: 'rgba(0,201,255,0.12)',   dot: '#00C9FF' },
-  Enduro:   { color: '#00E676', bg: 'rgba(0,230,118,0.12)',   dot: '#00E676' },
-  Scrambler:{ color: '#D4A017', bg: 'rgba(212,160,23,0.12)',  dot: '#D4A017' },
-  Cruiser:  { color: '#BF5FFF', bg: 'rgba(191,95,255,0.12)',  dot: '#BF5FFF' },
-  Scooter:  { color: '#29D9C2', bg: 'rgba(41,217,194,0.12)',  dot: '#29D9C2' },
-  Otro:     { color: '#8A8A9E', bg: 'rgba(138,138,158,0.12)', dot: '#8A8A9E' },
+  Calle:       { color: '#3B82F6', bg: 'rgba(59,130,246,0.12)',  dot: '#3B82F6' },
+  Deportiva:   { color: '#FF3B47', bg: 'rgba(255,59,71,0.12)',   dot: '#FF3B47' },
+  Trabajo:     { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)',  dot: '#F59E0B' },
+  Todoterreno: { color: '#00E676', bg: 'rgba(0,230,118,0.12)',   dot: '#00E676' },
+  Touring:     { color: '#00C9FF', bg: 'rgba(0,201,255,0.12)',   dot: '#00C9FF' },
+  Otro:        { color: '#8A8A9E', bg: 'rgba(138,138,158,0.12)', dot: '#8A8A9E' },
 };
 const getTipoConfig = (tipo: string) =>
   TIPO_CONFIG[tipo] ?? TIPO_CONFIG['Otro'];
@@ -57,7 +62,8 @@ const schema = z.object({
   kilometraje:        z.coerce.number().int().nonnegative(),
   cilindraje:         z.coerce.number().int().positive(),
   id_usuario:         z.coerce.number().positive('Selecciona un propietario'),
-  ruta_imagen_motos:  z.string().optional(),
+  /* La foto NO va en el formulario: se maneja aparte (imageFile) para no
+     arrastrar valores viejos/vacíos al PUT y dañar otras motos. */
 });
 type Form = z.infer<typeof schema>;
 
@@ -324,23 +330,27 @@ export default function MotosPage() {
       placa: m.placa, anio: m.anio, marca: m.marca, modelo: m.modelo,
       nombre_moto: m.nombre_moto ?? '', tipo_moto: m.tipo_moto,
       kilometraje: m.kilometraje, cilindraje: m.cilindraje, id_usuario: m.id_usuario,
-      ruta_imagen_motos: m.ruta_imagen_motos ?? '',
     });
     setModalOpen(true);
   };
 
   const onSubmit = async (data: Form) => {
     setSaving(true);
+    /* Capturamos el id de la moto editada UNA sola vez: así una foto SIEMPRE
+       se guarda en la moto correcta, sin importar re-renders o cambios de estado. */
+    const motoIdEditada = editTarget?.id_moto ?? null;
     try {
       /* Foto comprimida en el dispositivo (instantáneo, sin servidor) */
       let fotoBase64: string | null = null;
       if (imageFile) {
         try { fotoBase64 = await comprimirImagen(imageFile); } catch { /* se guarda sin foto */ }
       }
-      if (editTarget) {
-        await motosApi.update(editTarget.id_moto, data);
+      if (motoIdEditada != null) {
+        /* data NUNCA incluye ruta_imagen_motos (no está en el schema) →
+           editar km/marca/etc. jamás toca la foto de esta ni de otra moto. */
+        await motosApi.update(motoIdEditada, data);
         if (fotoBase64) {
-          try { await motosApi.update(editTarget.id_moto, { ruta_imagen_motos: fotoBase64 }); }
+          try { await motosApi.update(motoIdEditada, { ruta_imagen_motos: fotoBase64 }); }
           catch { toast.error('Datos guardados, pero la foto no (actualiza el backend a columna TEXT).'); }
         }
         toast.success('Moto actualizada');
@@ -600,9 +610,12 @@ export default function MotosPage() {
             <Input label="Año" type="number" placeholder={String(new Date().getFullYear())} error={errors.anio?.message} {...register('anio')} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Marca" placeholder="Yamaha" error={errors.marca?.message} {...register('marca')} />
-            <Input label="Modelo" placeholder="MT-07" error={errors.modelo?.message} {...register('modelo')} />
+            <Input label="Marca" placeholder="Honda" list="marcas-ec" error={errors.marca?.message} {...register('marca')} />
+            <Input label="Modelo" placeholder="CB190R" error={errors.modelo?.message} {...register('modelo')} />
           </div>
+          <datalist id="marcas-ec">
+            {MARCAS_EC.map((m) => <option key={m} value={m} />)}
+          </datalist>
           <Input label='Nombre moto (opcional)' placeholder='"La Bestia"' {...register('nombre_moto')} />
 
           {/* Foto de la moto */}

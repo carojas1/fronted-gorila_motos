@@ -58,7 +58,8 @@ export function useNotifications() {
   const [loading, setLoading]             = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
+    /* Sin usuario o sin token → no llamar APIs protegidas (evita 401 en /login) */
+    if (!user || !localStorage.getItem('gm_token')) return;
     setLoading(true);
     try {
       /* Cliente: solo sus motos. Admin/mecánico: todo. */

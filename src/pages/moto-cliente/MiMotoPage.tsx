@@ -23,13 +23,12 @@ import type { Moto } from '../../types';
 import { EstadoMotoLive } from '../../components/mantenimiento/EstadoMantenimiento';
 import { calcularEstadoLocal } from '../../lib/mantenimiento';
 
-/* ─── Tipos de moto disponibles ─── */
-const TIPOS = ['Sport', 'Naked', 'Touring', 'Enduro', 'Scrambler', 'Cruiser', 'Scooter', 'Otro'];
+/* ─── Tipos de moto usados en Ecuador (igual que MotosPage) ─── */
+const TIPOS = ['Calle', 'Deportiva', 'Trabajo', 'Todoterreno', 'Touring', 'Otro'];
 
 const TIPO_COLOR: Record<string, string> = {
-  Sport: '#FF3B47', Naked: '#FF8C00', Touring: '#00C9FF',
-  Enduro: '#00E676', Scrambler: '#D4A017', Cruiser: '#BF5FFF',
-  Scooter: '#29D9C2', Otro: '#8A8A9E',
+  Calle: '#3B82F6', Deportiva: '#FF3B47', Trabajo: '#F59E0B',
+  Todoterreno: '#00E676', Touring: '#00C9FF', Otro: '#8A8A9E',
 };
 
 /* ─── Schema formulario moto ─── */
