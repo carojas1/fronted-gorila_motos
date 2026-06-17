@@ -52,66 +52,68 @@ export const TIPO_ICON: Record<string, string> = {
   REVISION_GENERAL: 'ClipboardCheck',
 };
 
-/* ── Tabla completa de intervalos (km) por rango — espejo del seeder ── */
+/* ── Tabla completa de intervalos (km) por rango — espejo EXACTO del seeder ──
+   Intervalos cortos a propósito (rodadura Ecuador: polvo, altitud, combustible
+   87-oct). Mantienen la moto óptima y disparan recordatorios al correo seguido. */
 export const INTERVALOS: { rango: RangoCC; params: ParametroRef[] }[] = [
   {
     rango: RANGOS_CC[0],
     params: [
-      { tipo: 'ACEITE',           label: TIPO_LABEL.ACEITE,           intervaloKm: 2000,  descripcion: 'Aceite motor — cambio cada 2 000 km' },
-      { tipo: 'FILTRO_AIRE',      label: TIPO_LABEL.FILTRO_AIRE,      intervaloKm: 4000,  descripcion: 'Filtro de aire — limpieza/cambio cada 4 000 km' },
-      { tipo: 'BUJIA',            label: TIPO_LABEL.BUJIA,            intervaloKm: 5000,  descripcion: 'Bujía — inspección y cambio cada 5 000 km' },
-      { tipo: 'CADENA',           label: TIPO_LABEL.CADENA,           intervaloKm: 3000,  descripcion: 'Cadena/correa — tensado y lubricación cada 3 000 km' },
-      { tipo: 'LLANTA_TRASERA',   label: TIPO_LABEL.LLANTA_TRASERA,   intervaloKm: 8000,  descripcion: 'Llanta trasera — revisión de profundidad cada 8 000 km' },
-      { tipo: 'FRENOS',           label: TIPO_LABEL.FRENOS,           intervaloKm: 5000,  descripcion: 'Pastillas y líquido de frenos — inspección cada 5 000 km' },
-      { tipo: 'REVISION_GENERAL', label: TIPO_LABEL.REVISION_GENERAL, intervaloKm: 6000,  descripcion: 'Revisión general completa cada 6 000 km' },
+      { tipo: 'ACEITE',           label: TIPO_LABEL.ACEITE,           intervaloKm: 1200,  descripcion: 'Aceite motor — cambio cada 1 200 km' },
+      { tipo: 'FILTRO_AIRE',      label: TIPO_LABEL.FILTRO_AIRE,      intervaloKm: 2500,  descripcion: 'Filtro de aire — limpieza/cambio cada 2 500 km' },
+      { tipo: 'BUJIA',            label: TIPO_LABEL.BUJIA,            intervaloKm: 3000,  descripcion: 'Bujía — inspección y cambio cada 3 000 km' },
+      { tipo: 'CADENA',           label: TIPO_LABEL.CADENA,           intervaloKm: 1800,  descripcion: 'Cadena/correa — tensado y lubricación cada 1 800 km' },
+      { tipo: 'LLANTA_TRASERA',   label: TIPO_LABEL.LLANTA_TRASERA,   intervaloKm: 5000,  descripcion: 'Llanta trasera — revisión de profundidad cada 5 000 km' },
+      { tipo: 'FRENOS',           label: TIPO_LABEL.FRENOS,           intervaloKm: 3000,  descripcion: 'Pastillas y líquido de frenos — inspección cada 3 000 km' },
+      { tipo: 'REVISION_GENERAL', label: TIPO_LABEL.REVISION_GENERAL, intervaloKm: 3500,  descripcion: 'Revisión general completa cada 3 500 km' },
     ],
   },
   {
     rango: RANGOS_CC[1],
     params: [
-      { tipo: 'ACEITE',           label: TIPO_LABEL.ACEITE,           intervaloKm: 3000,  descripcion: 'Aceite motor — cambio cada 3 000 km' },
-      { tipo: 'FILTRO_AIRE',      label: TIPO_LABEL.FILTRO_AIRE,      intervaloKm: 6000,  descripcion: 'Filtro de aire — limpieza/cambio cada 6 000 km' },
-      { tipo: 'BUJIA',            label: TIPO_LABEL.BUJIA,            intervaloKm: 8000,  descripcion: 'Bujía — inspección y cambio cada 8 000 km' },
-      { tipo: 'CADENA',           label: TIPO_LABEL.CADENA,           intervaloKm: 5000,  descripcion: 'Cadena — tensado y lubricación cada 5 000 km' },
-      { tipo: 'LLANTA_TRASERA',   label: TIPO_LABEL.LLANTA_TRASERA,   intervaloKm: 10000, descripcion: 'Llanta trasera — revisión cada 10 000 km' },
-      { tipo: 'FRENOS',           label: TIPO_LABEL.FRENOS,           intervaloKm: 7000,  descripcion: 'Frenos — inspección completa cada 7 000 km' },
-      { tipo: 'REVISION_GENERAL', label: TIPO_LABEL.REVISION_GENERAL, intervaloKm: 8000,  descripcion: 'Revisión general cada 8 000 km' },
+      { tipo: 'ACEITE',           label: TIPO_LABEL.ACEITE,           intervaloKm: 1800,  descripcion: 'Aceite motor — cambio cada 1 800 km' },
+      { tipo: 'FILTRO_AIRE',      label: TIPO_LABEL.FILTRO_AIRE,      intervaloKm: 3500,  descripcion: 'Filtro de aire — limpieza/cambio cada 3 500 km' },
+      { tipo: 'BUJIA',            label: TIPO_LABEL.BUJIA,            intervaloKm: 5000,  descripcion: 'Bujía — inspección y cambio cada 5 000 km' },
+      { tipo: 'CADENA',           label: TIPO_LABEL.CADENA,           intervaloKm: 3000,  descripcion: 'Cadena — tensado y lubricación cada 3 000 km' },
+      { tipo: 'LLANTA_TRASERA',   label: TIPO_LABEL.LLANTA_TRASERA,   intervaloKm: 6000,  descripcion: 'Llanta trasera — revisión cada 6 000 km' },
+      { tipo: 'FRENOS',           label: TIPO_LABEL.FRENOS,           intervaloKm: 4000,  descripcion: 'Frenos — inspección completa cada 4 000 km' },
+      { tipo: 'REVISION_GENERAL', label: TIPO_LABEL.REVISION_GENERAL, intervaloKm: 5000,  descripcion: 'Revisión general cada 5 000 km' },
     ],
   },
   {
     rango: RANGOS_CC[2],
     params: [
-      { tipo: 'ACEITE',           label: TIPO_LABEL.ACEITE,           intervaloKm: 4000,  descripcion: 'Aceite motor — cambio cada 4 000 km' },
-      { tipo: 'FILTRO_AIRE',      label: TIPO_LABEL.FILTRO_AIRE,      intervaloKm: 8000,  descripcion: 'Filtro de aire — cada 8 000 km' },
-      { tipo: 'BUJIA',            label: TIPO_LABEL.BUJIA,            intervaloKm: 10000, descripcion: 'Bujía de iridio — cada 10 000 km' },
-      { tipo: 'CADENA',           label: TIPO_LABEL.CADENA,           intervaloKm: 8000,  descripcion: 'Cadena — tensado y lubricación cada 8 000 km' },
-      { tipo: 'LLANTA_TRASERA',   label: TIPO_LABEL.LLANTA_TRASERA,   intervaloKm: 12000, descripcion: 'Llanta trasera — revisión cada 12 000 km' },
-      { tipo: 'FRENOS',           label: TIPO_LABEL.FRENOS,           intervaloKm: 9000,  descripcion: 'Frenos — inspección cada 9 000 km' },
-      { tipo: 'REVISION_GENERAL', label: TIPO_LABEL.REVISION_GENERAL, intervaloKm: 10000, descripcion: 'Revisión general cada 10 000 km' },
+      { tipo: 'ACEITE',           label: TIPO_LABEL.ACEITE,           intervaloKm: 2500,  descripcion: 'Aceite motor — cambio cada 2 500 km' },
+      { tipo: 'FILTRO_AIRE',      label: TIPO_LABEL.FILTRO_AIRE,      intervaloKm: 5000,  descripcion: 'Filtro de aire — cada 5 000 km' },
+      { tipo: 'BUJIA',            label: TIPO_LABEL.BUJIA,            intervaloKm: 6000,  descripcion: 'Bujía de iridio — cada 6 000 km' },
+      { tipo: 'CADENA',           label: TIPO_LABEL.CADENA,           intervaloKm: 5000,  descripcion: 'Cadena — tensado y lubricación cada 5 000 km' },
+      { tipo: 'LLANTA_TRASERA',   label: TIPO_LABEL.LLANTA_TRASERA,   intervaloKm: 7000,  descripcion: 'Llanta trasera — revisión cada 7 000 km' },
+      { tipo: 'FRENOS',           label: TIPO_LABEL.FRENOS,           intervaloKm: 5500,  descripcion: 'Frenos — inspección cada 5 500 km' },
+      { tipo: 'REVISION_GENERAL', label: TIPO_LABEL.REVISION_GENERAL, intervaloKm: 6000,  descripcion: 'Revisión general cada 6 000 km' },
     ],
   },
   {
     rango: RANGOS_CC[3],
     params: [
-      { tipo: 'ACEITE',           label: TIPO_LABEL.ACEITE,           intervaloKm: 5000,  descripcion: 'Aceite sintético — cambio cada 5 000 km' },
-      { tipo: 'FILTRO_AIRE',      label: TIPO_LABEL.FILTRO_AIRE,      intervaloKm: 10000, descripcion: 'Filtro de aire — cada 10 000 km' },
-      { tipo: 'BUJIA',            label: TIPO_LABEL.BUJIA,            intervaloKm: 12000, descripcion: 'Bujía de platino/iridio — cada 12 000 km' },
-      { tipo: 'CADENA',           label: TIPO_LABEL.CADENA,           intervaloKm: 10000, descripcion: 'Cadena — lubricación y revisión cada 10 000 km' },
-      { tipo: 'LLANTA_TRASERA',   label: TIPO_LABEL.LLANTA_TRASERA,   intervaloKm: 15000, descripcion: 'Llanta trasera — desgaste cada 15 000 km' },
-      { tipo: 'FRENOS',           label: TIPO_LABEL.FRENOS,           intervaloKm: 11000, descripcion: 'Frenos — inspección cada 11 000 km' },
-      { tipo: 'REVISION_GENERAL', label: TIPO_LABEL.REVISION_GENERAL, intervaloKm: 12000, descripcion: 'Revisión general cada 12 000 km' },
+      { tipo: 'ACEITE',           label: TIPO_LABEL.ACEITE,           intervaloKm: 3000,  descripcion: 'Aceite sintético — cambio cada 3 000 km' },
+      { tipo: 'FILTRO_AIRE',      label: TIPO_LABEL.FILTRO_AIRE,      intervaloKm: 6000,  descripcion: 'Filtro de aire — cada 6 000 km' },
+      { tipo: 'BUJIA',            label: TIPO_LABEL.BUJIA,            intervaloKm: 7000,  descripcion: 'Bujía de platino/iridio — cada 7 000 km' },
+      { tipo: 'CADENA',           label: TIPO_LABEL.CADENA,           intervaloKm: 6000,  descripcion: 'Cadena — lubricación y revisión cada 6 000 km' },
+      { tipo: 'LLANTA_TRASERA',   label: TIPO_LABEL.LLANTA_TRASERA,   intervaloKm: 9000,  descripcion: 'Llanta trasera — desgaste cada 9 000 km' },
+      { tipo: 'FRENOS',           label: TIPO_LABEL.FRENOS,           intervaloKm: 6500,  descripcion: 'Frenos — inspección cada 6 500 km' },
+      { tipo: 'REVISION_GENERAL', label: TIPO_LABEL.REVISION_GENERAL, intervaloKm: 7000,  descripcion: 'Revisión general cada 7 000 km' },
     ],
   },
   {
     rango: RANGOS_CC[4],
     params: [
-      { tipo: 'ACEITE',           label: TIPO_LABEL.ACEITE,           intervaloKm: 6000,  descripcion: 'Aceite 100% sintético — cambio cada 6 000 km' },
-      { tipo: 'FILTRO_AIRE',      label: TIPO_LABEL.FILTRO_AIRE,      intervaloKm: 12000, descripcion: 'Filtro de aire de alto flujo — cada 12 000 km' },
-      { tipo: 'BUJIA',            label: TIPO_LABEL.BUJIA,            intervaloKm: 15000, descripcion: 'Bujía de iridio — cada 15 000 km' },
-      { tipo: 'CADENA',           label: TIPO_LABEL.CADENA,           intervaloKm: 12000, descripcion: 'Cadena reforzada — cada 12 000 km' },
-      { tipo: 'LLANTA_TRASERA',   label: TIPO_LABEL.LLANTA_TRASERA,   intervaloKm: 18000, descripcion: 'Llanta trasera de alto rendimiento — cada 18 000 km' },
-      { tipo: 'FRENOS',           label: TIPO_LABEL.FRENOS,           intervaloKm: 13000, descripcion: 'Frenos — inspección cada 13 000 km' },
-      { tipo: 'REVISION_GENERAL', label: TIPO_LABEL.REVISION_GENERAL, intervaloKm: 15000, descripcion: 'Revisión general integral cada 15 000 km' },
+      { tipo: 'ACEITE',           label: TIPO_LABEL.ACEITE,           intervaloKm: 3500,  descripcion: 'Aceite 100% sintético — cambio cada 3 500 km' },
+      { tipo: 'FILTRO_AIRE',      label: TIPO_LABEL.FILTRO_AIRE,      intervaloKm: 7000,  descripcion: 'Filtro de aire de alto flujo — cada 7 000 km' },
+      { tipo: 'BUJIA',            label: TIPO_LABEL.BUJIA,            intervaloKm: 9000,  descripcion: 'Bujía de iridio — cada 9 000 km' },
+      { tipo: 'CADENA',           label: TIPO_LABEL.CADENA,           intervaloKm: 7000,  descripcion: 'Cadena reforzada — cada 7 000 km' },
+      { tipo: 'LLANTA_TRASERA',   label: TIPO_LABEL.LLANTA_TRASERA,   intervaloKm: 10000, descripcion: 'Llanta trasera de alto rendimiento — cada 10 000 km' },
+      { tipo: 'FRENOS',           label: TIPO_LABEL.FRENOS,           intervaloKm: 7500,  descripcion: 'Frenos — inspección cada 7 500 km' },
+      { tipo: 'REVISION_GENERAL', label: TIPO_LABEL.REVISION_GENERAL, intervaloKm: 9000,  descripcion: 'Revisión general integral cada 9 000 km' },
     ],
   },
 ];
@@ -169,8 +171,9 @@ export function calcularEstadoLocal(
     const proximoCambio = ultimoCambio + intervalo;
     const porcentaje    = Math.round((kmDesdeUltimo / intervalo) * 100); // puede superar 100% (vencido)
     const kmRestante    = proximoCambio - kmActual;
+    /* PROXIMO desde 70% (antes 80%) → el cliente recibe el aviso antes */
     const estado: EstadoCalculado['estado'] =
-      porcentaje >= 100 ? 'VENCIDO' : porcentaje >= 80 ? 'PROXIMO' : 'OK';
+      porcentaje >= 100 ? 'VENCIDO' : porcentaje >= 70 ? 'PROXIMO' : 'OK';
     return {
       tipo: p.tipo, label: p.label, intervaloKm: intervalo, kmActual,
       ultimoCambioKm: ultimoCambio, proximoCambioKm: proximoCambio,
