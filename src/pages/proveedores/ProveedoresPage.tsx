@@ -4,7 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Truck, Package, AlertTriangle, Phone, Mail, CheckCircle2, X, Edit2, Save, MessageCircle, Plus, Search, Info } from 'lucide-react';
+import { Truck, Package, AlertTriangle, Phone, Mail, CheckCircle2, X, Edit2, Save, MessageCircle, Plus, Search, Info, Trash2 } from 'lucide-react';
 import { productosApi, proveedorContactosApi } from '../../lib/api';
 import { fmtMoney, getErrorMsg } from '../../lib/utils';
 import { useToast } from '../../components/ui/Toast';
@@ -179,12 +179,13 @@ function ProveedorCard({ codigo, productos, contacto, onEdit }: ProveedorCardPro
 }
 
 /* ── Modal de contacto ─────────────────────────────────────────────────────── */
-function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose }: {
-  codigo:   string;
-  contacto: Contacto | null;
-  isNew?:   boolean;
-  onSave:   (codigo: string, data: Contacto) => void;
-  onClose:  () => void;
+function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose, onDelete }: {
+  codigo:    string;
+  contacto:  Contacto | null;
+  isNew?:    boolean;
+  onSave:    (codigo: string, data: Contacto) => void;
+  onClose:   () => void;
+  onDelete?: () => void;
 }) {
   const [codigoState, setCodigoState] = useState(codigo);
   const [nombre,   setNombre]   = useState(contacto?.nombre   ?? '');
@@ -254,6 +255,15 @@ function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose }: {
         </div>
 
         <div className="flex gap-3 pt-2">
+          {!isNew && onDelete && (
+            <button
+              onClick={onDelete}
+              className="px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5"
+              style={{ background: 'rgba(225,20,40,0.1)', border: '1px solid rgba(225,20,40,0.25)', color: '#E11428' }}
+            >
+              <Trash2 size={13} /> Eliminar
+            </button>
+          )}
           <button
             onClick={onClose}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white/40 hover:text-white/70 border border-white/[0.07] transition-all"
@@ -349,11 +359,19 @@ export default function ProveedoresPage() {
   );
 
   const handleSave = (codigo: string, data: Contacto) => {
-    setContactos(prev => ({ ...prev, [codigo]: data }));   // optimista
+    setContactos(prev => ({ ...prev, [codigo]: data }));
     setEditCodigo(null);
     setCreatingNew(false);
     proveedorContactosApi.guardar(codigo, data)
       .then(() => toast.success('Proveedor guardado'))
+      .catch(err => { toast.error(getErrorMsg(err)); cargarContactos(); });
+  };
+
+  const handleDelete = (codigo: string) => {
+    setContactos(prev => { const n = { ...prev }; delete n[codigo]; return n; });
+    setEditCodigo(null);
+    proveedorContactosApi.borrar(codigo)
+      .then(() => toast.success('Proveedor eliminado'))
       .catch(err => { toast.error(getErrorMsg(err)); cargarContactos(); });
   };
 
@@ -502,6 +520,7 @@ export default function ProveedoresPage() {
           contacto={contactos[editCodigo] ?? null}
           onSave={handleSave}
           onClose={() => setEditCodigo(null)}
+          onDelete={() => handleDelete(editCodigo)}
         />
       )}
 

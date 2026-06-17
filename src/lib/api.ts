@@ -225,6 +225,8 @@ export const proveedorContactosApi = {
   list:   ()            => api.get('/proveedores-contactos'),
   guardar:(codigo: string, data: Record<string, unknown>) =>
     api.put(`/proveedores-contactos/${encodeURIComponent(codigo)}`, data),
+  borrar: (codigo: string) =>
+    api.delete(`/proveedores-contactos/${encodeURIComponent(codigo)}`),
 };
 
 /* ── Health check (keep-alive para Render) ──────────────────────────────────
