@@ -5,27 +5,16 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Truck, Package, AlertTriangle, Phone, Mail, CheckCircle2, X, Edit2, Save, MessageCircle, Plus } from 'lucide-react';
-import { productosApi } from '../../lib/api';
-import { fmtMoney } from '../../lib/utils';
+import { productosApi, proveedorContactosApi } from '../../lib/api';
+import { fmtMoney, getErrorMsg } from '../../lib/utils';
 import { useToast } from '../../components/ui/Toast';
 import type { Producto } from '../../types';
-
-/* Contacto guardado en localStorage por código de proveedor */
-const STORAGE_KEY = 'gm_proveedores_contactos';
 
 interface Contacto {
   nombre:   string;
   telefono: string;
   email:    string;
   producto: string;
-}
-
-function loadContactos(): Record<string, Contacto> {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}'); }
-  catch { return {}; }
-}
-function saveContactos(data: Record<string, Contacto>) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 /* ── Stock badge utils ── */
@@ -290,9 +279,20 @@ export default function ProveedoresPage() {
 
   const [productos,   setProductos]   = useState<Producto[]>([]);
   const [loading,     setLoading]     = useState(true);
-  const [contactos,   setContactos]   = useState<Record<string, Contacto>>(loadContactos);
+  const [contactos,   setContactos]   = useState<Record<string, Contacto>>({});
   const [editCodigo,  setEditCodigo]  = useState<string | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
+
+  const cargarContactos = () => {
+    proveedorContactosApi.list()
+      .then(({ data }) => {
+        const map: Record<string, Contacto> = {};
+        (data as Array<{ codigo: string; nombre: string; telefono: string; email: string; producto: string }>)
+          .forEach(c => { map[c.codigo] = { nombre: c.nombre, telefono: c.telefono, email: c.email, producto: c.producto }; });
+        setContactos(map);
+      })
+      .catch(() => { /* sin contactos */ });
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -301,6 +301,7 @@ export default function ProveedoresPage() {
       setProductos(Array.isArray(data) ? data : []);
     } catch { /* render sleeping */ }
     finally { setLoading(false); }
+    cargarContactos();
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -331,12 +332,12 @@ export default function ProveedoresPage() {
   );
 
   const handleSave = (codigo: string, data: Contacto) => {
-    const updated = { ...contactos, [codigo]: data };
-    setContactos(updated);
-    saveContactos(updated);
+    setContactos(prev => ({ ...prev, [codigo]: data }));   // optimista
     setEditCodigo(null);
     setCreatingNew(false);
-    toast.success('Proveedor guardado');
+    proveedorContactosApi.guardar(codigo, data)
+      .then(() => toast.success('Proveedor guardado'))
+      .catch(err => { toast.error(getErrorMsg(err)); cargarContactos(); });
   };
 
   return (

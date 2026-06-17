@@ -11,25 +11,14 @@ import { Fuel, Plus, Trash2, TrendingDown, DollarSign, Gauge, X, AlertTriangle, 
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
-import { motosApi } from '../../lib/api';
+import { motosApi, combustibleApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../components/ui/Toast';
+import { getErrorMsg } from '../../lib/utils';
 import type { Moto, CargaCombustible } from '../../types';
 import { fmtDate, fmtMoney } from '../../lib/utils';
 
-const STORAGE_KEY = 'gm_fuel_logs';
 const PRICE_PER_GAL = 2.72; // precio referencia extra/galón Ecuador (USD)
-
-function loadLogs(): CargaCombustible[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'); }
-  catch { return []; }
-}
-function saveLogs(logs: CargaCombustible[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
-}
-
-function uid() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
 
 interface FormState {
   id_moto:     string;
@@ -47,27 +36,39 @@ const EMPTY: FormState = {
 
 export default function CombustiblePage() {
   const { user, isAdmin, isMecanico } = useAuth();
+  const toast = useToast();
   const [motos,   setMotos]   = useState<Moto[]>([]);
-  const [logs,    setLogs]    = useState<CargaCombustible[]>(loadLogs());
+  const [logs,    setLogs]    = useState<CargaCombustible[]>([]);
   const [open,    setOpen]    = useState(false);
+  const [saving,  setSaving]  = useState(false);
   const [form,    setForm]    = useState<FormState>(EMPTY);
   const [selMoto, setSelMoto] = useState<number | null>(null);
   const [month,   setMonth]   = useState(() => new Date().toISOString().slice(0, 7));
 
+  /* Cargar logs desde la nube: admin/mecánico todas, cliente solo las de sus motos */
+  const cargarLogs = (misMotos: Moto[]) => {
+    if (isAdmin || isMecanico) {
+      combustibleApi.list().then(r => setLogs(r.data as CargaCombustible[])).catch(() => {});
+    } else {
+      Promise.allSettled(misMotos.map(m => combustibleApi.byMoto(m.id_moto)))
+        .then(res => {
+          const all: CargaCombustible[] = [];
+          res.forEach(r => { if (r.status === 'fulfilled') all.push(...(r.value.data as CargaCombustible[])); });
+          setLogs(all);
+        });
+    }
+  };
+
   useEffect(() => {
     motosApi.list().then(r => {
       const all: Moto[] = r.data;
-      /* Clientes ven solo sus motos */
-      const mine = (isAdmin || isMecanico)
-        ? all
-        : all.filter(m => m.id_usuario === user?.id_usuario);
+      const mine = (isAdmin || isMecanico) ? all : all.filter(m => m.id_usuario === user?.id_usuario);
       setMotos(mine);
       if (mine.length > 0) setSelMoto(mine[0].id_moto);
+      cargarLogs(mine);
     }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin, isMecanico]);
-
-  /* Persist on change */
-  useEffect(() => { saveLogs(logs); }, [logs]);
 
   /* Logs filtrados por moto y mes */
   const filtered = useMemo(() => logs.filter(l => {
@@ -117,28 +118,32 @@ export default function CombustiblePage() {
     return drop >= 15 ? { last: +last.toFixed(1), avg: +avg.toFixed(1), pct: Math.round(drop) } : null;
   }, [chartData]);
 
-  const addLog = () => {
+  const addLog = async () => {
     if (!form.id_moto || !form.fecha || !form.litros || !form.km_actual) return;
     const moto = motos.find(m => m.id_moto === Number(form.id_moto));
-    const entry: CargaCombustible = {
-      id:          uid(),
-      id_moto:     Number(form.id_moto),
-      placa:       moto?.placa ?? '—',
-      fecha:       form.fecha,
-      litros:      Number(form.litros),
-      costo_total: form.costo_total
-        ? Number(form.costo_total)
-        : Number(form.litros) * PRICE_PER_GAL,
-      km_actual:   Number(form.km_actual),
-      km_anterior: form.km_anterior ? Number(form.km_anterior) : 0,
-      notas:       form.notas || undefined,
-    };
-    setLogs(p => [entry, ...p]);
-    setForm(EMPTY);
-    setOpen(false);
+    setSaving(true);
+    try {
+      await combustibleApi.create({
+        id_moto:     Number(form.id_moto),
+        placa:       moto?.placa ?? '—',
+        fecha:       form.fecha,
+        litros:      Number(form.litros),
+        costo_total: form.costo_total ? Number(form.costo_total) : Number(form.litros) * PRICE_PER_GAL,
+        km_actual:   Number(form.km_actual),
+        km_anterior: form.km_anterior ? Number(form.km_anterior) : 0,
+        notas:       form.notas || null,
+      });
+      setForm(EMPTY);
+      setOpen(false);
+      cargarLogs(motos);
+    } catch (err) { toast.error(getErrorMsg(err)); }
+    finally { setSaving(false); }
   };
 
-  const removeLog = (id: string) => setLogs(p => p.filter(l => l.id !== id));
+  const removeLog = async (id: number) => {
+    try { await combustibleApi.remove(id); cargarLogs(motos); }
+    catch (err) { toast.error(getErrorMsg(err)); }
+  };
 
   const f = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
@@ -437,11 +442,11 @@ export default function CombustiblePage() {
               </button>
               <button
                 onClick={addLog}
-                disabled={!form.id_moto || !form.fecha || !form.litros || !form.km_actual}
+                disabled={saving || !form.id_moto || !form.fecha || !form.litros || !form.km_actual}
                 className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40"
                 style={{ background: '#E11428' }}
               >
-                Guardar registro
+                {saving ? 'Guardando…' : 'Guardar registro'}
               </button>
             </div>
           </div>

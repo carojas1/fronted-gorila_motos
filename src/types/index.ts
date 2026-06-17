@@ -151,7 +151,7 @@ export interface HistorialPuntos {
 
 /* ─── Combustible ─── */
 export interface CargaCombustible {
-  id:          string;
+  id:          number;
   id_moto:     number;
   placa:       string;
   fecha:       string;
