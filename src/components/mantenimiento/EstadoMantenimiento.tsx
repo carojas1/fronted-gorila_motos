@@ -56,7 +56,12 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
         setServicios(map);
         setErrorServ(false);
       })
-      .catch(() => setErrorServ(true));
+      .catch((err) => {
+        /* 404 = la moto no tiene registros de mantenimiento aún → array vacío, sin error */
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 404) { setServicios({}); setErrorServ(false); }
+        else setErrorServ(true);
+      });
   };
   useEffect(cargarServicios, [moto.id_moto]);
 

@@ -9,7 +9,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { LogOut, ChevronDown, Menu, X } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import { initials } from '../../lib/utils';
+import { initials, parsePermisos } from '../../lib/utils';
 import { NotificationBell, NotificationPanel } from '../ui/NotificationCenter';
 import { useNotifications } from '../../hooks/useNotifications';
 import TermsModal, { useTermsAccepted } from '../ui/TermsModal';
@@ -35,27 +35,33 @@ export default function AppLayout() {
   const roleLabel = isAdmin ? 'Administrador' : isMecanico ? 'Mecánico' : 'Cliente';
   const roleColor = isAdmin ? '#E11428' : isMecanico ? '#3B82F6' : '#10B981';
 
+  /* Permisos de módulos (mecánicos): null = sin restricción, array = lista permitida */
+  const mecPermisos = isMecanico ? parsePermisos(user?.descripcion) : null;
+  const puede = (mod: string) =>
+    isAdmin || !isMecanico || !mecPermisos || mecPermisos.includes(mod);
+
   /* Navegación principal — limpia. Diagnóstico y Metodología viven DENTRO de Motos.
      Combustible y Alertas van en el menú "Más" para no saturar la barra. */
   const NAV = [
     { label: 'Dashboard',    to: '/dashboard'    },
-    ...((isAdmin || isMecanico) ? [{ label: 'Registros',   to: '/registros'   }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Motos',       to: '/motos'       }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Inventario',  to: '/inventario'  }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Proveedores', to: '/proveedores' }] : []),
-    ...(isAdmin               ? [{ label: 'Pagos',       to: '/pagos'       }] : []),
-    ...(isCliente             ? [{ label: 'Mi Moto',     to: '/mi-moto'     }] : []),
-    ...(isCliente             ? [{ label: 'Mi Portal',   to: '/portal'      }] : []),
-    ...(isCliente             ? [{ label: 'Puntos',      to: '/puntos'      }] : []),
+    ...(puede('registros')   && (isAdmin || isMecanico) ? [{ label: 'Registros',   to: '/registros'   }] : []),
+    ...(puede('motos')       && (isAdmin || isMecanico) ? [{ label: 'Motos',       to: '/motos'       }] : []),
+    ...(puede('inventario')  && (isAdmin || isMecanico) ? [{ label: 'Inventario',  to: '/inventario'  }] : []),
+    ...(puede('proveedores') && (isAdmin || isMecanico) ? [{ label: 'Proveedores', to: '/proveedores' }] : []),
+    ...(puede('clientes')    && (isAdmin || isMecanico) ? [{ label: 'Clientes',    to: '/clientes'    }] : []),
+    ...(isAdmin                                         ? [{ label: 'Pagos',       to: '/pagos'       }] : []),
+    ...(isCliente                                       ? [{ label: 'Mi Moto',     to: '/mi-moto'     }] : []),
+    ...(isCliente                                       ? [{ label: 'Mi Portal',   to: '/portal'      }] : []),
+    ...(isCliente                                       ? [{ label: 'Puntos',      to: '/puntos'      }] : []),
   ];
 
   /* Menú "Más" — secundarios, no saturan la barra principal */
   const NAV_MORE = [
-    ...((isAdmin || isMecanico) ? [{ label: 'Alertas',     to: '/alertas'     }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Metodología', to: '/metodologia' }] : []),
-    ...((isAdmin || isMecanico) ? [{ label: 'Puntos',      to: '/puntos'      }] : []),
-    { label: 'Combustible',   to: '/combustible'  },
-    ...(isAdmin               ? [{ label: 'Perfiles',    to: '/perfiles'    }] : []),
+    ...(puede('alertas')     && (isAdmin || isMecanico) ? [{ label: 'Alertas',     to: '/alertas'     }] : []),
+    ...(puede('metodologia') && (isAdmin || isMecanico) ? [{ label: 'Metodología', to: '/metodologia' }] : []),
+    ...(puede('puntos')      && (isAdmin || isMecanico) ? [{ label: 'Puntos',      to: '/puntos'      }] : []),
+    { label: 'Combustible', to: '/combustible' },
+    ...(isAdmin                                         ? [{ label: 'Perfiles',    to: '/perfiles'    }] : []),
   ];
 
   const handleLogout = () => { setMobileOpen(false); logout(); navigate('/login'); };

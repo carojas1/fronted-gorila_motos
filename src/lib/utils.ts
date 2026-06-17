@@ -60,6 +60,24 @@ export const ESTADO_REGISTRO: Record<number, { label: string; color: string }> =
   4: { label: 'Facturado',  color: 'bg-teal-100 text-teal-700'     },
 };
 
+/** Lee la lista de módulos permitidos del campo descripcion (PERMISOS:mod1,mod2) */
+export function parsePermisos(descripcion: string | undefined | null): string[] | null {
+  if (!descripcion) return null;
+  const match = descripcion.match(/PERMISOS:\s*([^|]+)/i);
+  if (!match) return null;
+  return match[1].trim().split(',').map(m => m.trim()).filter(Boolean);
+}
+
+/** Construye un nuevo string de descripcion preservando CEDULA/TELEFONO y actualizando PERMISOS */
+export function setPermisos(descripcion: string | undefined | null, modulos: string[]): string {
+  const parts = (descripcion ?? '')
+    .split('|')
+    .map(s => s.trim())
+    .filter(s => s && !/^PERMISOS:/i.test(s));
+  if (modulos.length > 0) parts.push(`PERMISOS:${modulos.join(',')}`);
+  return parts.join(' | ');
+}
+
 /** Extrae teléfono del campo descripcion (formato: "CEDULA: xxx | TELEFONO: xxx") */
 export function extractPhone(descripcion: string | undefined | null): string | null {
   if (!descripcion) return null;

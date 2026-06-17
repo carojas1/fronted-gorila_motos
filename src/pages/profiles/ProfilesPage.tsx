@@ -14,7 +14,7 @@ import {
 import { usuariosApi, rolesApi, authApi, motosApi } from "../../lib/api";
 import { useToast } from "../../components/ui/Toast";
 import { useAuth } from "../../contexts/AuthContext";
-import { initials, extractCedula, getErrorMsg } from "../../lib/utils";
+import { initials, extractCedula, getErrorMsg, parsePermisos, setPermisos } from "../../lib/utils";
 import type { Usuario, Rol, Moto } from "../../types";
 import { useNavigate } from "react-router-dom";
 import { Bike, Gauge } from "lucide-react";
@@ -36,6 +36,19 @@ function getRolName(roles: unknown[]): string {
         ?? (r as { nombre?: string })?.nombre ?? "");
   return raw.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
+
+/* ── Módulos configurables para mecánicos ── */
+const MECANICO_MODULES = [
+  { key: 'registros',   label: 'Registros',   desc: 'Órdenes de servicio' },
+  { key: 'motos',       label: 'Motos',        desc: 'Diagnósticos y perfiles' },
+  { key: 'inventario',  label: 'Inventario',   desc: 'Productos y stock' },
+  { key: 'proveedores', label: 'Proveedores',  desc: 'Gestión de proveedores' },
+  { key: 'clientes',    label: 'Clientes',     desc: 'Historial de clientes' },
+  { key: 'alertas',     label: 'Alertas',      desc: 'Alertas de mantenimiento' },
+  { key: 'puntos',      label: 'Puntos',       desc: 'Sistema de puntos' },
+  { key: 'combustible', label: 'Combustible',  desc: 'Registro de cargas' },
+  { key: 'metodologia', label: 'Metodología',  desc: 'Guías técnicas' },
+];
 
 /* ── Constantes de roles ── */
 const TABS = [
@@ -267,9 +280,10 @@ export default function ProfilesPage() {
   const [loading,    setLoading]    = useState(true);
   const [search,     setSearch]     = useState("");
   const [activeTab,  setActiveTab]  = useState("ADMIN");
-  const [roleModal,    setRoleModal]    = useState<{ user: Usuario } | null>(null);
-  const [selectedRol,  setSelectedRol]  = useState(0);
-  const [saving,       setSaving]       = useState(false);
+  const [roleModal,      setRoleModal]      = useState<{ user: Usuario } | null>(null);
+  const [selectedRol,    setSelectedRol]    = useState(0);
+  const [selectedModulos, setSelectedModulos] = useState<string[]>(MECANICO_MODULES.map(m => m.key));
+  const [saving,         setSaving]         = useState(false);
   const [addModal,     setAddModal]     = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Usuario | null>(null);
   const [deleting,     setDeleting]     = useState(false);
@@ -329,12 +343,33 @@ export default function ProfilesPage() {
     });
   }, [usuarios, activeTab, search, motosByUser]);
 
+  const openRoleModal = (u: Usuario) => {
+    const currentPerms = parsePermisos(u.descripcion);
+    setSelectedModulos(currentPerms ?? MECANICO_MODULES.map(m => m.key));
+    const currentRolNombre = getRolName((u.roles ?? []) as unknown[]);
+    const currentRol = roles.find(r => r.nombre === currentRolNombre);
+    setSelectedRol(currentRol?.id_rol ?? 0);
+    setRoleModal({ user: u });
+  };
+
   const assignRole = async () => {
     if (!roleModal || !selectedRol || !me) return;
     setSaving(true);
     try {
-      await rolesApi.assign(roleModal.user.id_usuario, selectedRol, me.id_usuario);
-      toast.success("Rol actualizado · el usuario verá los cambios al iniciar sesión nuevamente");
+      /* cambiarCategoria reemplaza el rol actual — evita duplicados */
+      await rolesApi.cambiarCategoria(roleModal.user.id_usuario, selectedRol, me.id_usuario);
+
+      /* Si el nuevo rol es MECÁNICO → guardar permisos de módulos en descripcion */
+      const rolNombre = roles.find(r => r.id_rol === selectedRol)?.nombre?.toUpperCase() ?? '';
+      if (rolNombre === 'MECANICO') {
+        const newDesc = setPermisos(roleModal.user.descripcion, selectedModulos);
+        await usuariosApi.update(roleModal.user.id_usuario, {
+          ...(roleModal.user as unknown as Record<string, unknown>),
+          descripcion: newDesc,
+        });
+      }
+
+      toast.success("Rol y permisos guardados · el empleado debe volver a iniciar sesión");
       setRoleModal(null);
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }
@@ -549,7 +584,7 @@ export default function ProfilesPage() {
                 u={u}
                 roleName={getRolName((u.roles ?? []) as unknown[])}
                 motosCount={(motosByUser.get(u.id_usuario) ?? []).length}
-                onAssign={(uu: Usuario) => setRoleModal({ user: uu })}
+                onAssign={(uu: Usuario) => openRoleModal(uu)}
                 onView={(uu: Usuario) => setViewClient(uu)}
                 onDelete={isAdmin ? (uu: Usuario) => setDeleteTarget(uu) : undefined}
               />
@@ -624,39 +659,56 @@ export default function ProfilesPage() {
               <p className="text-[10px] tracking-[0.25em] uppercase font-black text-white/25 mb-3">
                 Módulos accesibles
               </p>
-              <div className="space-y-1.5 p-3 rounded-xl" style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                {(() => {
-                  const sel  = roles.find(r => r.id_rol === selectedRol)?.nombre?.toUpperCase() ?? "";
-                  const isA  = sel === "ADMIN";
-                  const isM  = sel === "MECANICO";
-                  const mods = [
-                    { name: "Dashboard",     ok: true },
-                    { name: "Registros",     ok: isA || isM },
-                    { name: "Diagnóstico",   ok: isA || isM },
-                    { name: "Motos",         ok: true },
-                    { name: "Clientes",      ok: isA || isM },
-                    { name: "Inventario",    ok: isA || isM },
-                    { name: "Proveedores",   ok: isA || isM },
-                    { name: "Pagos",         ok: isA },
-                    { name: "Perfiles",      ok: isA },
-                    { name: "Ver precios",   ok: isA },
-                  ];
-                  return mods.map(m => (
-                    <div key={m.name} className="flex items-center justify-between py-1.5 border-b border-white/[0.04] last:border-0">
-                      <span className="text-[12px] text-white/55 font-medium">{m.name}</span>
-                      <span
-                        className="text-[9px] font-black tracking-wider px-2 py-0.5 rounded-full"
-                        style={m.ok
-                          ? { background: "rgba(16,185,129,0.12)", color: "#10B981", border: "1px solid rgba(16,185,129,0.22)" }
-                          : { background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.07)" }
-                        }
-                      >
-                        {m.ok ? "✓ SÍ" : "✗ NO"}
-                      </span>
+              {(() => {
+                const rolNombre = roles.find(r => r.id_rol === selectedRol)?.nombre?.toUpperCase() ?? "";
+                if (rolNombre === "MECANICO") {
+                  return (
+                    <div className="space-y-1 p-3 rounded-xl" style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <p className="text-[10px] text-blue-400/70 mb-2">Elige qué puede ver este mecánico:</p>
+                      {MECANICO_MODULES.map(m => {
+                        const checked = selectedModulos.includes(m.key);
+                        return (
+                          <label key={m.key} className="flex items-center gap-2.5 py-1.5 border-b border-white/[0.04] last:border-0 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => setSelectedModulos(prev =>
+                                checked ? prev.filter(x => x !== m.key) : [...prev, m.key]
+                              )}
+                              className="accent-blue-500 w-3.5 h-3.5 shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[12px] font-bold" style={{ color: checked ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.3)" }}>
+                                {m.label}
+                              </span>
+                              <span className="text-[10px] text-white/22 ml-1.5">{m.desc}</span>
+                            </div>
+                          </label>
+                        );
+                      })}
+                      <div className="flex gap-2 pt-2">
+                        <button onClick={() => setSelectedModulos(MECANICO_MODULES.map(m => m.key))}
+                          className="text-[10px] text-blue-400/70 hover:text-blue-400 transition-colors font-bold">Todos</button>
+                        <span className="text-white/15">·</span>
+                        <button onClick={() => setSelectedModulos([])}
+                          className="text-[10px] text-white/25 hover:text-white/50 transition-colors font-bold">Ninguno</button>
+                      </div>
                     </div>
-                  ));
-                })()}
-              </div>
+                  );
+                }
+                if (rolNombre === "ADMIN") {
+                  return (
+                    <div className="p-3 rounded-xl" style={{ background: "rgba(225,20,40,0.05)", border: "1px solid rgba(225,20,40,0.15)" }}>
+                      <p className="text-[11px] text-red-400/70">Acceso completo a todos los módulos.</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="p-3 rounded-xl" style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)" }}>
+                    <p className="text-[11px] text-emerald-400/70">Acceso solo a sus motos y portal personal.</p>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
