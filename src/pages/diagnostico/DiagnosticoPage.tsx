@@ -132,6 +132,12 @@ export default function DiagnosticoPage() {
   const [historial,setHistorial]= useState<DiagnosticoMoto[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
+  /* Resultado del último diagnóstico guardado (resumen + confirmación de correo) */
+  const [resultado, setResultado] = useState<{
+    motoLabel: string; placa: string; correo: string;
+    malos: { label: string; obs: string }[];
+    regulares: { label: string; obs: string }[];
+  } | null>(null);
 
   /* Búsqueda de moto para diagnosticar */
   const [busqueda,    setBusqueda]    = useState('');
@@ -199,7 +205,16 @@ export default function DiagnosticoPage() {
     try {
       const { data } = await diagnosticosApi.create(diagnostico as unknown as Record<string, unknown>);
       setHistorial(prev => [data as DiagnosticoMoto, ...prev]);
-      toast.success('Diagnóstico registrado exitosamente', 'Diagnóstico');
+      toast.success('Diagnóstico registrado · reporte enviado al cliente', 'Diagnóstico');
+      /* Resumen + confirmación de correo (el backend envía el reporte al dueño) */
+      const owner = usuarios.find(u => u.id_usuario === motoSel.id_usuario);
+      setResultado({
+        motoLabel: `${motoSel.marca} ${motoSel.modelo}`,
+        placa:     motoSel.placa,
+        correo:    owner?.correo ?? '',
+        malos:     PARTES.filter(p => detalles[p.key].estado === 3).map(p => ({ label: p.label, obs: detalles[p.key].obs })),
+        regulares: PARTES.filter(p => detalles[p.key].estado === 2).map(p => ({ label: p.label, obs: detalles[p.key].obs })),
+      });
       // Reset form
       setMotoSel(null);
       setBusqueda('');
@@ -241,6 +256,60 @@ export default function DiagnosticoPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Resultado del último diagnóstico + confirmación de correo ── */}
+      {resultado && (() => {
+        const critico = resultado.malos.length > 0;
+        const acento  = critico ? '#E11428' : (resultado.regulares.length > 0 ? '#F59E0B' : '#10B981');
+        const bg      = critico ? 'rgba(225,20,40,0.08)' : (resultado.regulares.length > 0 ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)');
+        return (
+          <div style={{ ...card, marginBottom: 24, borderColor: `${acento}40`, background: bg }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: `${acento}20`, border: `1px solid ${acento}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {critico ? <XCircle size={18} color={acento} /> : (resultado.regulares.length > 0 ? <AlertTriangle size={18} color={acento} /> : <CheckCircle size={18} color={acento} />)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ color: '#EBEBEB', fontWeight: 800, fontSize: 15, margin: '0 0 2px' }}>
+                  Diagnóstico guardado — {resultado.motoLabel} <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{resultado.placa}</span>
+                </p>
+                <p style={{ color: acento, fontWeight: 700, fontSize: 12.5, margin: '0 0 10px' }}>
+                  {critico
+                    ? `${resultado.malos.length} componente(s) en estado CRÍTICO${resultado.regulares.length ? ` y ${resultado.regulares.length} a vigilar` : ''}`
+                    : (resultado.regulares.length > 0 ? `${resultado.regulares.length} componente(s) a vigilar — nada crítico` : 'Todos los componentes en buen estado ✓')}
+                </p>
+
+                {(resultado.malos.length > 0 || resultado.regulares.length > 0) && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    {resultado.malos.map(m => (
+                      <span key={m.label} style={{ fontSize: 11, fontWeight: 700, color: '#E11428', background: 'rgba(225,20,40,0.12)', border: '1px solid rgba(225,20,40,0.25)', borderRadius: 8, padding: '3px 9px' }}>
+                        {m.label}: Malo{m.obs ? ` · ${m.obs}` : ''}
+                      </span>
+                    ))}
+                    {resultado.regulares.map(r => (
+                      <span key={r.label} style={{ fontSize: 11, fontWeight: 700, color: '#F59E0B', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8, padding: '3px 9px' }}>
+                        {r.label}: Regular{r.obs ? ` · ${r.obs}` : ''}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <CheckCircle size={13} color="#10B981" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                    {resultado.correo
+                      ? <>Reporte enviado automáticamente al correo del cliente: <b style={{ color: '#EBEBEB' }}>{resultado.correo}</b></>
+                      : 'El reporte se intentó enviar al correo del cliente.'}
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => setResultado(null)}
+                style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', flexShrink: 0 }}>
+                Nuevo diagnóstico
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Formulario nuevo diagnóstico ── */}
       <div style={{ ...card, marginBottom: 24 }}>
