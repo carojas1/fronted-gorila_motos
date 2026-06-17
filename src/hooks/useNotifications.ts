@@ -23,15 +23,26 @@ export interface Notification {
   createdAt:string;
 }
 
-const STORAGE_KEY = 'gm_notifications';
+const STORAGE_KEY    = 'gm_notifications';
+const STORAGE_VER    = 'gm_notif_v';
+const CURRENT_VER    = '2';   // bump when message format changes
 
 function loadStored(): Notification[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'); }
+  try {
+    /* Migración: si la versión no coincide, limpiar para evitar fechas mal formateadas */
+    if (localStorage.getItem(STORAGE_VER) !== CURRENT_VER) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(STORAGE_VER, CURRENT_VER);
+      return [];
+    }
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+  }
   catch { return []; }
 }
 
 function saveNotifs(n: Notification[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(n));
+  localStorage.setItem(STORAGE_VER, CURRENT_VER);
 }
 
 function genId(prefix: string, id: number | string) {
