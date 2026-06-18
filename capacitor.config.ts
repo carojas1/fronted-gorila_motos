@@ -29,6 +29,12 @@ const config: CapacitorConfig = {
       style: 'Dark',
       backgroundColor: '#0C0C10',
     },
+    /* Google Sign-In nativo: el plugin solo obtiene la credencial de Google
+       (Credential Manager); la sesión Firebase se hace en JS con signInWithCredential. */
+    FirebaseAuthentication: {
+      skipNativeAuth: true,
+      providers: ['google.com'],
+    },
   },
 };
 

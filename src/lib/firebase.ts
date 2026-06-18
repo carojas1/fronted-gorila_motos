@@ -4,6 +4,7 @@
    Config embebida como fallback para cualquier deploy
    ───────────────────────────────────────────── */
 
+import { Capacitor } from '@capacitor/core';
 import { initializeApp, getApps } from 'firebase/app';
 import {
   getAuth,
@@ -13,6 +14,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
+  signInWithCredential,
   getRedirectResult,
   signOut,
   onAuthStateChanged,
@@ -90,6 +92,22 @@ export async function checkEmailVerified(): Promise<boolean> {
  */
 export async function startGoogleSignIn(): Promise<FirebaseUser | null> {
   if (!auth) throw new Error('Firebase no disponible');
+
+  /* ── APK nativo: el popup de Firebase no funciona dentro del WebView.
+        Usamos el plugin nativo (Credential Manager de Google) para obtener
+        el idToken y luego iniciamos sesión en el SDK JS con esa credencial.
+        Así el resto del flujo (processGoogleUser) queda idéntico a la web. ── */
+  if (Capacitor.isNativePlatform()) {
+    const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+    const result = await FirebaseAuthentication.signInWithGoogle();
+    const idToken = result.credential?.idToken;
+    if (!idToken) throw new Error('No se obtuvo el token de Google');
+    const cred = GoogleAuthProvider.credential(idToken);
+    const userCred = await signInWithCredential(auth, cred);
+    return userCred.user;
+  }
+
+  /* ── Web: popup con fallback automático a redirect ── */
   try {
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
