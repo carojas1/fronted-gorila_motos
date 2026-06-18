@@ -18,6 +18,7 @@ import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
 import { firebaseEnabled, startGoogleSignIn, getGoogleRedirectUser } from '../../lib/firebase';
 import { healthApi } from '../../lib/api';
+import ErrorBoundary from '../../components/ui/ErrorBoundary';
 
 const Bike3D = lazy(() => import('../../components/3d/Bike3D'));
 
@@ -273,17 +274,20 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* MOTO 3D — cinemática, sin frame-box */}
-        {/* Overflow negativo + overflow:hidden en padre = crop cinematográfico */}
-        <Suspense fallback={null}>
-          <div style={{
-            position: 'absolute',
-            top: '5%', left: '-20%', right: '-20%', bottom: '19%',
-            zIndex: 1,
-          }}>
-            <Bike3D/>
-          </div>
-        </Suspense>
+        {/* MOTO 3D — cinemática, sin frame-box.
+            Envuelta en ErrorBoundary: si el WebGL falla (emuladores, GPU débil)
+            la moto simplemente no se muestra y el login sigue funcionando. */}
+        <ErrorBoundary fallback={() => null}>
+          <Suspense fallback={null}>
+            <div style={{
+              position: 'absolute',
+              top: '5%', left: '-20%', right: '-20%', bottom: '19%',
+              zIndex: 1,
+            }}>
+              <Bike3D/>
+            </div>
+          </Suspense>
+        </ErrorBoundary>
 
         {/* Reflejo del suelo — glow rojo bajo la moto (como fotograf. de producto) */}
         <div style={{

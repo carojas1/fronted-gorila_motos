@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  /* base relativa ('./') para que los assets carguen dentro del APK (WebView
+     en https://localhost) sin importar cómo resuelva la raíz. */
+  base: './',
   server: {
     port: 4200,
     open: true,
@@ -17,6 +20,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    /* Target conservador: transpila ??, ?. y demás a sintaxis compatible con
+       WebViews antiguos (emuladores como LDPlayer traen Chromium viejo). */
+    target: 'es2015',
     rollupOptions: {
       output: {
         manualChunks(id) {
