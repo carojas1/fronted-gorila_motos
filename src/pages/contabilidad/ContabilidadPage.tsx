@@ -284,7 +284,7 @@ export default function ContabilidadPage() {
           {[1,2,3,4].map(i => <div key={i} className="gm-card-d rounded-2xl p-6 h-28 skeleton-d" />)}
         </div>
       ) : (
-        <div className="card-enter grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {KPIs.map(({ label, value, sub, icon: Icon, color, bg, border }) => (
             <div key={label} className="rounded-2xl p-5 flex flex-col gap-3"
                  style={{ background: bg, border: `1px solid ${border}` }}>

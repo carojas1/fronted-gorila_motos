@@ -74,8 +74,7 @@ export default function AppLayout() {
     ...(puede('inventario')  && (isAdmin || isMecanico) ? [{ label: 'Inventario',  to: '/inventario'  }] : []),
     ...(puede('proveedores') && (isAdmin || isMecanico) ? [{ label: 'Proveedores', to: '/proveedores' }] : []),
     ...(puede('clientes')    && (isAdmin || isMecanico) ? [{ label: 'Clientes',    to: '/clientes'    }] : []),
-    ...(isAdmin                                         ? [{ label: 'Pagos',          to: '/pagos'          }] : []),
-    ...(isAdmin                                         ? [{ label: 'Contabilidad',   to: '/contabilidad'   }] : []),
+    ...(isAdmin                                         ? [{ label: 'Pagos',       to: '/pagos'       }] : []),
     ...(isCliente                                       ? [{ label: 'Mi Moto',     to: '/mi-moto'     }] : []),
     ...(isCliente                                       ? [{ label: 'Mi Portal',   to: '/portal'      }] : []),
     ...(isCliente                                       ? [{ label: 'Puntos',      to: '/puntos'      }] : []),
@@ -83,11 +82,12 @@ export default function AppLayout() {
 
   /* Menú "Más" — secundarios, no saturan la barra principal */
   const NAV_MORE = [
-    ...(puede('alertas')     && (isAdmin || isMecanico) ? [{ label: 'Alertas',     to: '/alertas'     }] : []),
-    ...(puede('metodologia') && (isAdmin || isMecanico) ? [{ label: 'Metodología', to: '/metodologia' }] : []),
-    ...(puede('puntos')      && (isAdmin || isMecanico) ? [{ label: 'Puntos',      to: '/puntos'      }] : []),
+    ...(puede('alertas')     && (isAdmin || isMecanico) ? [{ label: 'Alertas',       to: '/alertas'       }] : []),
+    ...(puede('metodologia') && (isAdmin || isMecanico) ? [{ label: 'Metodología',  to: '/metodologia'   }] : []),
+    ...(puede('puntos')      && (isAdmin || isMecanico) ? [{ label: 'Puntos',       to: '/puntos'        }] : []),
     { label: 'Combustible', to: '/combustible' },
-    ...(isAdmin                                         ? [{ label: 'Perfiles',    to: '/perfiles'    }] : []),
+    ...(isAdmin                                         ? [{ label: 'Contabilidad', to: '/contabilidad'  }] : []),
+    ...(isAdmin                                         ? [{ label: 'Perfiles',     to: '/perfiles'      }] : []),
   ];
 
   const handleLogout = () => { setMobileOpen(false); logout(); navigate('/login'); };

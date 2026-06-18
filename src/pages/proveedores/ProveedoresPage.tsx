@@ -367,12 +367,29 @@ export default function ProveedoresPage() {
       .catch(err => { toast.error(getErrorMsg(err)); cargarContactos(); });
   };
 
-  const handleDelete = (codigo: string) => {
-    setContactos(prev => { const n = { ...prev }; delete n[codigo]; return n; });
+  const handleDelete = async (codigo: string) => {
+    const productosProveedor = productos.filter(p => p.codigo_proveedor === codigo);
+    const confirmMsg = productosProveedor.length > 0
+      ? `¿Eliminar este proveedor y sus ${productosProveedor.length} producto(s) del inventario?`
+      : '¿Eliminar este proveedor?';
+    if (!window.confirm(confirmMsg)) return;
+
     setEditCodigo(null);
-    proveedorContactosApi.borrar(codigo)
-      .then(() => toast.success('Proveedor eliminado'))
-      .catch(err => { toast.error(getErrorMsg(err)); cargarContactos(); });
+    setContactos(prev => { const n = { ...prev }; delete n[codigo]; return n; });
+    setProductos(prev => prev.filter(p => p.codigo_proveedor !== codigo));
+
+    try {
+      await Promise.all([
+        proveedorContactosApi.borrar(codigo),
+        ...productosProveedor.map(p => productosApi.remove(p.id_producto)),
+      ]);
+      toast.success(productosProveedor.length > 0
+        ? `Proveedor y ${productosProveedor.length} producto(s) eliminados`
+        : 'Proveedor eliminado');
+    } catch (err) {
+      toast.error(getErrorMsg(err));
+      fetchData();
+    }
   };
 
   return (
