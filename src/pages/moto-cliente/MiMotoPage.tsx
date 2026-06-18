@@ -10,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   Bike, Camera, Plus, User, Phone, CreditCard,
-  CheckCircle, AlertTriangle, Pencil, X, Save,
+  CheckCircle, Pencil, X, Save,
   Gauge, Activity,
 } from 'lucide-react';
 import { motosApi, usuariosApi, mantenimientosApi } from '../../lib/api';
@@ -333,23 +333,27 @@ export default function MiMotoPage() {
 
         {editingPerfil && (
           <form onSubmit={handlePerfil(onSavePerfil)} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <Input
-                label="Cédula / ID"
-                type="text"
-                placeholder="1234567890"
-                prefix={<CreditCard size={14} />}
-                error={errPerfil.cedula?.message}
-                {...regPerfil('cedula')}
-              />
-              <Input
-                label="Teléfono / WhatsApp"
-                type="tel"
-                placeholder="0987 654 321"
-                prefix={<Phone size={14} />}
-                error={errPerfil.telefono?.message}
-                {...regPerfil('telefono')}
-              />
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 140px' }}>
+                <Input
+                  label="Cédula / ID"
+                  type="text"
+                  placeholder="1234567890"
+                  prefix={<CreditCard size={14} />}
+                  error={errPerfil.cedula?.message}
+                  {...regPerfil('cedula')}
+                />
+              </div>
+              <div style={{ flex: '1 1 140px' }}>
+                <Input
+                  label="Teléfono / WhatsApp"
+                  type="tel"
+                  placeholder="0987 654 321"
+                  prefix={<Phone size={14} />}
+                  error={errPerfil.telefono?.message}
+                  {...regPerfil('telefono')}
+                />
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setEditingPerfil(false)}
@@ -392,26 +396,14 @@ export default function MiMotoPage() {
             Registra tu moto para acceder a historial de mantenimiento,<br/>
             alertas y puntos de fidelidad.
           </p>
-          {!perfilOk && (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 18,
-              background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
-              borderRadius: 10, padding: '8px 14px',
-            }}>
-              <AlertTriangle size={13} color="#F59E0B" />
-              <span style={{ fontSize: 12, color: '#F59E0B' }}>Completa tus datos personales antes de registrar tu moto</span>
-            </div>
-          )}
-          <br/>
           <button
             onClick={() => setAddingMoto(true)}
-            disabled={!perfilOk}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               fontSize: 13, fontWeight: 700, color: '#fff',
-              background: perfilOk ? '#E11428' : 'rgba(255,255,255,0.08)',
+              background: '#E11428',
               border: 'none', borderRadius: 10, padding: '10px 22px',
-              cursor: perfilOk ? 'pointer' : 'not-allowed',
+              cursor: 'pointer',
             }}
           >
             <Plus size={15} /> Registrar mi moto
@@ -495,34 +487,27 @@ export default function MiMotoPage() {
             );
           })}
 
-          {/* Botón agregar otra moto — requiere datos personales completos */}
           {!addingMoto && (
-            perfilOk ? (
-              <button
-                onClick={() => setAddingMoto(true)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
-                  width: '100%', padding: '13px', borderRadius: 14,
-                  background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)',
-                  color: 'rgba(255,255,255,0.35)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  transition: 'all 180ms',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(225,20,40,0.3)';
-                  (e.currentTarget as HTMLElement).style.color = '#E11428';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)';
-                  (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)';
-                }}
-              >
-                <Plus size={15} /> Agregar otra moto
-              </button>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '13px', borderRadius: 14, background: 'rgba(245,158,11,0.06)', border: '1px dashed rgba(245,158,11,0.25)', color: '#F59E0B', fontSize: 12.5, fontWeight: 600 }}>
-                <AlertTriangle size={14} /> Completa tus datos personales para agregar otra moto
-              </div>
-            )
+            <button
+              onClick={() => setAddingMoto(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
+                width: '100%', padding: '13px', borderRadius: 14,
+                background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.35)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                transition: 'all 180ms',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(225,20,40,0.3)';
+                (e.currentTarget as HTMLElement).style.color = '#E11428';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)';
+                (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)';
+              }}
+            >
+              <Plus size={15} /> Agregar otra moto
+            </button>
           )}
         </div>
       )}
@@ -548,8 +533,8 @@ export default function MiMotoPage() {
               <label style={label}>
                 Foto de tu moto <span style={{ color: 'rgba(255,255,255,0.2)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional)</span>
               </label>
-              <div
-                onClick={() => fileInputRef.current?.click()}
+              <label
+                htmlFor="moto-photo-input"
                 style={{
                   border: `1px dashed ${photoPreview ? 'rgba(225,20,40,0.35)' : 'rgba(255,255,255,0.1)'}`,
                   borderRadius: 12, cursor: 'pointer', overflow: 'hidden',
@@ -567,7 +552,7 @@ export default function MiMotoPage() {
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>Toca para subir una foto</span>
                   </div>
                 )}
-              </div>
+              </label>
               {photoPreview && (
                 <button
                   type="button"
@@ -577,22 +562,22 @@ export default function MiMotoPage() {
                   <X size={10} /> Quitar foto
                 </button>
               )}
-              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onSelectPhoto} />
+              <input ref={fileInputRef} id="moto-photo-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={onSelectPhoto} />
             </div>
 
             {/* Fila 1 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
               <Input label="Marca" type="text" placeholder="Ej. Honda, Yamaha…" error={errMoto.marca?.message} {...regMoto('marca')} />
               <Input label="Modelo" type="text" placeholder="Ej. CB300R, MT-07…" error={errMoto.modelo?.message} {...regMoto('modelo')} />
             </div>
             {/* Fila 2 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12 }}>
               <Input label="Placa" type="text" placeholder="ABC-1234" error={errMoto.placa?.message} {...regMoto('placa')} />
               <Input label="Año" type="number" placeholder={String(new Date().getFullYear())} error={errMoto.anio?.message} {...regMoto('anio')} />
               <Input label="Nombre (apodo)" type="text" placeholder="Opcional" error={errMoto.nombre_moto?.message} {...regMoto('nombre_moto')} />
             </div>
             {/* Fila 3 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12 }}>
               <Input label="Cilindraje (cc)" type="number" placeholder="300" error={errMoto.cilindraje?.message} {...regMoto('cilindraje')} />
               <Input label="Kilometraje" type="number" placeholder="0" error={errMoto.kilometraje?.message} {...regMoto('kilometraje')} />
               {/* Tipo de moto */}

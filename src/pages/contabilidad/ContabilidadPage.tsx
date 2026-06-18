@@ -9,7 +9,7 @@ import {
   ArrowUpRight, ArrowDownRight, BarChart2, Receipt,
 } from 'lucide-react';
 import { registrosApi, pagosEmpleadoApi, usuariosApi, type PagoEmpleadoAPI } from '../../lib/api';
-import { fmtMoney, fmtDate, getErrorMsg } from '../../lib/utils';
+import { fmtMoney, fmtDate, getErrorMsg, toIsoStr } from '../../lib/utils';
 import { useToast } from '../../components/ui/Toast';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
@@ -101,11 +101,11 @@ export default function ContabilidadPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   /* ── filtrado por periodo ── */
-  const filtrar = <T extends { fecha: string }>(arr: T[]): T[] => {
+  const filtrar = <T extends { fecha: unknown }>(arr: T[]): T[] => {
     if (periodo === 'todo') return arr;
-    if (periodo === 'anio') return arr.filter(x => x.fecha.startsWith(String(anio)));
+    if (periodo === 'anio') return arr.filter(x => toIsoStr(x.fecha).startsWith(String(anio)));
     return arr.filter(x => {
-      const [y, m] = x.fecha.split('-').map(Number);
+      const [y, m] = toIsoStr(x.fecha).split('-').map(Number);
       return y === anio && m === mes;
     });
   };
@@ -136,12 +136,12 @@ export default function ContabilidadPage() {
 
   /* ── datos mensuales para el chart ── */
   const { chartIngresos, chartGastos } = useMemo(() => {
-    const cobrados = registros.filter(r => r.estado === 4 && r.fecha.startsWith(String(anio)));
+    const cobrados = registros.filter(r => r.estado === 4 && toIsoStr(r.fecha).startsWith(String(anio)));
     const ing  = Array.from({ length: 12 }, (_, m) =>
-      cobrados.filter(r => Number(r.fecha.slice(5,7)) === m + 1).reduce((s,r) => s + (r.costo_total??0), 0)
+      cobrados.filter(r => Number(toIsoStr(r.fecha).slice(5,7)) === m + 1).reduce((s,r) => s + (r.costo_total??0), 0)
     );
     const gas  = Array.from({ length: 12 }, (_, m) =>
-      gastos.filter(g => g.fecha.startsWith(String(anio)) && Number(g.fecha.slice(5,7)) === m + 1)
+      gastos.filter(g => toIsoStr(g.fecha).startsWith(String(anio)) && Number(toIsoStr(g.fecha).slice(5,7)) === m + 1)
              .reduce((s,g) => s + Number(g.monto), 0)
     );
     return { chartIngresos: ing, chartGastos: gas };
@@ -187,10 +187,10 @@ export default function ContabilidadPage() {
   const movimientos = useMemo(() => {
     const ing = registros
       .filter(r => r.estado === 4)
-      .map(r => ({ tipo: 'ingreso' as const, fecha: r.fecha, desc: `Servicio · ${r.placa}`, monto: r.costo_total ?? 0, id: r.id_registro }))
+      .map(r => ({ tipo: 'ingreso' as const, fecha: toIsoStr(r.fecha), desc: `Servicio · ${r.placa}`, monto: r.costo_total ?? 0, id: r.id_registro }))
       .slice(0, 20);
     const gas = gastos
-      .map(g => ({ tipo: 'gasto' as const, fecha: g.fecha, desc: `${g.concepto} — ${nombreEmpleado(g.id_empleado)}`, monto: Number(g.monto), id: g.id_pago, id_pago: g.id_pago }))
+      .map(g => ({ tipo: 'gasto' as const, fecha: toIsoStr(g.fecha), desc: `${g.concepto} — ${nombreEmpleado(g.id_empleado)}`, monto: Number(g.monto), id: g.id_pago, id_pago: g.id_pago }))
       .slice(0, 20);
     return [...ing, ...gas].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 25);
   // eslint-disable-next-line react-hooks/exhaustive-deps

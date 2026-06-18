@@ -874,16 +874,18 @@ export default function ClientesPage() {
     return clientes.filter(c => {
       const cedula = extractCedula(c.descripcion) ?? '';
       const phone  = extractPhone(c.descripcion) ?? '';
+      const placas = motos.filter(m => m.id_usuario === c.id_usuario).map(m => m.placa.toLowerCase());
       return (
         c.nombre_completo.toLowerCase().includes(q) ||
         c.correo.toLowerCase().includes(q) ||
         c.nombre_usuario.toLowerCase().includes(q) ||
         cedula.includes(q) ||
         phone.includes(q) ||
-        (c.ciudad ?? '').toLowerCase().includes(q)
+        (c.ciudad ?? '').toLowerCase().includes(q) ||
+        placas.some(p => p.includes(q))
       );
     });
-  }, [clientes, search]);
+  }, [clientes, search, motos]);
 
   /* KPIs */
   const clienteNombres = useMemo(() => new Set(clientes.map(c=>c.nombre_completo)), [clientes]);
@@ -989,7 +991,7 @@ export default function ClientesPage() {
               <Search size={14} />
               <input
                 className="gm-input-d w-full"
-                placeholder="Nombre, cédula, teléfono, correo o ciudad..."
+                placeholder="Nombre, cédula, teléfono, correo, ciudad o placa..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -1018,7 +1020,7 @@ export default function ClientesPage() {
                   {search ? 'Sin resultados para esa búsqueda' : 'No hay clientes registrados'}
                 </p>
                 <p className="text-[11px] text-white/20 mt-1">
-                  {search ? 'Prueba con nombre, cédula o teléfono' : 'Registra clientes desde la sección Perfiles'}
+                  {search ? 'Prueba con nombre, cédula, teléfono o placa' : 'Registra clientes desde la sección Perfiles'}
                 </p>
               </div>
             </div>
