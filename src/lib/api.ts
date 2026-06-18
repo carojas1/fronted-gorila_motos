@@ -5,7 +5,14 @@
 
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
+/* Base URL del backend.
+   - En el APK (Capacitor) la WebView corre en https://localhost, por lo que
+     una ruta relativa '/api' apuntaría al propio dispositivo y fallaría.
+     Por eso el fallback es la URL ABSOLUTA del backend en Render.
+   - En Vercel se puede sobreescribir con VITE_API_URL si hiciera falta. */
+const BASE_URL =
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  'https://backend-gorila-motos.onrender.com/api';
 
 export const api = axios.create({
   baseURL: BASE_URL,

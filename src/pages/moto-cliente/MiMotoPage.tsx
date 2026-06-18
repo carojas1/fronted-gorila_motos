@@ -16,6 +16,7 @@ import {
 import { motosApi, usuariosApi, mantenimientosApi } from '../../lib/api';
 import { usePolling } from '../../hooks/usePolling';
 import { comprimirImagen, imagenMoto } from '../../lib/fotos';
+import { esNativo, tomarFotoNativa } from '../../lib/camara';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg, extractPhone, extractCedula } from '../../lib/utils';
@@ -64,6 +65,8 @@ export default function MiMotoPage() {
 
   const [photoFile,    setPhotoFile]   = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  /* Cuando la foto viene de la cámara nativa ya es un dataURL comprimido. */
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [savingPhotoId, setSavingPhotoId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -160,12 +163,27 @@ export default function MiMotoPage() {
     }
   }, [editingPerfil]);
 
-  /* ── Seleccionar foto (formulario de nueva moto) ── */
+  /* ── Seleccionar foto (formulario de nueva moto) — WEB ── */
   const onSelectPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setPhotoFile(file);
+    setPhotoDataUrl(null);
     setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  /* ── Seleccionar foto en el APK — cámara/galería nativa con permisos ── */
+  const onPickPhotoNative = async () => {
+    try {
+      const dataUrl = await tomarFotoNativa('preguntar');
+      setPhotoDataUrl(dataUrl);
+      setPhotoFile(null);
+      setPhotoPreview(dataUrl);
+    } catch (err) {
+      const msg = getErrorMsg(err);
+      // El usuario cancelando no es un error que mostrar
+      if (!/cancel/i.test(msg)) toast.error('No se pudo abrir la cámara. Revisa los permisos.', 'Foto');
+    }
   };
 
   /* ── Cambiar la foto de una moto YA registrada (cada quien la suya) ── */
@@ -188,6 +206,7 @@ export default function MiMotoPage() {
     setAddingMoto(false);
     resetMoto();
     setPhotoFile(null);
+    setPhotoDataUrl(null);
     setPhotoPreview(null);
   };
 
@@ -196,9 +215,11 @@ export default function MiMotoPage() {
     if (!user?.id_usuario) return;
     setSavingMoto(true);
     try {
-      /* 1. Comprimir la foto en el dispositivo (instantáneo, sin servidor) */
-      let fotoBase64: string | null = null;
-      if (photoFile) {
+      /* 1. Obtener la foto como dataURL comprimido.
+            - Cámara nativa (APK): ya viene comprimida → photoDataUrl.
+            - Web: comprimir el File seleccionado. */
+      let fotoBase64: string | null = photoDataUrl;
+      if (!fotoBase64 && photoFile) {
         try { fotoBase64 = await comprimirImagen(photoFile); } catch { /* se guarda sin foto */ }
       }
       /* 2. Crear moto */
@@ -219,6 +240,7 @@ export default function MiMotoPage() {
       resetMoto();
       setAddingMoto(false);
       setPhotoFile(null);
+      setPhotoDataUrl(null);
       setPhotoPreview(null);
       toast.success('¡Moto registrada correctamente!', 'Mi Moto');
     } catch (err) {
@@ -533,30 +555,34 @@ export default function MiMotoPage() {
               <label style={label}>
                 Foto de tu moto <span style={{ color: 'rgba(255,255,255,0.2)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional)</span>
               </label>
-              <label
-                htmlFor="moto-photo-input"
-                style={{
+              {(() => {
+                const boxStyle = {
                   border: `1px dashed ${photoPreview ? 'rgba(225,20,40,0.35)' : 'rgba(255,255,255,0.1)'}`,
                   borderRadius: 12, cursor: 'pointer', overflow: 'hidden',
                   background: 'rgba(255,255,255,0.02)', transition: 'border-color 180ms',
                   minHeight: 80, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(225,20,40,0.4)')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = photoPreview ? 'rgba(225,20,40,0.35)' : 'rgba(255,255,255,0.1)')}
-              >
-                {photoPreview ? (
+                } as const;
+                const inner = photoPreview ? (
                   <img src={photoPreview} alt="preview" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }} />
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 20 }}>
                     <Camera size={22} color="rgba(255,255,255,0.2)" />
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>Toca para subir una foto</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>
+                      {esNativo() ? 'Toca para tomar o elegir una foto' : 'Toca para subir una foto'}
+                    </span>
                   </div>
-                )}
-              </label>
+                );
+                // APK nativo → cámara/galería de Capacitor. Web → <label> + <input file>.
+                return esNativo() ? (
+                  <div role="button" onClick={onPickPhotoNative} style={boxStyle}>{inner}</div>
+                ) : (
+                  <label htmlFor="moto-photo-input" style={boxStyle}>{inner}</label>
+                );
+              })()}
               {photoPreview && (
                 <button
                   type="button"
-                  onClick={() => { setPhotoFile(null); setPhotoPreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                  onClick={() => { setPhotoFile(null); setPhotoDataUrl(null); setPhotoPreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
                   style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}
                 >
                   <X size={10} /> Quitar foto
