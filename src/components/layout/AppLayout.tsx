@@ -7,20 +7,44 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 // AnimatePresence kept for mobile drawer only — main content uses plain motion.div to avoid scroll freeze
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, ChevronDown, Menu, X } from 'lucide-react';
+import { LogOut, ChevronDown, Menu, X, KeyRound } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import { initials, parsePermisos } from '../../lib/utils';
+import { initials, parsePermisos, getErrorMsg } from '../../lib/utils';
 import { NotificationBell, NotificationPanel } from '../ui/NotificationCenter';
 import { useNotifications } from '../../hooks/useNotifications';
 import TermsModal, { useTermsAccepted } from '../ui/TermsModal';
-import { healthApi } from '../../lib/api';
+import { healthApi, usuariosApi } from '../../lib/api';
+import { useToast } from '../ui/Toast';
+import Modal from '../ui/Modal';
+import Button from '../ui/Button';
 import ErrorBoundary from '../ui/ErrorBoundary';
 
 export default function AppLayout() {
   const { user, isAdmin, isMecanico, isCliente, logout } = useAuth();
   const location  = useLocation();
   const navigate  = useNavigate();
+  const toast      = useToast();
   const { unread } = useNotifications();
+
+  /* Cambiar/crear contraseña (sirve para quien entró con Google y quiere
+     poder iniciar sesión también escribiendo su correo y contraseña) */
+  const [pwOpen,    setPwOpen]    = useState(false);
+  const [pw1,       setPw1]       = useState('');
+  const [pw2,       setPw2]       = useState('');
+  const [pwSaving,  setPwSaving]  = useState(false);
+
+  const guardarPassword = async () => {
+    if (pw1.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (pw1 !== pw2)    { toast.error('Las contraseñas no coinciden'); return; }
+    if (!user?.id_usuario) { toast.error('Sesión no válida'); return; }
+    setPwSaving(true);
+    try {
+      await usuariosApi.update(user.id_usuario, { contrasena: pw1 });
+      toast.success('Contraseña actualizada · ya puedes entrar escribiendo tu correo', 'Listo');
+      setPwOpen(false); setPw1(''); setPw2(''); setOpen(false);
+    } catch (err) { toast.error(getErrorMsg(err)); }
+    finally { setPwSaving(false); }
+  };
   const [notifOpen, setNotifOpen]       = useState(false);
   const notifRef                        = useRef<HTMLDivElement>(null);
   const [open, setOpen]                 = useState(false);
@@ -450,8 +474,19 @@ export default function AppLayout() {
                     </div>
                   </div>
 
-                  {/* Logout */}
-                  <div className="p-2">
+                  {/* Acciones de cuenta */}
+                  <div className="p-2 space-y-1">
+                    <button
+                      onClick={() => { setPwOpen(true); setOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-bold transition-all text-white/70"
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; }}
+                    >
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500/10 border border-blue-500/20">
+                        <KeyRound size={14} className="text-blue-400" />
+                      </div>
+                      Crear / cambiar contraseña
+                    </button>
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-bold transition-all"
@@ -494,6 +529,39 @@ export default function AppLayout() {
             </ErrorBoundary>
           </motion.div>
       </main>
+
+      {/* ══ MODAL: crear / cambiar contraseña ══ */}
+      <Modal
+        open={pwOpen}
+        onClose={() => { setPwOpen(false); setPw1(''); setPw2(''); }}
+        title="Crear o cambiar contraseña"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setPwOpen(false); setPw1(''); setPw2(''); }}>Cancelar</Button>
+            <Button onClick={guardarPassword} loading={pwSaving} disabled={!pw1 || !pw2}>
+              <KeyRound size={14} /> Guardar contraseña
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-[12px] text-white/45 leading-relaxed">
+            Define una contraseña para tu cuenta <strong className="text-white/70">{user?.correo}</strong>.
+            Así podrás iniciar sesión escribiendo tu correo y contraseña (además de Google).
+          </p>
+          <div>
+            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Nueva contraseña</label>
+            <input type="password" className="gm-input-d w-full" placeholder="Mínimo 6 caracteres"
+                   value={pw1} onChange={e => setPw1(e.target.value)} autoComplete="new-password" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Repetir contraseña</label>
+            <input type="password" className="gm-input-d w-full" placeholder="Vuelve a escribirla"
+                   value={pw2} onChange={e => setPw2(e.target.value)} autoComplete="new-password" />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
