@@ -3,7 +3,7 @@
    Registro clínico al ingreso de cada vehículo
    ───────────────────────────────────────────── */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   ClipboardList, Search, Bike, CheckCircle, AlertTriangle, XCircle,
@@ -11,6 +11,7 @@ import {
   Cog, Link2, Shield, Circle, ArrowUpDown, Droplets, Zap, type LucideIcon,
 } from 'lucide-react';
 import { motosApi, diagnosticosApi, usuariosApi } from '../../lib/api';
+import { usePolling } from '../../hooks/usePolling';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
@@ -148,24 +149,29 @@ export default function DiagnosticoPage() {
     Object.fromEntries(PARTES.map(p => [p.key, { estado: 1, obs: '' }]))
   );
 
-  useEffect(() => {
-    Promise.allSettled([
+  const load = useCallback(async () => {
+    const [m, u, h] = await Promise.allSettled([
       motosApi.list(),
       usuariosApi.list(),
       user ? diagnosticosApi.byMecanico(user.id_usuario) : Promise.reject(),
-    ]).then(([m, u, h]) => {
-      if (m.status === 'fulfilled') {
-        const lista = m.value.data as Moto[];
-        setMotos(lista);
-        if (preselected.current) {
-          const found = lista.find(mo => mo.id_moto === parseInt(preselected.current!));
-          if (found) { setMotoSel(found); setBusqueda(`${found.marca} ${found.modelo}`); }
-        }
+    ]);
+    if (m.status === 'fulfilled') {
+      const lista = m.value.data as Moto[];
+      setMotos(lista);
+      if (preselected.current) {
+        const found = lista.find(mo => mo.id_moto === parseInt(preselected.current!));
+        if (found) { setMotoSel(found); setBusqueda(`${found.marca} ${found.modelo}`); }
       }
-      if (u.status === 'fulfilled') setUsuarios(u.value.data as Usuario[]);
-      if (h.status === 'fulfilled') setHistorial(h.value.data as DiagnosticoMoto[]);
-    }).finally(() => setLoading(false));
+    }
+    if (u.status === 'fulfilled') setUsuarios(u.value.data as Usuario[]);
+    if (h.status === 'fulfilled') setHistorial(h.value.data as DiagnosticoMoto[]);
+    setLoading(false);
   }, [user]);
+
+  useEffect(() => { load(); }, [load]);
+
+  /* Refresco en tiempo real del historial de diagnósticos */
+  usePolling(load, { intervalMs: 30_000 });
 
   const motosFiltradas = motos.filter(m => {
     const q = busqueda.toLowerCase();
@@ -205,6 +211,7 @@ export default function DiagnosticoPage() {
     try {
       const { data } = await diagnosticosApi.create(diagnostico as unknown as Record<string, unknown>);
       setHistorial(prev => [data as DiagnosticoMoto, ...prev]);
+      load(); // sincroniza con la verdad del servidor (evita duplicados/estados viejos)
       toast.success('Diagnóstico registrado · reporte enviado al cliente', 'Diagnóstico');
       /* Resumen + confirmación de correo (el backend envía el reporte al dueño) */
       const owner = usuarios.find(u => u.id_usuario === motoSel.id_usuario);

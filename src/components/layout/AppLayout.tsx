@@ -14,6 +14,7 @@ import { NotificationBell, NotificationPanel } from '../ui/NotificationCenter';
 import { useNotifications } from '../../hooks/useNotifications';
 import TermsModal, { useTermsAccepted } from '../ui/TermsModal';
 import { healthApi } from '../../lib/api';
+import ErrorBoundary from '../ui/ErrorBoundary';
 
 export default function AppLayout() {
   const { user, isAdmin, isMecanico, isCliente, logout } = useAuth();
@@ -486,7 +487,11 @@ export default function AppLayout() {
             transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
             className="p-4 md:p-6 lg:p-8 max-w-screen-2xl mx-auto"
           >
-            <Outlet />
+            {/* Boundary por página: si una pantalla falla, el menú sigue vivo
+                y al navegar a otra ruta (resetKey) se recupera sola. */}
+            <ErrorBoundary resetKey={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </motion.div>
       </main>
     </div>

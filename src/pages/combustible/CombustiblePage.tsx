@@ -5,7 +5,7 @@
    km_actual es opcional; si se da, actualiza el km de la moto
    ───────────────────────────────────────────── */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Fuel, Plus, Trash2, TrendingDown, DollarSign, Gauge, X,
@@ -16,6 +16,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
 import { motosApi, combustibleApi, usuariosApi } from '../../lib/api';
+import { usePolling } from '../../hooks/usePolling';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg, fmtDate, fmtMoney } from '../../lib/utils';
@@ -70,7 +71,7 @@ export default function CombustiblePage() {
   /* Admin: buscador global (usuario, correo, placa) y vista de todos los registros */
   const [adminSearch, setAdminSearch] = useState('');
 
-  const cargarLogs = (misMotos: Moto[]) => {
+  const cargarLogs = useCallback((misMotos: Moto[]) => {
     if (isAdmin || isMecanico) {
       combustibleApi.list().then(r => setLogs(r.data as CargaCombustible[])).catch(() => {});
     } else {
@@ -81,22 +82,27 @@ export default function CombustiblePage() {
           setLogs(all);
         });
     }
-  };
+  }, [isAdmin, isMecanico]);
 
-  useEffect(() => {
-    motosApi.list().then(r => {
+  const recargar = useCallback(async () => {
+    try {
+      const r = await motosApi.list();
       const all: Moto[] = r.data;
       const mine = (isAdmin || isMecanico) ? all : all.filter(m => m.id_usuario === user?.id_usuario);
       setMotos(mine);
-      if (mine.length > 0) setSelMoto(mine[0].id_moto);
+      // Preserva la moto ya seleccionada (no pisa la elección del usuario en cada poll)
+      setSelMoto(prev => prev ?? (mine.length > 0 ? mine[0].id_moto : null));
       cargarLogs(mine);
-    }).catch(() => {});
-    /* Admin/mecánico: cargar usuarios para mostrar dueño + correo de cada carga */
+    } catch { /* silencioso */ }
     if (isAdmin || isMecanico) {
       usuariosApi.list().then(r => setUsuarios(r.data as Usuario[])).catch(() => {});
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin, isMecanico]);
+  }, [user, isAdmin, isMecanico, cargarLogs]);
+
+  useEffect(() => { recargar(); }, [recargar]);
+
+  /* Refresco en tiempo real de cargas de combustible */
+  usePolling(recargar, { intervalMs: 30_000 });
 
   /* Dueño (nombre + correo) por id_moto — para la vista de admin */
   const ownerByMoto = useMemo(() => {
@@ -188,9 +194,11 @@ export default function CombustiblePage() {
         notas:            `[${form.tipo_combustible.toUpperCase()}] ${form.notas || ''}`.trim(),
       });
 
-      /* Actualizar km de la moto si se ingresó km_actual */
+      /* Actualizar km de la moto si se ingresó km_actual.
+         Enviamos SOLO el kilometraje (update parcial en el backend) para nunca
+         arrastrar datos viejos ni la foto — el backend conserva el resto. */
       if (moto && kmActual && kmActual > 0) {
-        await motosApi.update(moto.id_moto, { ...moto, kilometraje: kmActual }).catch(() => {});
+        await motosApi.update(moto.id_moto, { kilometraje: kmActual }).catch(() => {});
         /* Actualizar lista local de motos con el nuevo km */
         setMotos(prev => prev.map(m => m.id_moto === moto.id_moto ? { ...m, kilometraje: kmActual } : m));
       }

@@ -4,7 +4,7 @@
    Incluye sección para completar datos personales (cédula / teléfono).
    ───────────────────────────────────────────── */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ import {
   Gauge, Activity,
 } from 'lucide-react';
 import { motosApi, usuariosApi, mantenimientosApi } from '../../lib/api';
+import { usePolling } from '../../hooks/usePolling';
 import { comprimirImagen, imagenMoto } from '../../lib/fotos';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
@@ -96,34 +97,45 @@ export default function MiMotoPage() {
     formState: { errors: errPerfil },
   } = useForm<PerfilForm>({ resolver: zodResolver(perfilSchema) });
 
-  /* Cargar motos del usuario */
-  useEffect(() => {
+  /* Cargar motos del usuario.
+     `silent` evita el spinner y NO pisa lo que el usuario está escribiendo
+     en el campo de kilometraje (solo rellena entradas faltantes). */
+  const cargarMotos = useCallback(async (silent = false) => {
     if (!user?.id_usuario) return;
-    setLoadingMotos(true);
-    motosApi.byUser(user.id_usuario)
-      .then(({ data }) => {
-        const lista = Array.isArray(data) ? data as Moto[] : [];
-        setMotos(lista);
-        setKmMoto(Object.fromEntries(lista.map(m => [m.id_moto, String(m.kilometraje)])));
-        // Mantenimientos (nube) para los badges de cada moto
-        Promise.allSettled(lista.map(m => mantenimientosApi.byMoto(m.id_moto)))
-          .then(res => {
-            const map: Record<number, Record<string, number>> = {};
-            res.forEach((r, i) => {
-              if (r.status === 'fulfilled') {
-                const sm: Record<string, number> = {};
-                (r.value.data as { tipo: string; kmServicio: number }[]).forEach(x => {
-                  sm[x.tipo] = Math.max(sm[x.tipo] ?? 0, x.kmServicio);
-                });
-                map[lista[i].id_moto] = sm;
-              }
-            });
-            setServiciosMap(map);
+    if (!silent) setLoadingMotos(true);
+    try {
+      const { data } = await motosApi.byUser(user.id_usuario);
+      const lista = Array.isArray(data) ? data as Moto[] : [];
+      setMotos(lista);
+      setKmMoto(prev => {
+        const next = { ...prev };
+        // Solo inicializa el km que aún no existe en el form (preserva edición en curso)
+        lista.forEach(m => {
+          if (next[m.id_moto] === undefined) next[m.id_moto] = String(m.kilometraje);
+        });
+        return next;
+      });
+      const res = await Promise.allSettled(lista.map(m => mantenimientosApi.byMoto(m.id_moto)));
+      const map: Record<number, Record<string, number>> = {};
+      res.forEach((r, i) => {
+        if (r.status === 'fulfilled') {
+          const sm: Record<string, number> = {};
+          (r.value.data as { tipo: string; kmServicio: number }[]).forEach(x => {
+            sm[x.tipo] = Math.max(sm[x.tipo] ?? 0, x.kmServicio);
           });
-      })
-      .catch(() => setMotos([]))
-      .finally(() => setLoadingMotos(false));
+          map[lista[i].id_moto] = sm;
+        }
+      });
+      setServiciosMap(map);
+    } catch { setMotos([]); }
+    finally { if (!silent) setLoadingMotos(false); }
   }, [user?.id_usuario]);
+
+  useEffect(() => { cargarMotos(false); }, [cargarMotos]);
+
+  /* Refresco en tiempo real (silencioso): si el taller actualiza la moto,
+     el cliente lo ve sin recargar — sin pisar su edición de kilometraje */
+  usePolling(() => cargarMotos(true), { intervalMs: 30_000 });
 
   /* Actualizar km — EstadoMotoLive se recalcula solo al cambiar moto.kilometraje */
   const actualizarKm = async (moto: Moto) => {

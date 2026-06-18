@@ -804,7 +804,7 @@ export default function InventoryPage() {
                       >
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-black text-white shrink-0"
                              style={{ background: 'rgba(225,20,40,0.18)', border: '1px solid rgba(225,20,40,0.3)' }}>
-                          {u.nombre_completo.charAt(0).toUpperCase()}
+                          {u.nombre_completo?.charAt(0)?.toUpperCase() ?? '?'}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[13px] font-semibold text-white/85 truncate">{u.nombre_completo}</p>
@@ -831,7 +831,7 @@ export default function InventoryPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-black text-white shrink-0"
                        style={{ background: 'rgba(225,20,40,0.18)', border: '1px solid rgba(225,20,40,0.3)' }}>
-                    {vnCliente.nombre.charAt(0).toUpperCase()}
+                    {vnCliente.nombre?.charAt(0)?.toUpperCase() ?? '?'}
                   </div>
                   <div className="min-w-0">
                     <p className="text-[14px] font-bold text-white/90 truncate">{vnCliente.nombre}</p>

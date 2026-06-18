@@ -8,6 +8,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Bell, CheckCircle, Bike, Search, RefreshCw } from 'lucide-react';
 import { motosApi, registrosApi, usuariosApi } from '../../lib/api';
+import { usePolling } from '../../hooks/usePolling';
 import type { Moto, RegistroDetalle, Usuario, MotoAlerta } from '../../types';
 import { fmtDate } from '../../lib/utils';
 
@@ -90,6 +91,9 @@ export default function AlertasPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  /* Refresco en tiempo real: alertas reflejan servicios recién registrados */
+  usePolling(load, { intervalMs: 30_000 });
 
   const counts = {
     overdue: alertas.filter(a => a.urgency === 'overdue').length,

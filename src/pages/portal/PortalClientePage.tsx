@@ -4,13 +4,14 @@
    puntos y alertas de mantenimiento
    ───────────────────────────────────────────── */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bike, Star, Wrench, Clock, AlertTriangle,
   CheckCircle, ChevronRight, Phone, MapPin, Mail,
 } from 'lucide-react';
 import { motosApi, registrosApi } from '../../lib/api';
+import { usePolling } from '../../hooks/usePolling';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Moto, RegistroDetalle } from '../../types';
 import { fmtDate, fmtMoney, toIsoStr } from '../../lib/utils';
@@ -55,21 +56,25 @@ export default function PortalClientePage() {
   const [tab,      setTab]      = useState<'historial' | 'alertas' | 'puntos'>('historial');
   const [filterPlaca, setFilterPlaca] = useState('');
 
-  useEffect(() => {
-    Promise.allSettled([motosApi.list(), registrosApi.list()]).then(([mr, rr]) => {
-      const allMotos:    Moto[]            = mr.status === 'fulfilled' ? mr.value.data : [];
-      const allRegistros:RegistroDetalle[] = rr.status === 'fulfilled' ? rr.value.data : [];
+  const load = useCallback(async () => {
+    const [mr, rr] = await Promise.allSettled([motosApi.list(), registrosApi.list()]);
+    const allMotos:    Moto[]            = mr.status === 'fulfilled' ? mr.value.data : [];
+    const allRegistros:RegistroDetalle[] = rr.status === 'fulfilled' ? rr.value.data : [];
 
-      const myMotos    = allMotos.filter(m => m.id_usuario === user?.id_usuario);
-      const myPlacas   = new Set(myMotos.map(m => m.placa));
-      const myRegistros= allRegistros.filter(r => myPlacas.has(r.placa))
-                                     .sort((a,b) => toIsoStr(b.fecha).localeCompare(toIsoStr(a.fecha)));
+    const myMotos    = allMotos.filter(m => m.id_usuario === user?.id_usuario);
+    const myPlacas   = new Set(myMotos.map(m => m.placa));
+    const myRegistros= allRegistros.filter(r => myPlacas.has(r.placa))
+                                   .sort((a,b) => toIsoStr(b.fecha).localeCompare(toIsoStr(a.fecha)));
 
-      setMotos(myMotos);
-      setRegistros(myRegistros);
-      setLoading(false);
-    });
+    setMotos(myMotos);
+    setRegistros(myRegistros);
+    setLoading(false);
   }, [user]);
+
+  useEffect(() => { load(); }, [load]);
+
+  /* Refresco en tiempo real: el cliente ve nuevos servicios/km sin recargar */
+  usePolling(load, { intervalMs: 25_000 });
 
   /* Puntos totales */
   const puntosTotales = useMemo(() => {
@@ -118,7 +123,7 @@ export default function PortalClientePage() {
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-5">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl font-black shrink-0"
                style={{ background: 'rgba(225,20,40,0.12)', border: '2px solid rgba(225,20,40,0.25)', color: '#E11428' }}>
-            {user?.nombre_completo?.charAt(0).toUpperCase() ?? 'U'}
+            {user?.nombre_completo?.charAt(0)?.toUpperCase() ?? 'U'}
           </div>
           <div className="flex-1">
             <p className="text-[11px] text-white/30 font-bold uppercase tracking-widest">Mi portal</p>
@@ -181,7 +186,7 @@ export default function PortalClientePage() {
                   <p className="text-white/85 font-black text-sm">{m.marca} {m.modelo}</p>
                   <p className="text-white/35 text-xs mt-0.5">{m.anio} · {m.cilindraje}cc · {m.tipo_moto}</p>
                   <p className="text-white/50 text-xs mt-1">
-                    {m.kilometraje.toLocaleString()} km totales
+                    {(m.kilometraje ?? 0).toLocaleString()} km totales
                   </p>
                   {/* Barra aceite */}
                   <div className="mt-3">
@@ -304,7 +309,7 @@ export default function PortalClientePage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-black">{m.kilometraje.toLocaleString()} km</p>
+                  <p className="text-white font-black">{(m.kilometraje ?? 0).toLocaleString()} km</p>
                   {kmSince != null && (
                     <p className="text-[11px] mt-0.5" style={{ color: cfg.color }}>
                       {kmSince >= thr

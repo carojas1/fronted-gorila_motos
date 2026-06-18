@@ -401,7 +401,7 @@ export default function PuntosPage() {
                               <div className="flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shrink-0"
                                      style={{ background: `${lvl.color}18`, color: lvl.color }}>
-                                  {d.usuario.nombre_completo.charAt(0).toUpperCase()}
+                                  {d.usuario?.nombre_completo?.charAt(0)?.toUpperCase() ?? '?'}
                                 </div>
                                 <div>
                                   <p className="text-[13px] font-bold text-white/85 leading-tight">

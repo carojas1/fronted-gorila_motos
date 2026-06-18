@@ -121,9 +121,9 @@ function MotoCard({
     if (glowRef.current) glowRef.current.style.background = 'none';
   };
 
-  const km = moto.kilometraje.toLocaleString('es-CO');
+  const km = (moto.kilometraje ?? 0).toLocaleString('es-CO');
   const anioActual = new Date().getFullYear();
-  const antiguedad = anioActual - moto.anio;
+  const antiguedad = moto.anio ? anioActual - moto.anio : 0;
 
   return (
     <div

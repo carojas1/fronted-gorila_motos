@@ -21,6 +21,7 @@ import {
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { fmtDate, fmtMoney, ESTADO_REGISTRO, extractPhone, extractCedula, initials, toIsoStr } from '../../lib/utils';
+import { imagenMoto } from '../../lib/fotos';
 import type { Usuario, Moto, CargaCombustible, Factura, DetalleFactura } from '../../types';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -358,8 +359,8 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                 <div key={m.id_moto} className="gm-card-d rounded-2xl overflow-hidden">
                   <div className="h-[2px] bg-gradient-to-r from-blue-500/50 to-transparent" />
                   <div className="p-4 flex gap-4">
-                    {m.ruta_imagen_motos ? (
-                      <img src={m.ruta_imagen_motos} alt={m.placa}
+                    {imagenMoto(m) ? (
+                      <img src={imagenMoto(m)!} alt={m.placa}
                            className="w-20 h-16 rounded-xl object-cover shrink-0 border border-white/[0.08]" />
                     ) : (
                       <div className="w-20 h-16 rounded-xl shrink-0 flex items-center justify-center"

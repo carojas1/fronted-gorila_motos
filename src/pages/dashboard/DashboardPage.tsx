@@ -3,7 +3,7 @@
    KPIs reales · Recharts · Multi-rol
    ───────────────────────────────────────────── */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Wrench, Package, Bike, Users, ArrowRight,
@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { motosApi, registrosApi, productosApi, usuariosApi } from '../../lib/api';
 import { fmtDate, fmtMoney, ESTADO_REGISTRO } from '../../lib/utils';
+import { usePolling } from '../../hooks/usePolling';
 import { useCountUp } from '../../hooks/useGsap';
 import Badge from '../../components/ui/Badge';
 import type { RegistroDetalle, Moto, Producto } from '../../types';
@@ -85,17 +86,21 @@ export default function DashboardPage() {
   const firstName = user?.nombre_completo?.split(' ')[0] ?? 'Equipo';
   const isOpen   = hour >= 8 && hour < 18;
 
-  useEffect(() => {
-    Promise.allSettled([
+  const load = useCallback(async () => {
+    const [m, r, p, u] = await Promise.allSettled([
       motosApi.list(), registrosApi.list(), productosApi.list(), usuariosApi.list(),
-    ]).then(([m, r, p, u]) => {
-      setMotos(    m.status === 'fulfilled' ? m.value.data : []);
-      setRegistros(r.status === 'fulfilled' ? r.value.data : []);
-      setProductos(p.status === 'fulfilled' ? p.value.data : []);
-      setUsuarios( u.status === 'fulfilled' ? u.value.data : []);
-      setLoading(false);
-    });
+    ]);
+    if (m.status === 'fulfilled') setMotos(m.value.data);
+    if (r.status === 'fulfilled') setRegistros(r.value.data);
+    if (p.status === 'fulfilled') setProductos(p.value.data);
+    if (u.status === 'fulfilled') setUsuarios(u.value.data);
+    setLoading(false);
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  /* Refresco en tiempo real: cada 25 s y al volver a la pestaña */
+  usePolling(load, { intervalMs: 25_000 });
 
   /* ── Métricas derivadas ── */
   const ingresosTotal = useMemo(() =>
@@ -391,10 +396,10 @@ export default function DashboardPage() {
                   {isAdmin && <p className="text-sm font-black text-white/70">{fmtMoney(r.costo_total)}</p>}
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                         style={{
-                          background: `${ESTADO_COLORS[r.estado]}18`,
-                          color: ESTADO_COLORS[r.estado],
+                          background: `${ESTADO_COLORS[r.estado] ?? '#6B7280'}18`,
+                          color: ESTADO_COLORS[r.estado] ?? '#6B7280',
                         }}>
-                    {ESTADO_LABELS[r.estado]}
+                    {ESTADO_LABELS[r.estado] ?? '—'}
                   </span>
                 </div>
               </div>

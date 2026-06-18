@@ -18,6 +18,7 @@ import {
   fmtDate, fmtMoney, getErrorMsg, ESTADO_REGISTRO, extractPhone, toIsoStr,
 } from '../../lib/utils';
 import { calcularEstadoLocal } from '../../lib/mantenimiento';
+import { usePolling } from '../../hooks/usePolling';
 import type { RegistroDetalle, Usuario, Moto, Tipo } from '../../types';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -195,6 +196,9 @@ export default function RecordsPage() {
   }, [toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  /* Refresco en tiempo real: nuevas órdenes aparecen sin recargar */
+  usePolling(fetchData, { intervalMs: 20_000 });
 
   /* Mantenimientos (nube) de la moto seleccionada → para las recomendaciones por km */
   useEffect(() => {
