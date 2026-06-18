@@ -8,25 +8,20 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import gsap from 'gsap';
 import {
   ChevronLeft, Wrench, DollarSign, ShieldCheck, Plus, Trash2,
-  TrendingUp, BarChart2, Calendar, FileText,
+  TrendingUp, BarChart2, Calendar, FileText, CheckSquare, Square,
 } from 'lucide-react';
-import { usuariosApi } from '../../lib/api';
+import { usuariosApi, pagosEmpleadoApi, type PagoEmpleadoAPI } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
-import { fmtDate, fmtMoney, initials, getErrorMsg } from '../../lib/utils';
-import {
-  listarPagos, crearPago, eliminarPago, resumenFinanzas,
-  obtenerPermisos, guardarPermisos, MODULOS, PERMISOS_DEFAULT,
-  type PagoEmpleado, type ConceptoPago, type PermisosEmpleado,
-} from '../../lib/finanzasEmpleado';
+import { fmtDate, fmtMoney, initials, getErrorMsg, parsePermisos, setPermisos } from '../../lib/utils';
+import { MODULOS, type ModuloKey, type PermisosEmpleado } from '../../lib/finanzasEmpleado';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
-import Input from '../../components/ui/Input';
 import type { Usuario } from '../../types';
 
 type Tab = 'resumen' | 'pagos' | 'permisos';
 
+type ConceptoPago = 'Sueldo' | 'Bono' | 'Comisión' | 'Anticipo' | 'Otro';
 const CONCEPTOS: ConceptoPago[] = ['Sueldo', 'Bono', 'Comisión', 'Anticipo', 'Otro'];
-
 const MES_LABELS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 /* ─── Mini bar chart SVG ─── */
@@ -39,7 +34,7 @@ function BarChart({ data }: { data: { mes: number; total: number }[] }) {
         return (
           <div key={mes} className="flex-1 flex flex-col items-center gap-1 group" title={`${MES_LABELS[mes]}: ${fmtMoney(total)}`}>
             <div
-              className="w-full rounded-t-sm transition-all duration-700 group-hover:opacity-100"
+              className="w-full rounded-t-sm transition-all duration-700"
               style={{
                 height: `${h}%`,
                 background: total > 0
@@ -60,19 +55,49 @@ function BarChart({ data }: { data: { mes: number; total: number }[] }) {
 
 /* ─── Tab: Resumen ─── */
 function TabResumen({ idEmpleado }: { idEmpleado: number }) {
-  const anio   = new Date().getFullYear();
-  const resumen = resumenFinanzas(idEmpleado, anio);
+  const [pagos, setPagos] = useState<PagoEmpleadoAPI[]>([]);
+  const [loading, setLoading] = useState(true);
+  const anio = new Date().getFullYear();
+
+  useEffect(() => {
+    pagosEmpleadoApi.listByEmployee(idEmpleado)
+      .then(({ data }) => setPagos(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [idEmpleado]);
+
+  const delAnio = pagos.filter(p => p.fecha.startsWith(String(anio)));
+  const porMes  = Array.from({ length: 12 }, (_, m) => ({
+    mes: m,
+    total: delAnio
+      .filter(p => Number(p.fecha.slice(5, 7)) === m + 1)
+      .reduce((s, p) => s + Number(p.monto), 0),
+  }));
+  const totalYTD       = delAnio.reduce((s, p) => s + Number(p.monto), 0);
+  const mesActual      = new Date().getMonth() + 1;
+  const totalMesActual = delAnio
+    .filter(p => Number(p.fecha.slice(5, 7)) === mesActual)
+    .reduce((s, p) => s + Number(p.monto), 0);
+  const promedio       = delAnio.length ? totalYTD / delAnio.length : 0;
+  const ultimo         = pagos[0] ?? null;
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        {[1,2,3,4].map(i => <div key={i} className="gm-card-d rounded-2xl p-5 h-20 skeleton-d" />)}
+      </div>
+    );
+  }
 
   const KPIs = [
-    { label: 'Total YTD',    value: fmtMoney(resumen.totalYTD),        icon: TrendingUp, color: 'text-emerald-400' },
-    { label: 'Mes actual',   value: fmtMoney(resumen.totalMesActual),  icon: Calendar,   color: 'text-blue-400'    },
-    { label: 'Nº de pagos',  value: String(resumen.totalPagosCount),   icon: FileText,   color: 'text-amber-400'   },
-    { label: 'Promedio',     value: fmtMoney(resumen.promedio),        icon: BarChart2,  color: 'text-violet-400'  },
+    { label: 'Total YTD',    value: fmtMoney(totalYTD),       icon: TrendingUp, color: 'text-emerald-400' },
+    { label: 'Mes actual',   value: fmtMoney(totalMesActual), icon: Calendar,   color: 'text-blue-400'    },
+    { label: 'Nº de pagos',  value: String(delAnio.length),   icon: FileText,   color: 'text-amber-400'   },
+    { label: 'Promedio',     value: fmtMoney(promedio),       icon: BarChart2,  color: 'text-violet-400'  },
   ];
 
   return (
     <div className="space-y-6">
-      {/* KPI grid */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {KPIs.map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="gm-card-d rounded-2xl p-5">
@@ -83,7 +108,6 @@ function TabResumen({ idEmpleado }: { idEmpleado: number }) {
         ))}
       </div>
 
-      {/* Gráfico mensual */}
       <div className="gm-card-d rounded-2xl p-5">
         <div className="flex items-center justify-between mb-5">
           <div>
@@ -92,11 +116,10 @@ function TabResumen({ idEmpleado }: { idEmpleado: number }) {
           </div>
           <span className="text-[10px] tracking-[0.25em] uppercase text-white/25 font-semibold">12 meses</span>
         </div>
-        <BarChart data={resumen.porMes} />
+        <BarChart data={porMes} />
       </div>
 
-      {/* Último pago */}
-      {resumen.ultimo && (
+      {ultimo && (
         <div className="gm-card-d rounded-2xl p-5 flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-gm-red/10 border border-gm-red/20 flex items-center justify-center shrink-0">
             <DollarSign size={16} className="text-gm-red" />
@@ -104,9 +127,9 @@ function TabResumen({ idEmpleado }: { idEmpleado: number }) {
           <div className="flex-1">
             <p className="text-[11px] text-white/30 mb-0.5">Último pago registrado</p>
             <p className="text-sm font-bold text-white/85">
-              {fmtMoney(resumen.ultimo.monto)} — {resumen.ultimo.concepto}
+              {fmtMoney(Number(ultimo.monto))} — {ultimo.concepto}
             </p>
-            <p className="text-[11px] text-white/35">{fmtDate(resumen.ultimo.fecha)}</p>
+            <p className="text-[11px] text-white/35">{fmtDate(ultimo.fecha)}</p>
           </div>
         </div>
       )}
@@ -117,29 +140,36 @@ function TabResumen({ idEmpleado }: { idEmpleado: number }) {
 /* ─── Tab: Pagos ─── */
 function TabPagos({ idEmpleado }: { idEmpleado: number }) {
   const toast   = useToast();
-  const [pagos, setPagos]   = useState<PagoEmpleado[]>([]);
+  const [pagos, setPagos]   = useState<PagoEmpleadoAPI[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modal, setModal]   = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm]     = useState({
-    fecha: new Date().toISOString().slice(0, 10),
+  const [form, setForm] = useState({
+    fecha:    new Date().toISOString().slice(0, 10),
     concepto: 'Sueldo' as ConceptoPago,
-    monto: '',
-    notas: '',
+    monto:    '',
+    notas:    '',
   });
 
-  const cargar = useCallback(() => {
-    setPagos(listarPagos(idEmpleado));
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await pagosEmpleadoApi.listByEmployee(idEmpleado);
+      setPagos(Array.isArray(data) ? data : []);
+    } catch { /* silencioso */ }
+    finally { setLoading(false); }
   }, [idEmpleado]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     const monto = parseFloat(form.monto);
     if (isNaN(monto) || monto <= 0) { toast.error('Ingresa un monto válido'); return; }
     setSaving(true);
     try {
-      crearPago(idEmpleado, {
-        fecha: form.fecha,
+      await pagosEmpleadoApi.create({
+        id_empleado: idEmpleado,
+        fecha:    form.fecha,
         concepto: form.concepto,
         monto,
         notas: form.notas || undefined,
@@ -148,17 +178,19 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
       setModal(false);
       setForm({ fecha: new Date().toISOString().slice(0, 10), concepto: 'Sueldo', monto: '', notas: '' });
       cargar();
-    } catch { toast.error('Error al guardar'); }
+    } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setSaving(false); }
   };
 
-  const handleEliminar = (id: string) => {
-    eliminarPago(idEmpleado, id);
-    cargar();
-    toast.success('Pago eliminado');
+  const handleEliminar = async (id: number) => {
+    try {
+      await pagosEmpleadoApi.remove(id);
+      setPagos(prev => prev.filter(p => p.id_pago !== id));
+      toast.success('Pago eliminado');
+    } catch (err) { toast.error(getErrorMsg(err)); }
   };
 
-  const VARIANT_CONCEPTO: Record<ConceptoPago, string> = {
+  const VARIANT_CONCEPTO: Record<string, string> = {
     Sueldo:   'text-emerald-400',
     Bono:     'text-amber-400',
     Comisión: 'text-blue-400',
@@ -168,26 +200,26 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
 
   return (
     <div className="space-y-5">
-      {/* Botón agregar */}
       <div className="flex justify-end">
         <Button icon={<Plus size={14} />} onClick={() => setModal(true)}>Registrar pago</Button>
       </div>
 
-      {/* Tabla */}
       <div className="gm-card-d rounded-2xl overflow-hidden">
         <div className="overflow-x-auto dark-scroll">
           <table className="gm-table-d">
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Concepto</th>
-                <th>Monto</th>
-                <th>Notas</th>
-                <th></th>
+                <th>Fecha</th><th>Concepto</th><th>Monto</th><th>Notas</th><th></th>
               </tr>
             </thead>
             <tbody>
-              {pagos.length === 0 ? (
+              {loading ? (
+                [1,2,3].map(i => (
+                  <tr key={i}>{[60,80,80,120,40].map((w,j) => (
+                    <td key={j} className="px-4 py-3.5"><div className="skeleton-d h-3.5 rounded" style={{width:w}} /></td>
+                  ))}</tr>
+                ))
+              ) : pagos.length === 0 ? (
                 <tr>
                   <td colSpan={5}>
                     <div className="py-14 text-center flex flex-col items-center gap-3">
@@ -197,18 +229,18 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
                   </td>
                 </tr>
               ) : pagos.map((p) => (
-                <tr key={p.id}>
+                <tr key={p.id_pago}>
                   <td className="text-white/35 text-xs whitespace-nowrap">{fmtDate(p.fecha)}</td>
                   <td>
-                    <span className={`text-sm font-semibold ${VARIANT_CONCEPTO[p.concepto]}`}>
+                    <span className={`text-sm font-semibold ${VARIANT_CONCEPTO[p.concepto] ?? 'text-white/45'}`}>
                       {p.concepto}
                     </span>
                   </td>
-                  <td className="font-black text-white/85 tabular-nums">{fmtMoney(p.monto)}</td>
+                  <td className="font-black text-white/85 tabular-nums">{fmtMoney(Number(p.monto))}</td>
                   <td className="text-white/35 text-xs max-w-[180px] truncate">{p.notas ?? '—'}</td>
                   <td>
                     <button
-                      onClick={() => handleEliminar(p.id)}
+                      onClick={() => handleEliminar(p.id_pago)}
                       className="icon-btn danger"
                       title="Eliminar"
                     >
@@ -222,7 +254,6 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
         </div>
       </div>
 
-      {/* Modal nuevo pago */}
       <Modal
         open={modal}
         onClose={() => setModal(false)}
@@ -241,9 +272,9 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
             <select
               className="gm-select-d w-full"
               value={form.concepto}
-              onChange={(e) => setForm((f) => ({ ...f, concepto: e.target.value as ConceptoPago }))}
+              onChange={e => setForm(f => ({ ...f, concepto: e.target.value as ConceptoPago }))}
             >
-              {CONCEPTOS.map((c) => <option key={c} value={c}>{c}</option>)}
+              {CONCEPTOS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
@@ -252,7 +283,7 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
               type="date"
               className="gm-input-d"
               value={form.fecha}
-              onChange={(e) => setForm((f) => ({ ...f, fecha: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))}
             />
           </div>
           <div>
@@ -263,7 +294,7 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
               placeholder="0.00"
               step="0.01"
               value={form.monto}
-              onChange={(e) => setForm((f) => ({ ...f, monto: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, monto: e.target.value }))}
             />
           </div>
           <div>
@@ -273,7 +304,7 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
               className="gm-input-d"
               placeholder="Nota interna..."
               value={form.notas}
-              onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
             />
           </div>
         </div>
@@ -283,40 +314,88 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
 }
 
 /* ─── Tab: Permisos ─── */
-function TabPermisos({ idEmpleado }: { idEmpleado: number }) {
-  const toast   = useToast();
-  const [permisos, setPermisos] = useState<PermisosEmpleado>(() => obtenerPermisos(idEmpleado));
-  const [saving, setSaving]     = useState(false);
+function TabPermisos({
+  empleado,
+  onUpdate,
+}: {
+  empleado: Usuario;
+  onUpdate: (desc: string) => void;
+}) {
+  const toast    = useToast();
+  const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
 
-  const handleGuardar = () => {
+  /* Leer permisos actuales desde descripcion del backend */
+  const getInitial = (): PermisosEmpleado => {
+    const lista = parsePermisos(empleado.descripcion);
+    const base  = {} as PermisosEmpleado;
+    for (const { key } of MODULOS) {
+      base[key as ModuloKey] = lista ? lista.includes(key) : true;
+    }
+    return base;
+  };
+  const [permisos, setPermisoState] = useState<PermisosEmpleado>(getInitial);
+
+  const todosActivos   = MODULOS.every(({ key }) => permisos[key as ModuloKey]);
+  const ningunoActivo  = MODULOS.every(({ key }) => !permisos[key as ModuloKey]);
+
+  const handleGuardar = async () => {
     setSaving(true);
-    setTimeout(() => {
-      guardarPermisos(idEmpleado, permisos);
+    try {
+      const modulos    = MODULOS.filter(({ key }) => permisos[key as ModuloKey]).map(m => m.key);
+      const nuevaDesc  = setPermisos(empleado.descripcion, modulos);
+      await usuariosApi.update(empleado.id_usuario, { descripcion: nuevaDesc });
+      onUpdate(nuevaDesc);
+      toast.success('Permisos guardados — el mecánico debe cerrar sesión para que tomen efecto');
+      navigate('/perfiles');
+    } catch (err) {
+      toast.error(getErrorMsg(err));
+    } finally {
       setSaving(false);
-      toast.success('Permisos actualizados');
-    }, 400);
+    }
   };
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-white/40">
-        Activa o desactiva el acceso a cada módulo del sistema para este empleado.
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-white/40">
+          Activa o desactiva el acceso a cada módulo del sistema para este empleado.
+        </p>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={() => {
+              const all = {} as PermisosEmpleado;
+              MODULOS.forEach(({ key }) => { all[key as ModuloKey] = true; });
+              setPermisoState(all);
+            }}
+            className="flex items-center gap-1.5 text-[11px] font-bold text-white/40 hover:text-white/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.18]"
+          >
+            <CheckSquare size={12} /> Seleccionar todo
+          </button>
+          <button
+            onClick={() => {
+              const none = {} as PermisosEmpleado;
+              MODULOS.forEach(({ key }) => { none[key as ModuloKey] = false; });
+              setPermisoState(none);
+            }}
+            className="flex items-center gap-1.5 text-[11px] font-bold text-white/40 hover:text-white/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.18]"
+          >
+            <Square size={12} /> Quitar todo
+          </button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {MODULOS.map(({ key, label }) => {
-          const enabled = permisos[key];
+          const enabled = permisos[key as ModuloKey];
           return (
             <button
               key={key}
-              onClick={() => setPermisos((p) => ({ ...p, [key]: !p[key] }))}
+              onClick={() => setPermisoState(p => ({ ...p, [key as ModuloKey]: !p[key as ModuloKey] }))}
               className={`gm-card-d rounded-xl p-4 flex items-center gap-4 text-left transition-all duration-200 ${
-                enabled
-                  ? 'border-gm-red/35 bg-gm-red/[0.05]'
-                  : 'hover:border-white/[0.1]'
+                enabled ? 'border-gm-red/35 bg-gm-red/[0.05]' : 'hover:border-white/[0.1]'
               }`}
             >
-              {/* Toggle */}
               <div className={`w-10 h-6 rounded-full relative transition-all duration-300 ${
                 enabled ? 'bg-gm-red shadow-[0_0_12px_rgba(225,20,40,0.5)]' : 'bg-white/[0.08]'
               }`}>
@@ -333,6 +412,18 @@ function TabPermisos({ idEmpleado }: { idEmpleado: number }) {
         })}
       </div>
 
+      {(todosActivos || ningunoActivo) && (
+        <div className={`rounded-xl px-4 py-2.5 text-[11px] font-semibold ${
+          ningunoActivo
+            ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+            : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
+        }`}>
+          {ningunoActivo
+            ? '⚠ Sin ningún permiso el mecánico no podrá acceder a ningún módulo.'
+            : '✓ Acceso completo a todos los módulos activado.'}
+        </div>
+      )}
+
       <div className="flex justify-end pt-2">
         <Button loading={saving} onClick={handleGuardar}>
           <ShieldCheck size={14} /> Guardar permisos
@@ -344,10 +435,10 @@ function TabPermisos({ idEmpleado }: { idEmpleado: number }) {
 
 /* ─── Página principal ─── */
 export default function EmpleadoDetailPage() {
-  const { id }    = useParams<{ id: string }>();
-  const navigate  = useNavigate();
-  const toast     = useToast();
-  const pageRef   = useRef<HTMLDivElement>(null);
+  const { id }   = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const toast    = useToast();
+  const pageRef  = useRef<HTMLDivElement>(null);
 
   const idEmpleado = Number(id);
   const [empleado, setEmpleado] = useState<Usuario | null>(null);
@@ -361,7 +452,6 @@ export default function EmpleadoDetailPage() {
       .finally(() => setLoading(false));
   }, [idEmpleado, navigate, toast]);
 
-  /* Animación de entrada */
   useEffect(() => {
     if (loading) return;
     const ctx = gsap.context(() => {
@@ -403,7 +493,6 @@ export default function EmpleadoDetailPage() {
         </Link>
 
         <div className="flex items-center gap-4">
-          {/* Avatar grande */}
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black border shrink-0"
             style={{
@@ -444,7 +533,12 @@ export default function EmpleadoDetailPage() {
       <div className="section-enter">
         {tab === 'resumen'  && <TabResumen  idEmpleado={idEmpleado} />}
         {tab === 'pagos'    && <TabPagos    idEmpleado={idEmpleado} />}
-        {tab === 'permisos' && <TabPermisos idEmpleado={idEmpleado} />}
+        {tab === 'permisos' && (
+          <TabPermisos
+            empleado={empleado}
+            onUpdate={desc => setEmpleado(e => e ? { ...e, descripcion: desc } : e)}
+          />
+        )}
       </div>
     </div>
   );

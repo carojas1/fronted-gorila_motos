@@ -37,6 +37,7 @@ import PortalClientePage from './pages/portal/PortalClientePage';
 import MiMotoPage        from './pages/moto-cliente/MiMotoPage';
 import DiagnosticoPage   from './pages/diagnostico/DiagnosticoPage';
 import PagosPage         from './pages/pagos/PagosPage';
+import ContabilidadPage  from './pages/contabilidad/ContabilidadPage';
 import ProveedoresPage   from './pages/proveedores/ProveedoresPage';
 import MetodologiaPage   from './pages/metodologia/MetodologiaPage';
 
@@ -95,9 +96,10 @@ export default function App() {
 
                 {/* Solo ADMIN */}
                 <Route element={<RequireRole roles={['admin']} />}>
-                  <Route path="/perfiles"     element={<PasswordGate scope="perfiles" title="Perfiles de usuarios"><ProfilesPage /></PasswordGate>} />
+                  <Route path="/perfiles"       element={<PasswordGate scope="perfiles" title="Perfiles de usuarios"><ProfilesPage /></PasswordGate>} />
                   <Route path="/perfiles/:id" element={<PasswordGate scope="perfiles" title="Ficha de usuario"><EmpleadoDetailPage /></PasswordGate>} />
-                  <Route path="/pagos"        element={<PagosPage />}           />
+                  <Route path="/pagos"        element={<PagosPage />}        />
+                  <Route path="/contabilidad" element={<ContabilidadPage />} />
                 </Route>
 
               </Route>

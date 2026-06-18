@@ -220,6 +220,23 @@ export const combustibleApi = {
   remove: (id: number)  => api.delete(`/combustible/${id}`),
 };
 
+/* ── Pagos de empleados + gastos generales ── */
+export interface PagoEmpleadoAPI {
+  id_pago:      number;
+  id_empleado:  number;   // 0 = gasto general (compra de inventario, etc.)
+  fecha:        string;   // yyyy-MM-dd
+  concepto:     string;
+  monto:        number;
+  notas?:       string;
+}
+
+export const pagosEmpleadoApi = {
+  listByEmployee: (idEmpleado: number)  => api.get<PagoEmpleadoAPI[]>(`/pagos-empleado/${idEmpleado}`),
+  listAll:        ()                    => api.get<PagoEmpleadoAPI[]>('/pagos-empleado'),
+  create:         (data: Omit<PagoEmpleadoAPI, 'id_pago'>) => api.post<PagoEmpleadoAPI>('/pagos-empleado', data),
+  remove:         (id: number)          => api.delete(`/pagos-empleado/${id}`),
+};
+
 /* ── Contactos de proveedores — en la nube ── */
 export const proveedorContactosApi = {
   list:   ()            => api.get('/proveedores-contactos'),
