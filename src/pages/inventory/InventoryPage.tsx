@@ -81,6 +81,8 @@ export default function InventoryPage() {
   const [vnNotFound,    setVnNotFound]    = useState(false);
   const [vnQty,         setVnQty]         = useState('1');
   const [vnSending,     setVnSending]     = useState(false);
+  const [sellEmail,     setSellEmail]     = useState('');
+  const [vnUsuarios,    setVnUsuarios]    = useState<Usuario[]>([]);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -95,6 +97,14 @@ export default function InventoryPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (vnTarget) {
+      usuariosApi.list().then(res => setVnUsuarios(res.data as Usuario[])).catch(() => {});
+    } else {
+      setVnUsuarios([]);
+    }
+  }, [vnTarget]);
 
   /* Animación de entrada */
   useEffect(() => {
@@ -197,14 +207,26 @@ export default function InventoryPage() {
     if (qty > sellTarget.stock) { toast.error(`Solo hay ${sellTarget.stock} unidades en stock`); return; }
     setSelling(true);
     try {
-      // El backend hace reemplazo completo → enviar el producto entero con el stock nuevo
       await productosApi.update(sellTarget.id_producto, {
         ...sellTarget,
         stock:              sellTarget.stock - qty,
         fecha_modificacion: new Date().toISOString().slice(0, 10),
       });
+      if (sellEmail.trim()) {
+        const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        productosApi.enviarComprobante({
+          correo:         sellEmail.trim(),
+          nombreCliente:  'Cliente',
+          nombreProducto: sellTarget.nombre,
+          codigoProducto: sellTarget.codigo_personal,
+          cantidad:       qty,
+          pvp:            sellTarget.pvp,
+          total:          qty * sellTarget.pvp,
+          fecha,
+        }).catch(() => {});
+      }
       toast.success(`Venta registrada · ${qty} u. de ${sellTarget.nombre} (quedan ${sellTarget.stock - qty})`);
-      setSellTarget(null); setSellQty('1');
+      setSellTarget(null); setSellQty('1'); setSellEmail('');
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setSelling(false); }
@@ -248,6 +270,12 @@ export default function InventoryPage() {
       }
     } catch { toast.error('Error buscando cliente'); }
     finally { setVnSearching(false); }
+  };
+
+  const seleccionarCliente = (usuario: Usuario) => {
+    setVnCliente({ nombre: usuario.nombre_completo, correo: usuario.correo, id_usuario: usuario.id_usuario });
+    setVnStep('confirm');
+    setVnQuery('');
   };
 
   /* ─── Venta Normal: confirmar venta ─── */
@@ -609,12 +637,12 @@ export default function InventoryPage() {
       {/* ─── Modal venta directa ─── */}
       <Modal
         open={!!sellTarget}
-        onClose={() => { setSellTarget(null); setSellQty('1'); }}
+        onClose={() => { setSellTarget(null); setSellQty('1'); setSellEmail(''); }}
         title="Venta directa (mostrador)"
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => { setSellTarget(null); setSellQty('1'); }}>Cancelar</Button>
+            <Button variant="secondary" onClick={() => { setSellTarget(null); setSellQty('1'); setSellEmail(''); }}>Cancelar</Button>
             <Button onClick={confirmSell} loading={selling}>
               <ShoppingCart size={14} /> Registrar venta
             </Button>
@@ -642,6 +670,21 @@ export default function InventoryPage() {
                 <span className="text-[13px] text-white/40 ml-2">
                   Total: <strong className="text-emerald-400">{fmtMoney((parseInt(sellQty || '0', 10)) * sellTarget.pvp)}</strong>
                 </span>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+                Email del cliente <span className="text-white/25 font-normal normal-case tracking-normal">(opcional — envía comprobante)</span>
+              </label>
+              <div className="relative">
+                <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                <input
+                  type="email"
+                  className="gm-input-d w-full pl-8"
+                  placeholder="cliente@correo.com"
+                  value={sellEmail}
+                  onChange={e => setSellEmail(e.target.value)}
+                />
               </div>
             </div>
           </div>
@@ -674,14 +717,11 @@ export default function InventoryPage() {
         open={!!vnTarget}
         onClose={() => { setVnTarget(null); setVnStep('search'); setVnQuery(''); setVnCliente(null); setVnNotFound(false); }}
         title="Venta Normal — cliente registrado"
-        size="sm"
+        size="lg"
         footer={
           vnStep === 'search' ? (
             <>
               <Button variant="secondary" onClick={() => setVnTarget(null)}>Cancelar</Button>
-              <Button onClick={buscarCliente} loading={vnSearching}>
-                <Search size={14} /> Buscar
-              </Button>
             </>
           ) : (
             <>
@@ -696,101 +736,150 @@ export default function InventoryPage() {
         }
       >
         {vnTarget && vnStep === 'search' && (
-          <div className="space-y-4">
-            <p className="text-[12px] text-white/45 leading-relaxed">
-              Busca al cliente en el sistema por <strong className="text-white/70">email</strong> o{' '}
-              <strong className="text-white/70">placa de su moto</strong>.
-            </p>
+          <div className="grid grid-cols-5 gap-5">
 
-            {/* Toggle modo */}
-            <div className="flex gap-2">
-              {(['email', 'placa'] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => { setVnMode(m); setVnQuery(''); setVnNotFound(false); setVnCliente(null); }}
-                  className="flex-1 py-2 rounded-lg text-[12px] font-bold transition-all"
-                  style={vnMode === m
-                    ? { background: 'rgba(96,165,250,0.2)', color: '#60A5FA', border: '1px solid rgba(96,165,250,0.4)' }
-                    : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.08)' }
-                  }
-                >
-                  {m === 'email' ? <><Mail size={12} className="inline mr-1" />Email</> : <><span className="mr-1">🏍️</span>Placa</>}
-                </button>
-              ))}
+            {/* ── Columna izquierda: producto + instrucción ── */}
+            <div className="col-span-2 space-y-4">
+              <div className="p-4 rounded-xl h-full" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Producto</p>
+                <p className="text-[15px] font-black text-white/90 leading-tight">{vnTarget.nombre}</p>
+                <p className="text-[11px] text-white/40 mt-1">Código: {vnTarget.codigo_personal}</p>
+                <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p className="text-[11px] text-white/35">Stock disponible</p>
+                  <p className="text-[22px] font-black" style={{ color: '#10B981' }}>{vnTarget.stock} u.</p>
+                </div>
+                <div className="mt-2">
+                  <p className="text-[11px] text-white/35">PVP unitario</p>
+                  <p className="text-[18px] font-black text-white/80">{fmtMoney(vnTarget.pvp)}</p>
+                </div>
+              </div>
             </div>
 
-            {/* Input búsqueda */}
-            <div>
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
-                {vnMode === 'email' ? 'Correo electrónico' : 'Número de placa'}
-              </label>
-              <input
-                className="gm-input-d w-full"
-                placeholder={vnMode === 'email' ? 'cliente@correo.com' : 'ABC-1234'}
-                value={vnQuery}
-                onChange={(e) => { setVnQuery(e.target.value); setVnNotFound(false); }}
-                onKeyDown={(e) => e.key === 'Enter' && buscarCliente()}
-              />
+            {/* ── Columna derecha: búsqueda + lista de clientes ── */}
+            <div className="col-span-3 space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+                  Seleccionar cliente
+                  <span className="ml-2 text-white/25 font-normal normal-case tracking-normal">
+                    {vnUsuarios.length > 0 ? `${vnUsuarios.length} registrados` : 'cargando...'}
+                  </span>
+                </label>
+                <div className="relative">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                  <input
+                    className="gm-input-d w-full pl-8"
+                    placeholder="Nombre o correo electrónico..."
+                    value={vnQuery}
+                    onChange={(e) => setVnQuery(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Lista inline de todos los clientes */}
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="overflow-y-auto dark-scroll" style={{ maxHeight: 290 }}>
+                  {(() => {
+                    const q = vnQuery.toLowerCase();
+                    const lista = vnUsuarios
+                      .filter(u => !q || u.correo.toLowerCase().includes(q) || u.nombre_completo.toLowerCase().includes(q))
+                      .slice(0, 25);
+                    if (vnUsuarios.length === 0) return (
+                      <div className="flex items-center justify-center py-12">
+                        <p className="text-[12px] text-white/25">Cargando clientes...</p>
+                      </div>
+                    );
+                    if (lista.length === 0) return (
+                      <div className="flex items-center justify-center py-12">
+                        <p className="text-[12px] text-white/25">Sin coincidencias</p>
+                      </div>
+                    );
+                    return lista.map((u, i) => (
+                      <button
+                        key={u.id_usuario}
+                        type="button"
+                        onClick={() => seleccionarCliente(u)}
+                        className="w-full text-left px-4 py-3 transition-colors hover:bg-white/5 flex items-center gap-3"
+                        style={{ borderBottom: i < lista.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+                      >
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-black text-white shrink-0"
+                             style={{ background: 'rgba(225,20,40,0.18)', border: '1px solid rgba(225,20,40,0.3)' }}>
+                          {u.nombre_completo.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-white/85 truncate">{u.nombre_completo}</p>
+                          <p className="text-[11px] text-white/40 truncate">{u.correo}</p>
+                        </div>
+                        <UserCheck size={13} className="text-white/20 shrink-0" />
+                      </button>
+                    ));
+                  })()}
+                </div>
+              </div>
             </div>
 
-            {/* Producto seleccionado */}
-            <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="text-[11px] text-white/35 uppercase tracking-wider mb-1">Producto</p>
-              <p className="text-[14px] font-bold text-white/90">{vnTarget.nombre}</p>
-              <p className="text-[11px] text-white/40">Stock: {vnTarget.stock} u. · PVP {fmtMoney(vnTarget.pvp)}</p>
-            </div>
-
-            {vnNotFound && (
-              <p className="text-[12px] text-amber-400 font-semibold text-center py-2">
-                No se encontró ningún cliente con ese {vnMode === 'email' ? 'correo' : 'número de placa'}.
-              </p>
-            )}
           </div>
         )}
 
         {vnTarget && vnStep === 'confirm' && vnCliente && (
-          <div className="space-y-4">
-            {/* Cliente encontrado */}
-            <div className="p-3 rounded-xl" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)' }}>
-              <p className="text-[11px] text-emerald-400 font-bold uppercase tracking-wider mb-1">Cliente encontrado</p>
-              <p className="text-[14px] font-bold text-white/90">{vnCliente.nombre}</p>
-              <p className="text-[11px] text-white/50 mt-0.5">{vnCliente.correo}</p>
+          <div className="grid grid-cols-5 gap-5">
+
+            {/* ── Izquierda: cliente + producto ── */}
+            <div className="col-span-2 space-y-3">
+              <div className="p-4 rounded-xl" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
+                <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mb-2">Cliente seleccionado</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-black text-white shrink-0"
+                       style={{ background: 'rgba(225,20,40,0.18)', border: '1px solid rgba(225,20,40,0.3)' }}>
+                    {vnCliente.nombre.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-bold text-white/90 truncate">{vnCliente.nombre}</p>
+                    <p className="text-[11px] text-white/50 truncate">{vnCliente.correo}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Producto</p>
+                <p className="text-[13px] font-bold text-white/85">{vnTarget.nombre}</p>
+                <p className="text-[11px] text-white/40 mt-1">PVP: {fmtMoney(vnTarget.pvp)} · Stock: {vnTarget.stock} u.</p>
+              </div>
+              {vnCliente.correo && (
+                <div className="flex items-start gap-2 px-3 py-3 rounded-xl"
+                     style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)' }}>
+                  <Mail size={12} className="text-emerald-400 shrink-0 mt-0.5" />
+                  <span className="text-[11px] text-emerald-400/80 leading-relaxed">
+                    Comprobante enviado automáticamente a <strong>{vnCliente.correo}</strong>
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Producto */}
-            <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="text-[11px] text-white/35 uppercase tracking-wider mb-1">Producto</p>
-              <p className="text-[14px] font-bold text-white/90">{vnTarget.nombre}</p>
-              <p className="text-[11px] text-white/40">Stock: <strong style={{ color: '#10B981' }}>{vnTarget.stock} u.</strong> · PVP {fmtMoney(vnTarget.pvp)}</p>
-            </div>
-
-            {/* Cantidad */}
-            <div>
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Cantidad</label>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setVnQty(q => String(Math.max(1, parseInt(q || '1', 10) - 1)))} className="icon-btn"><Minus size={14} /></button>
-                <input
-                  type="number" min={1} max={vnTarget.stock} value={vnQty}
-                  onChange={e => setVnQty(e.target.value)}
-                  className="gm-input-d text-center" style={{ width: 90 }}
-                />
-                <button onClick={() => setVnQty(q => String(Math.min(vnTarget.stock, parseInt(q || '1', 10) + 1)))} className="icon-btn"><Plus size={14} /></button>
-                <span className="text-[13px] text-white/40 ml-2">
-                  Total: <strong className="text-emerald-400">{fmtMoney((parseInt(vnQty || '0', 10)) * vnTarget.pvp)}</strong>
-                </span>
+            {/* ── Derecha: cantidad + total ── */}
+            <div className="col-span-3 flex flex-col justify-center space-y-5">
+              <div>
+                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-3">Cantidad a vender</label>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setVnQty(q => String(Math.max(1, parseInt(q || '1', 10) - 1)))} className="icon-btn w-10 h-10"><Minus size={16} /></button>
+                  <input
+                    type="number" min={1} max={vnTarget.stock} value={vnQty}
+                    onChange={e => setVnQty(e.target.value)}
+                    className="gm-input-d text-center text-lg font-bold" style={{ width: 100 }}
+                  />
+                  <button onClick={() => setVnQty(q => String(Math.min(vnTarget.stock, parseInt(q || '1', 10) + 1)))} className="icon-btn w-10 h-10"><Plus size={16} /></button>
+                </div>
+              </div>
+              <div className="p-5 rounded-2xl" style={{ background: 'linear-gradient(135deg,rgba(225,20,40,0.15),rgba(185,28,28,0.1))', border: '1px solid rgba(225,20,40,0.3)' }}>
+                <p className="text-[11px] text-white/40 uppercase tracking-widest mb-1">Total de la venta</p>
+                <p className="text-[36px] font-black text-white leading-none">
+                  {fmtMoney((parseInt(vnQty || '0', 10)) * vnTarget.pvp)}
+                </p>
+                <p className="text-[12px] text-white/35 mt-1">
+                  {vnQty} u. × {fmtMoney(vnTarget.pvp)}
+                </p>
               </div>
             </div>
 
-            {/* Auto-envío de comprobante */}
-            {vnCliente.correo && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                   style={{ background:'rgba(16,185,129,0.07)', border:'1px solid rgba(16,185,129,0.18)' }}>
-                <Mail size={12} className="text-emerald-400 shrink-0" />
-                <span className="text-[12px] text-emerald-400/80">
-                  Comprobante se enviará automáticamente a <strong>{vnCliente.correo}</strong>
-                </span>
-              </div>
-            )}
           </div>
         )}
       </Modal>
