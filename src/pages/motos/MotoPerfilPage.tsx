@@ -3,7 +3,7 @@
    Historial de diagnósticos + info completa
    ───────────────────────────────────────────── */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Bike, Gauge, Calendar, User, Pencil,
@@ -11,9 +11,11 @@ import {
   XCircle, ChevronDown, ChevronUp, Cog, Link2, Shield,
   Circle, ArrowUpDown, Droplets, Zap, Activity, type LucideIcon,
 } from 'lucide-react';
-import { motosApi, diagnosticosApi, usuariosApi } from '../../lib/api';
+import { motosApi, diagnosticosApi, usuariosApi, registrosApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Moto, Usuario, DiagnosticoMoto } from '../../types';
+import { usePolling } from '../../hooks/usePolling';
+import { fmtMoney, fmtDate, toIsoStr, ESTADO_REGISTRO } from '../../lib/utils';
+import type { Moto, Usuario, DiagnosticoMoto, RegistroDetalle } from '../../types';
 import { EstadoMotoLive } from '../../components/mantenimiento/EstadoMantenimiento';
 import { imagenMoto } from '../../lib/fotos';
 
@@ -138,6 +140,7 @@ export default function MotoPerfilPage() {
   const [owner,    setOwner]    = useState<Usuario | null>(null);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [historial,setHistorial]= useState<DiagnosticoMoto[]>([]);
+  const [servicios,setServicios]= useState<RegistroDetalle[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [loadDx,   setLoadDx]   = useState(true);
   const [error,    setError]    = useState('');
@@ -175,6 +178,22 @@ export default function MotoPerfilPage() {
       .finally(() => setLoadDx(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  /* Historial de servicios (órdenes) de esta moto — por placa */
+  const cargarServicios = useCallback(async () => {
+    if (!moto?.placa) return;
+    try {
+      const { data } = await registrosApi.list();
+      setServicios((data as RegistroDetalle[])
+        .filter(r => r.placa === moto.placa)
+        .sort((a, b) => toIsoStr(b.fecha).localeCompare(toIsoStr(a.fecha))));
+    } catch { /* silencioso */ }
+  }, [moto?.placa]);
+
+  useEffect(() => { cargarServicios(); }, [cargarServicios]);
+
+  /* Refresco en tiempo real del historial de servicios */
+  usePolling(cargarServicios, { intervalMs: 30_000 });
 
   /* ── Loading ── */
   if (loading) {
@@ -340,6 +359,72 @@ export default function MotoPerfilPage() {
           </div>
         </div>
         <EstadoMotoLive moto={moto} />
+      </div>
+
+      {/* ── Estadísticas + historial de servicios ── */}
+      <div style={s}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Activity size={17} color="#10B981" />
+          </div>
+          <div>
+            <p style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 15, margin: 0 }}>Historial de servicios</p>
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, margin: '2px 0 0' }}>
+              {servicios.length} servicio{servicios.length !== 1 ? 's' : ''} · en tiempo real
+            </p>
+          </div>
+        </div>
+
+        {/* Mini-estadísticas */}
+        {(() => {
+          const total    = servicios.reduce((acc, r) => acc + (r.costo_total ?? 0), 0);
+          const completos= servicios.filter(r => r.estado >= 2).length;
+          const ultimo   = servicios[0];
+          const stat = (label: string, val: string, color: string) => (
+            <div style={{ flex: 1, minWidth: 96, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '12px 14px' }}>
+              <p style={{ margin: 0, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', fontWeight: 700 }}>{label}</p>
+              <p style={{ margin: '5px 0 0', fontSize: 19, fontWeight: 900, color }}>{val}</p>
+            </div>
+          );
+          return (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+              {stat('Servicios', String(servicios.length), '#fff')}
+              {stat('Completados', String(completos), '#10B981')}
+              {stat('Invertido', fmtMoney(total), '#E11428')}
+              {stat('Último', ultimo ? fmtDate(ultimo.fecha) : '—', '#3B82F6')}
+            </div>
+          );
+        })()}
+
+        {/* Línea de tiempo */}
+        {servicios.length === 0 ? (
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
+            Aún no hay servicios registrados para esta moto
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {servicios.slice(0, 12).map(r => {
+              const estColors: Record<number, string> = { 0: '#F59E0B', 1: '#3B82F6', 2: '#10B981', 3: '#8B5CF6', 4: '#14B8A6' };
+              const estColor = estColors[r.estado] ?? '#94A3B8';
+              const estLabel = ESTADO_REGISTRO[r.estado]?.label ?? '—';
+              return (
+                <div key={r.id_registro} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: '#0E0E14', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 11 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: estColor, flexShrink: 0, boxShadow: `0 0 6px ${estColor}99` }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>{r.tipo_servicio ?? 'Servicio'}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+                      {fmtDate(r.fecha)}{r.kilometraje ? ` · ${r.kilometraje.toLocaleString('es-EC')} km` : ''}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,0.8)' }}>{fmtMoney(r.costo_total ?? 0)}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 10, fontWeight: 700, color: estColor }}>{estLabel}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Historial de diagnósticos ── */}

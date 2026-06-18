@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import {
   Wrench, Package, Bike, Users, ArrowRight,
   TrendingUp, TrendingDown, Clock, Zap, Activity,
-  Bell, Star, AlertTriangle, ChevronRight,
+  Bell, Star, AlertTriangle, ChevronRight, Printer,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -166,6 +166,100 @@ export default function DashboardPage() {
   /* ── Actividad reciente ── */
   const recientes = registros.slice(0, 8);
 
+  /* ── Reporte semanal imprimible (admin) ── */
+  const printWeeklyReport = () => {
+    const hoy = new Date();
+    const hace7 = new Date(); hace7.setDate(hoy.getDate() - 6);
+    const inicioStr = hace7.toISOString().slice(0, 10);
+    const enRango = (f: unknown) => toIsoDate(f) >= inicioStr;
+
+    const regsWeek      = registros.filter(r => enRango(r.fecha));
+    const completadas   = regsWeek.filter(r => r.estado >= 2).length;
+    const facturadas    = regsWeek.filter(r => r.estado === 4);
+    const ingresosWeek  = facturadas.reduce((s, r) => s + (r.costo_total ?? 0), 0);
+    const nuevasMotos   = motos.length;
+    const ticketProm    = facturadas.length ? ingresosWeek / facturadas.length : 0;
+
+    const tiposWeek: Record<string, number> = {};
+    regsWeek.forEach(r => { const t = r.tipo_servicio ?? 'Otro'; tiposWeek[t] = (tiposWeek[t] ?? 0) + 1; });
+    const topTipos = Object.entries(tiposWeek).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+    const bajos = productos.filter(p => p.stock <= 3).sort((a, b) => a.stock - b.stock);
+
+    const rango = `${hace7.toLocaleDateString('es-EC', { day: 'numeric', month: 'short' })} – ${hoy.toLocaleDateString('es-EC', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    const w = window.open('', '_blank', 'width=900,height=760');
+    if (!w) return;
+    const kpi = (label: string, val: string, color: string) =>
+      `<div style="flex:1;min-width:120px;background:#F8FAFC;border:1px solid #EEF1F5;border-radius:12px;padding:14px 16px">
+        <p style="margin:0;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#94A3B8;font-weight:700">${label}</p>
+        <p style="margin:6px 0 0;font-size:26px;font-weight:900;color:${color};letter-spacing:-1px">${val}</p>
+      </div>`;
+    w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+      <title>GMotors — Reporte semanal ${rango}</title>
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Segoe UI',Arial,sans-serif;color:#0F172A;background:#fff;padding:32px}
+        .head{background:linear-gradient(135deg,#0C0C10,#1A1A22);border-radius:16px;padding:24px 28px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+        .brand{font-size:26px;font-weight:900;letter-spacing:-.5px}
+        .brand span{color:#E11428}
+        .tag{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-top:4px}
+        .badge{background:rgba(225,20,40,.15);border:1px solid rgba(225,20,40,.35);border-radius:10px;padding:8px 14px;text-align:right}
+        .badge p{margin:0;color:#E11428;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+        .badge span{color:rgba(255,255,255,.7);font-size:12px;font-weight:700}
+        h3{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#94A3B8;margin:26px 0 12px}
+        table{width:100%;border-collapse:collapse;font-size:13px}
+        th{text-align:left;color:#64748B;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:2px solid #EEF1F5}
+        td{padding:9px 10px;border-bottom:1px solid #F1F5F9}
+        .r{text-align:right}.b{font-weight:800}
+        .foot{margin-top:30px;text-align:center;font-size:11px;color:#CBD5E1;border-top:1px solid #EEF1F5;padding-top:14px}
+        @media print{body{padding:14px}}
+      </style></head><body>
+      <div class="head">
+        <div><div class="brand">Gorila <span>Motos</span></div><div class="tag">Reporte semanal · Cuenca, Ecuador</div></div>
+        <div class="badge"><p>Periodo</p><span>${rango}</span></div>
+      </div>
+
+      <h3>Resumen de la semana</h3>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        ${kpi('Órdenes', String(regsWeek.length), '#0F172A')}
+        ${kpi('Completadas', String(completadas), '#10B981')}
+        ${kpi('Facturadas', String(facturadas.length), '#14B8A6')}
+        ${kpi('Ingresos', fmtMoney(ingresosWeek), '#E11428')}
+        ${kpi('Ticket prom.', fmtMoney(ticketProm), '#8B5CF6')}
+        ${kpi('Motos totales', String(nuevasMotos), '#3B82F6')}
+      </div>
+
+      <h3>Servicios de la semana (${regsWeek.length})</h3>
+      <table><thead><tr><th>Fecha</th><th>Cliente</th><th>Placa</th><th>Servicio</th><th class="r">Total</th></tr></thead><tbody>
+        ${regsWeek.slice(0, 30).map(r => `<tr>
+          <td>${fmtDate(r.fecha)}</td>
+          <td>${r.nombre_cliente ?? '—'}</td>
+          <td>${r.placa ?? '—'}</td>
+          <td>${r.tipo_servicio ?? '—'}</td>
+          <td class="r b">${fmtMoney(r.costo_total ?? 0)}</td></tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:#94A3B8;padding:18px">Sin servicios esta semana</td></tr>'}
+      </tbody></table>
+
+      <div style="display:flex;gap:28px;flex-wrap:wrap">
+        <div style="flex:1;min-width:240px">
+          <h3>Servicios más solicitados</h3>
+          <table><tbody>
+            ${topTipos.map(([t, n]) => `<tr><td>${t}</td><td class="r b">${n}</td></tr>`).join('') || '<tr><td style="color:#94A3B8">—</td></tr>'}
+          </tbody></table>
+        </div>
+        <div style="flex:1;min-width:240px">
+          <h3>Stock crítico (≤3)</h3>
+          <table><tbody>
+            ${bajos.slice(0, 8).map(p => `<tr><td>${p.nombre}</td><td class="r b" style="color:${p.stock === 0 ? '#E11428' : '#F59E0B'}">${p.stock} u.</td></tr>`).join('') || '<tr><td style="color:#10B981">Todo en orden ✓</td></tr>'}
+          </tbody></table>
+        </div>
+      </div>
+
+      <div class="foot">Generado el ${hoy.toLocaleString('es-EC')} · Gorila Motos · Sistema de gestión</div>
+    </body></html>`);
+    w.document.close(); w.focus();
+    setTimeout(() => w.print(), 400);
+  };
+
   /* ── Vista cliente — solo si NO es admin ni mecánico ── */
   if (isCliente && !isAdmin && !isMecanico) {
     const myMotos   = motos.filter(m => m.id_usuario === user?.id_usuario);
@@ -235,6 +329,17 @@ export default function DashboardPage() {
           <p className="text-white/30 text-sm mt-0.5">{new Date().toLocaleDateString('es-EC', { weekday:'long', day:'numeric', month:'long' })}</p>
         </div>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              onClick={printWeeklyReport}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all hover:bg-white/[0.04]"
+              style={{ background: 'rgba(225,20,40,0.07)', borderColor: 'rgba(225,20,40,0.25)' }}
+              title="Generar e imprimir el reporte semanal del negocio"
+            >
+              <Printer size={13} className="text-gm-red" />
+              <span className="text-[11px] font-bold tracking-wider uppercase text-gm-red">Reporte semanal</span>
+            </button>
+          )}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border"
                style={{
                  background: isOpen ? 'rgba(16,185,129,0.07)' : 'rgba(239,68,68,0.07)',
@@ -254,10 +359,10 @@ export default function DashboardPage() {
 
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <KpiCard icon={Bike}    label="Motos registradas" target={motos.length}    sub="vehículos totales"   to="/motos"      color="#3B82F6" trend={12} />
-        <KpiCard icon={Wrench}  label="Órdenes activas"   target={activas}         sub="en proceso/pendiente" to="/registros"  color="#E11428" trend={-3} />
+        <KpiCard icon={Bike}    label="Motos registradas" target={motos.length}    sub="vehículos totales"   to="/motos"      color="#3B82F6" />
+        <KpiCard icon={Wrench}  label="Órdenes activas"   target={activas}         sub="en proceso/pendiente" to="/registros"  color="#E11428" />
         <KpiCard icon={Package} label="Stock crítico"      target={stockCritico}   sub="productos ≤3 unidades" to="/inventario" color="#F59E0B" />
-        {isAdmin && <KpiCard icon={Users} label="Usuarios" target={usuarios.length} sub="cuentas del sistema" to="/perfiles"   color="#8B5CF6" trend={8} />}
+        {isAdmin && <KpiCard icon={Users} label="Usuarios" target={usuarios.length} sub="cuentas del sistema" to="/perfiles"   color="#8B5CF6" />}
       </div>
 
       {/* ── Gráfica principal: órdenes + ingresos ── */}
