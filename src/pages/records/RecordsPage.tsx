@@ -159,6 +159,7 @@ export default function RecordsPage() {
   const [showQuick,     setShowQuick]     = useState(false);
   const [creatingQuick, setCreatingQuick] = useState(false);
   const [qNombre,       setQNombre]       = useState('');
+  const [qCorreo,       setQCorreo]       = useState('');
   const [qTelefono,     setQTelefono]     = useState('');
   const [qCedula,       setQCedula]       = useState('');
   const [qMarca,        setQMarca]        = useState('');
@@ -274,7 +275,7 @@ export default function RecordsPage() {
     setNCliente(null); setNMoto(null); setNTipo(null);
     setNKm(''); setNObs(''); setNManCustom(''); setNPartes([]);
     setPlateQuery(''); setShowQuick(false);
-    setQNombre(''); setQTelefono(''); setQCedula('');
+    setQNombre(''); setQCorreo(''); setQTelefono(''); setQCedula('');
     setQMarca(''); setQModelo(''); setQCc(''); setQTipoMoto('Otro');
   };
 
@@ -310,7 +311,13 @@ export default function RecordsPage() {
     setCreatingQuick(true);
     try {
       const base = (qNombre.trim().split(' ')[0] || 'cliente').toLowerCase().replace(/[^a-z0-9]/gi, '').slice(0, 12);
-      const correo = `${base}.${plateQuery.trim().toLowerCase().replace(/[^a-z0-9]/gi, '')}@gmotors.local`;
+      /* Si el admin tiene el correo REAL del cliente, se usa ese → el cliente
+         podrá iniciar sesión y recuperar su cuenta. Si no, correo interno. */
+      const correoReal = qCorreo.trim().toLowerCase();
+      const esCorreoValido = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correoReal);
+      const correo = esCorreoValido
+        ? correoReal
+        : `${base}.${plateQuery.trim().toLowerCase().replace(/[^a-z0-9]/gi, '')}@gmotors.local`;
       const pass   = qCedula.trim() || qTelefono.trim() || 'gorila123';
 
       // 1. Crear cliente
@@ -397,53 +404,56 @@ export default function RecordsPage() {
     finally { setCreatingOrder(false); }
   };
 
-  /* ─── Imprimir orden ─── */
+  /* ─── Imprimir orden (diseño profesional, imprime colores) ─── */
   const printOrder = (r: RegistroDetalle) => {
-    const w = window.open('', '_blank', 'width=820,height=700');
+    const w = window.open('', '_blank', 'width=860,height=720');
     if (!w) { toast.error('Activa las ventanas emergentes para imprimir'); return; }
+    const estLabel = ESTADO_REGISTRO[r.estado]?.label ?? '—';
     w.document.write(`<!DOCTYPE html><html lang="es"><head>
       <meta charset="UTF-8">
-      <title>GMotors — Orden #${r.id_registro}</title>
+      <title>Gorila Motos — Orden #${r.id_registro}</title>
       <style>
-        *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Segoe UI',Arial,sans-serif;padding:28px;color:#111;background:#fff}
-        .brand{font-size:26px;font-weight:900;color:#E11428;letter-spacing:-0.5px}
-        .subtitle{font-size:13px;color:#888;margin-top:2px}
-        .divider{border:none;border-top:3px solid #E11428;margin:16px 0}
-        .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
-        .field{background:#f5f5f5;border-radius:8px;padding:12px 14px}
-        .field label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#999;display:block;margin-bottom:4px}
-        .field span{font-size:15px;font-weight:700;color:#111}
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#0F172A;background:#fff}
+        .head{background:linear-gradient(135deg,#0C0C10,#1A1A22);border-radius:16px;padding:24px 28px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+        .brand{font-size:26px;font-weight:900;letter-spacing:-.5px}
+        .brand span{color:#E11428}
+        .tag{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-top:4px}
+        .badge{background:rgba(225,20,40,.16);border:1px solid rgba(225,20,40,.4);border-radius:10px;padding:8px 16px;text-align:right}
+        .badge p{margin:0;color:#E11428;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+        .badge span{color:#fff;font-size:18px;font-weight:900}
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0}
+        .field{background:#F8FAFC;border:1px solid #EEF1F5;border-radius:10px;padding:13px 16px}
+        .field label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#94A3B8;display:block;margin-bottom:5px;font-weight:700}
+        .field span{font-size:15px;font-weight:800;color:#0F172A}
         .full{grid-column:1/-1}
-        .plate{font-family:monospace;font-size:18px;font-weight:900;letter-spacing:2px;background:#111;color:#fff;padding:4px 10px;border-radius:6px}
-        .total-row{display:flex;justify-content:space-between;align-items:center;border-top:2px solid #E11428;padding-top:16px;margin-top:4px}
-        .total-label{font-size:14px;color:#666}
-        .total-val{font-size:30px;font-weight:900;color:#E11428}
-        .footer{margin-top:28px;text-align:center;font-size:11px;color:#bbb;border-top:1px solid #eee;padding-top:14px}
+        .plate{font-family:'Courier New',monospace;font-size:18px;font-weight:900;letter-spacing:2px;background:#0C0C10;color:#fff;padding:5px 12px;border-radius:6px;display:inline-block}
+        .chip{display:inline-block;font-size:11px;font-weight:800;padding:4px 12px;border-radius:99px;background:rgba(16,185,129,.12);color:#059669;border:1px solid rgba(16,185,129,.3)}
+        .total{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#E11428,#B91C1C);border-radius:14px;padding:18px 24px;color:#fff;margin-top:6px}
+        .total .lbl{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.85}
+        .total .val{font-size:32px;font-weight:900;letter-spacing:-1px}
+        .foot{margin-top:28px;text-align:center;font-size:11px;color:#CBD5E1;border-top:1px solid #EEF1F5;padding-top:14px}
         @media print{body{padding:14px}}
       </style></head><body>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div><div class="brand">GMotors</div><div class="subtitle">Taller de Servicio Técnico</div></div>
-        <div style="text-align:right"><div style="font-size:11px;color:#999">Orden de servicio</div>
-          <div style="font-size:22px;font-weight:900">#${r.id_registro}</div>
-          <div style="font-size:13px;color:#555">${fmtDate(r.fecha)}</div>
-        </div>
+      <div class="head">
+        <div><div class="brand">Gorila <span>Motos</span></div><div class="tag">Orden de servicio · Cuenca, Ecuador</div></div>
+        <div class="badge"><p>Orden</p><span>#${r.id_registro}</span></div>
       </div>
-      <hr class="divider"/>
       <div class="grid">
-        <div class="field"><label>Cliente</label><span>${r.nombre_cliente}</span></div>
-        <div class="field"><label>Placa</label><span class="plate">${r.placa}</span></div>
+        <div class="field"><label>Cliente</label><span>${r.nombre_cliente ?? '—'}</span></div>
+        <div class="field"><label>Placa</label><span class="plate">${r.placa ?? '—'}</span></div>
         <div class="field"><label>Vehículo</label><span>${r.marca_moto ?? ''} ${r.modelo_moto ?? ''}</span></div>
-        <div class="field"><label>Tipo de servicio</label><span>${r.tipo_servicio}</span></div>
-        ${r.kilometraje ? `<div class="field"><label>Kilometraje al ingreso</label><span>${r.kilometraje.toLocaleString('es-EC')} km</span></div>` : ''}
-        <div class="field"><label>Estado</label><span>${ESTADO_REGISTRO[r.estado]?.label ?? '—'}</span></div>
-        ${r.descripcion ? `<div class="field full"><label>Observaciones</label><span style="font-weight:400;font-size:13px">${r.descripcion}</span></div>` : ''}
+        <div class="field"><label>Tipo de servicio</label><span>${r.tipo_servicio ?? '—'}</span></div>
+        <div class="field"><label>Fecha de ingreso</label><span>${fmtDate(r.fecha)}</span></div>
+        ${r.kilometraje ? `<div class="field"><label>Kilometraje al ingreso</label><span>${r.kilometraje.toLocaleString('es-EC')} km</span></div>` : `<div class="field"><label>Estado</label><span class="chip">${estLabel}</span></div>`}
+        ${r.kilometraje ? `<div class="field"><label>Estado</label><span class="chip">${estLabel}</span></div>` : ''}
+        ${r.descripcion ? `<div class="field full"><label>Observaciones</label><span style="font-weight:500;font-size:13px;line-height:1.5">${r.descripcion}</span></div>` : ''}
       </div>
-      <div class="total-row">
-        <span class="total-label">Total del servicio</span>
-        <span class="total-val">${fmtMoney(r.costo_total ?? 0)}</span>
+      <div class="total">
+        <span class="lbl">Total del servicio</span>
+        <span class="val">${fmtMoney(r.costo_total ?? 0)}</span>
       </div>
-      <div class="footer">GMotors · Servicio de calidad con garantía · Gracias por su preferencia</div>
+      <div class="foot">Gorila Motos · Servicio de calidad con garantía · Gracias por su preferencia</div>
     </body></html>`);
     w.document.close();
     w.focus();
@@ -750,6 +760,12 @@ export default function RecordsPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <input className="gm-input-d" placeholder="Nombre del cliente *" value={qNombre} onChange={e => setQNombre(e.target.value)} />
                     <input className="gm-input-d" placeholder="Teléfono / WhatsApp" value={qTelefono} onChange={e => setQTelefono(e.target.value)} />
+                  </div>
+                  <div>
+                    <input className="gm-input-d w-full" type="email" placeholder="Correo del cliente (recomendado — para que pueda iniciar sesión)" value={qCorreo} onChange={e => setQCorreo(e.target.value)} />
+                    <p className="text-[10.5px] text-white/30 mt-1">
+                      Si pones su correo real, el cliente podrá entrar y ver su moto. Sin correo, se crea una cuenta interna y completa datos luego.
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <input className="gm-input-d" placeholder="Cédula (opcional)" value={qCedula} onChange={e => setQCedula(e.target.value)} />

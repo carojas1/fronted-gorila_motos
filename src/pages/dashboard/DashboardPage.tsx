@@ -197,7 +197,7 @@ export default function DashboardPage() {
     w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
       <title>GMotors — Reporte semanal ${rango}</title>
       <style>
-        *{box-sizing:border-box;margin:0;padding:0}
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
         body{font-family:'Segoe UI',Arial,sans-serif;color:#0F172A;background:#fff;padding:32px}
         .head{background:linear-gradient(135deg,#0C0C10,#1A1A22);border-radius:16px;padding:24px 28px;color:#fff;display:flex;justify-content:space-between;align-items:center}
         .brand{font-size:26px;font-weight:900;letter-spacing:-.5px}
