@@ -359,17 +359,16 @@ export default function ProfilesPage() {
       /* cambiarCategoria reemplaza el rol actual — evita duplicados */
       await rolesApi.cambiarCategoria(roleModal.user.id_usuario, selectedRol, me.id_usuario);
 
-      /* Si el nuevo rol es MECÁNICO → guardar permisos de módulos en descripcion */
+      /* Siempre guardar permisos en descripcion:
+         - MECANICO → lista de módulos seleccionados
+         - Otro rol  → limpia PERMISOS del campo para no dejar basura */
       const rolNombre = roles.find(r => r.id_rol === selectedRol)?.nombre?.toUpperCase() ?? '';
-      if (rolNombre === 'MECANICO') {
-        const newDesc = setPermisos(roleModal.user.descripcion, selectedModulos);
-        await usuariosApi.update(roleModal.user.id_usuario, {
-          ...(roleModal.user as unknown as Record<string, unknown>),
-          descripcion: newDesc,
-        });
-      }
+      const newDesc = rolNombre === 'MECANICO'
+        ? setPermisos(roleModal.user.descripcion, selectedModulos)
+        : (roleModal.user.descripcion ?? '').replace(/\|?PERMISOS:[^|]*/i, '').trim();
+      await usuariosApi.update(roleModal.user.id_usuario, { descripcion: newDesc });
 
-      toast.success("Rol y permisos guardados · el empleado debe volver a iniciar sesión");
+      toast.success("Rol y permisos guardados · el empleado debe cerrar sesión y volver a entrar");
       setRoleModal(null);
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }

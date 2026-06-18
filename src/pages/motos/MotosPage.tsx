@@ -307,11 +307,13 @@ export default function MotosPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
+    if (loading) return;
     const ctx = gsap.context(() => {
-      gsap.timeline({ defaults: { ease: 'power3.out' } })
-        .fromTo('.mp-header-el', { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, stagger: 0.06 })
-        .fromTo('.card-enter', { y: 40, opacity: 0, scale: 0.96 },
-          { y: 0, opacity: 1, scale: 1, stagger: 0.08, duration: 0.65, clearProps: 'transform' }, '-=0.3');
+      const headers = gsap.utils.toArray<HTMLElement>('.mp-header-el');
+      const cards   = gsap.utils.toArray<HTMLElement>('.card-enter');
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+      if (headers.length) tl.fromTo(headers, { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, stagger: 0.06 });
+      if (cards.length)   tl.fromTo(cards,   { y: 40, opacity: 0, scale: 0.96 }, { y: 0, opacity: 1, scale: 1, stagger: 0.08, duration: 0.65, clearProps: 'transform' }, '-=0.3');
     }, pageRef);
     return () => ctx.revert();
   }, [loading]);

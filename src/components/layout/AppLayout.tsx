@@ -523,10 +523,13 @@ export default function AppLayout() {
             className="p-4 md:p-6 lg:p-8 max-w-screen-2xl mx-auto"
           >
             {/* Boundary por página: si una pantalla falla, el menú sigue vivo
-                y al navegar a otra ruta (resetKey) se recupera sola. */}
-            <ErrorBoundary resetKey={location.pathname}>
-              <Outlet />
-            </ErrorBoundary>
+                y al navegar a otra ruta (resetKey) se recupera sola.
+                Términos: no renderizar nada hasta que el usuario acepte. */}
+            {!showTerms && (
+              <ErrorBoundary resetKey={location.pathname}>
+                <Outlet />
+              </ErrorBoundary>
+            )}
           </motion.div>
       </main>
 

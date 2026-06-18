@@ -69,13 +69,15 @@ export function useAuthEntrance() {
       }
 
       if (rightRef.current) {
-        const items = rightRef.current.querySelectorAll('.auth-item');
-        tl.fromTo(
-          items,
-          { y: 22, opacity: 0 },
-          { y: 0,  opacity: 1, duration: 0.5, stagger: 0.08 },
-          '-=0.4'
-        );
+        const items = Array.from(rightRef.current.querySelectorAll('.auth-item'));
+        if (items.length) {
+          tl.fromTo(
+            items,
+            { y: 22, opacity: 0 },
+            { y: 0,  opacity: 1, duration: 0.5, stagger: 0.08 },
+            '-=0.4'
+          );
+        }
       }
     });
 
@@ -201,8 +203,10 @@ export function useCardEntrance(selector = '.card-enter', deps: unknown[] = []) 
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const ctx = gsap.context(() => {
+      const els = gsap.utils.toArray<HTMLElement>(selector);
+      if (!els.length) return;
       gsap.fromTo(
-        selector,
+        els,
         { y: 36, opacity: 0, scale: 0.97 },
         {
           y: 0, opacity: 1, scale: 1,
@@ -227,23 +231,15 @@ export function usePageEntrance() {
   const pageRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const ctx = gsap.context(() => {
+      const headers  = gsap.utils.toArray<HTMLElement>('.header-enter');
+      const cards    = gsap.utils.toArray<HTMLElement>('.card-enter');
+      const sections = gsap.utils.toArray<HTMLElement>('.section-enter');
+      const rows     = gsap.utils.toArray<HTMLElement>('.row-enter');
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-      tl.fromTo('.header-enter',
-        { y: -18, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.55, stagger: 0.05 },
-      ).fromTo('.card-enter',
-        { y: 36, opacity: 0, scale: 0.97 },
-        { y: 0, opacity: 1, scale: 1, stagger: 0.07, duration: 0.6, clearProps: 'transform' },
-        '-=0.3',
-      ).fromTo('.section-enter',
-        { y: 24, opacity: 0 },
-        { y: 0, opacity: 1, stagger: 0.08, duration: 0.55 },
-        '-=0.35',
-      ).fromTo('.row-enter',
-        { x: -12, opacity: 0 },
-        { x: 0, opacity: 1, stagger: 0.04, duration: 0.4 },
-        '-=0.3',
-      );
+      if (headers.length)  tl.fromTo(headers,  { y: -18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, stagger: 0.05 });
+      if (cards.length)    tl.fromTo(cards,    { y: 36, opacity: 0, scale: 0.97 }, { y: 0, opacity: 1, scale: 1, stagger: 0.07, duration: 0.6, clearProps: 'transform' }, '-=0.3');
+      if (sections.length) tl.fromTo(sections, { y: 24, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.55 }, '-=0.35');
+      if (rows.length)     tl.fromTo(rows,     { x: -12, opacity: 0 }, { x: 0, opacity: 1, stagger: 0.04, duration: 0.4 }, '-=0.3');
     }, pageRef);
     return () => ctx.revert();
   }, []);
