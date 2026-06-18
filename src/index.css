@@ -182,11 +182,11 @@ body {
    DARK APP THEME — Post-login pages
    ══════════════════════════════════════════════ */
 
-/* ─── GSAP initial states ─── */
-.card-enter   { opacity: 0; transform: translateY(36px) scale(0.97); }
-.header-enter { opacity: 0; transform: translateY(-18px); }
-.section-enter{ opacity: 0; transform: translateY(24px); }
-.row-enter    { opacity: 0; transform: translateX(-12px); }
+/* ─── GSAP initial states — opacity visible by default so pages never go blank ─── */
+.card-enter   { }
+.header-enter { }
+.section-enter{ }
+.row-enter    { }
 
 /* ─── Dark card ─── */
 .gm-card-d {
