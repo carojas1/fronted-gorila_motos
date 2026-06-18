@@ -213,6 +213,15 @@ export default function MiMotoPage() {
   /* ── Guardar moto ── */
   const onSaveMoto = async (data: MotoForm) => {
     if (!user?.id_usuario) return;
+    /* Exigir datos personales (cédula y teléfono) antes de registrar la moto.
+       En vez de bloquear en silencio, avisamos y abrimos el editor de datos. */
+    if (!perfilOk) {
+      toast.error('Primero completa tus datos: cédula y teléfono.', 'Datos requeridos');
+      setEditingPerfil(true);
+      setAddingMoto(false);
+      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { /* noop */ }
+      return;
+    }
     setSavingMoto(true);
     try {
       /* 1. Obtener la foto como dataURL comprimido.
@@ -549,6 +558,24 @@ export default function MiMotoPage() {
           </div>
 
           <form onSubmit={handleMoto(onSaveMoto)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* Aviso: hace falta completar datos personales antes de registrar */}
+            {!perfilOk && (
+              <button
+                type="button"
+                onClick={() => { setEditingPerfil(true); setAddingMoto(false); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { /* noop */ } }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                  background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.28)',
+                  borderRadius: 12, padding: '11px 14px', cursor: 'pointer', width: '100%',
+                }}
+              >
+                <CreditCard size={16} color="#F59E0B" style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 12.5, color: '#F59E0B', fontWeight: 600, lineHeight: 1.45 }}>
+                  Completa primero tus datos (cédula y teléfono). Toca aquí para llenarlos.
+                </span>
+              </button>
+            )}
 
             {/* ── Foto de la moto ── */}
             <div>

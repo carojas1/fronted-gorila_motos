@@ -8,10 +8,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   Droplet, Wind, Zap, Link2, Circle, Disc, ClipboardCheck,
-  Info, ChevronDown, ChevronUp, Check, RotateCcw, type LucideIcon,
+  Info, ChevronDown, ChevronUp, Check, RotateCcw, MessageCircle, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { mantenimientosApi } from '../../lib/api';
+import { whatsappCitaLink, WORKSHOP_CONTACT } from '../../lib/constants';
 import {
   calcularEstadoLocal, etiquetaCC, rangoDeCC, parametrosDeCC,
   ESTADO_COLOR,
@@ -86,6 +87,20 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
   const ordenado = [...estado].sort((a, b) => b.porcentajeDesgaste - a.porcentajeDesgaste);
   const vencidos = estado.filter(e => e.estado === 'VENCIDO').length;
   const proximos = estado.filter(e => e.estado === 'PROXIMO').length;
+
+  /* Mensaje personalizado para agendar cita por WhatsApp (lo usa el cliente) */
+  const citaMsg = (() => {
+    const pendientes = ordenado
+      .filter(e => e.estado === 'VENCIDO' || e.estado === 'PROXIMO')
+      .map(e => `• ${e.label}${e.estado === 'VENCIDO' ? ' (urgente)' : ''}`);
+    return (
+      `¡Hola ${WORKSHOP_CONTACT.nombre}! 🏍️\n\n` +
+      `Quiero agendar una cita para mi moto ${moto.marca} ${moto.modelo} (placa ${moto.placa}).\n` +
+      `Kilometraje actual: ${moto.kilometraje.toLocaleString('es-EC')} km.` +
+      (pendientes.length ? `\n\nMantenimiento que necesita:\n${pendientes.join('\n')}` : '') +
+      `\n\n¿Qué horarios tienen disponibles? Gracias.`
+    );
+  })();
 
   return (
     <div>
@@ -176,6 +191,24 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
           );
         })}
       </div>
+
+      {/* Agendar cita por WhatsApp — solo clientes */}
+      {!canService && (
+        <a
+          href={whatsappCitaLink(citaMsg)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            width: '100%', marginTop: 14, padding: '12px 16px', borderRadius: 12,
+            background: 'linear-gradient(135deg, #25D366, #1EBE5A)', color: '#063D1E',
+            fontWeight: 800, fontSize: 14, textDecoration: 'none',
+            boxShadow: '0 6px 18px rgba(37,211,102,0.28)',
+          }}
+        >
+          <MessageCircle size={17} /> Agendar cita por WhatsApp
+        </a>
+      )}
 
       {/* Nota para el mecánico */}
       {canService && (

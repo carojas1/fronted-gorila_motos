@@ -9,6 +9,8 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 body {
@@ -22,7 +24,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-#root { min-height: 100vh; }
+#root { min-height: 100vh; overflow-x: clip; max-width: 100%; }
 
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }

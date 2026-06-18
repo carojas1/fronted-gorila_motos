@@ -18,6 +18,9 @@ export const WORKSHOP_CONTACT = {
   telefono:      '+593 98 083 4367',
   /** Solo dígitos, formato internacional (para enlaces wa.me) */
   whatsapp:      '593980834367',
+  /** Número que RECIBE las solicitudes de cita por WhatsApp.
+      EN PRUEBA: número personal. Cambiar al de Gorila Motos cuando se confirme. */
+  whatsappCitas: '593989443292',
   /** Correo general de contacto */
   email:         'info@gorilamoto.com',
   emailFacturacion: 'facturacion@gorilamoto.com',
@@ -31,5 +34,11 @@ export const WORKSHOP_CONTACT = {
 /** Enlace directo a WhatsApp con mensaje opcional */
 export function whatsappLink(mensaje = ''): string {
   const base = `https://wa.me/${WORKSHOP_CONTACT.whatsapp}`;
+  return mensaje ? `${base}?text=${encodeURIComponent(mensaje)}` : base;
+}
+
+/** Enlace de WhatsApp para AGENDAR CITA (va al número de citas del taller). */
+export function whatsappCitaLink(mensaje = ''): string {
+  const base = `https://wa.me/${WORKSHOP_CONTACT.whatsappCitas}`;
   return mensaje ? `${base}?text=${encodeURIComponent(mensaje)}` : base;
 }
