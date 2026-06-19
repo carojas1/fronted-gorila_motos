@@ -21,6 +21,8 @@ import { usePolling } from '../../hooks/usePolling';
 import { useCountUp } from '../../hooks/useGsap';
 import Badge from '../../components/ui/Badge';
 import type { RegistroDetalle, Moto, Producto } from '../../types';
+import { isNativeApp } from '../../lib/platform';
+import MobileDashboard from '../../components/mobile/MobileDashboard';
 
 /* ── Tooltip dark para recharts ── */
 function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
@@ -73,6 +75,11 @@ const ESTADO_COLORS: Record<number, string> = {
 const ESTADO_LABELS = ['Pendiente', 'En proceso', 'Completado', 'Entregado', 'Facturado'];
 
 export default function DashboardPage() {
+  /* En el APK se usa el dashboard móvil premium (isNativeApp es constante,
+     por lo que este return temprano no rompe el orden de hooks). */
+  if (isNativeApp) return <MobileDashboard />;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { user, isAdmin, isMecanico, isCliente } = useAuth();
 
   const [motos,     setMotos]     = useState<Moto[]>([]);

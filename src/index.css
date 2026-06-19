@@ -1287,6 +1287,95 @@ body {
 }
 
 /* ══════════════════════════════════════════════
+   APK — UI MÓVIL PREMIUM (tab bar + dashboard)
+   Solo se usan en componentes que se montan únicamente en el APK.
+   En la web estos selectores no existen en el DOM → inertes.
+   ══════════════════════════════════════════════ */
+
+/* ── Barra de pestañas inferior ── */
+.gm-tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+  display: flex; align-items: stretch;
+  background: rgba(12,12,16,0.94);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -10px 34px rgba(0,0,0,0.45);
+}
+.gm-tabbar-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; padding: 9px 0; background: none; border: none; cursor: pointer;
+  position: relative; transition: color 160ms ease, transform 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.gm-tabbar-item:active { transform: scale(0.9); }
+.gm-tabbar-lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.01em; }
+.gm-tabbar-ind {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 28px; height: 3px; border-radius: 0 0 4px 4px;
+  background: #FF3B47; box-shadow: 0 0 10px rgba(255,59,71,0.85);
+}
+
+/* ── Dashboard móvil ── */
+.m-dash { display: flex; flex-direction: column; gap: 14px; }
+.m-hero {
+  background: linear-gradient(140deg, #1A1A22 0%, #141419 55%, rgba(225,20,40,0.10) 130%);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 22px; padding: 18px 18px 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+.m-hero-greet { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.32); }
+.m-hero-name { font-size: 1.8rem; font-weight: 900; color: #fff; letter-spacing: -0.02em; margin-top: 2px; line-height: 1.05; }
+.m-hero-stats { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+.m-hs-num { font-size: 1.4rem; font-weight: 900; color: #fff; line-height: 1; }
+.m-hs-lbl { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+.m-hs-sep { width: 1px; height: 30px; background: rgba(255,255,255,0.1); }
+.m-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; padding: 5px 11px; border-radius: 99px; border: 1px solid; }
+.m-dot { width: 7px; height: 7px; border-radius: 50%; }
+.m-hero-income { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+.m-hero-income-val { font-size: 1.25rem; font-weight: 900; color: #fff; line-height: 1; }
+.m-hero-income-lbl { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+.m-section-t { font-size: 11px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin: 2px 2px -4px; }
+.m-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+.m-kpi {
+  position: relative; display: block; text-decoration: none;
+  background: linear-gradient(150deg, #17171E, #121217);
+  border: 1px solid rgba(255,255,255,0.06); border-radius: 18px; padding: 14px;
+  overflow: hidden; transition: transform 140ms ease;
+}
+.m-kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--c); opacity: 0.5; }
+.m-kpi:active { transform: scale(0.97); }
+.m-kpi-ico { width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+.m-kpi-val { font-size: 1.7rem; font-weight: 900; color: #fff; line-height: 1; letter-spacing: -0.02em; }
+.m-kpi-lbl { font-size: 11.5px; color: rgba(255,255,255,0.4); margin-top: 4px; font-weight: 600; }
+.m-alert {
+  display: flex; align-items: center; gap: 12px; text-decoration: none;
+  background: rgba(245,158,11,0.07); border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 16px; padding: 12px 14px;
+}
+.m-alert-ico { width: 36px; height: 36px; border-radius: 11px; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.m-alert-t { font-size: 13.5px; font-weight: 700; color: rgba(255,255,255,0.85); }
+.m-alert-s { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 1px; }
+.m-card { background: linear-gradient(150deg, #17171E, #121217); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 15px 15px 13px; }
+.m-card-head { display: flex; align-items: center; justify-content: space-between; }
+.m-card-t { font-size: 13px; font-weight: 800; color: rgba(255,255,255,0.85); }
+.m-card-link { font-size: 11.5px; font-weight: 700; color: #FF3B47; text-decoration: none; }
+.m-act { display: flex; align-items: center; gap: 11px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.m-act:last-child { border-bottom: none; }
+.m-act-ico { width: 34px; height: 34px; border-radius: 11px; background: rgba(225,20,40,0.09); border: 1px solid rgba(225,20,40,0.14); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.m-act-t { font-size: 13.5px; font-weight: 700; color: rgba(255,255,255,0.82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-act-s { font-size: 11px; color: rgba(255,255,255,0.32); font-family: monospace; margin-top: 1px; }
+.m-act-money { font-size: 13px; font-weight: 900; color: rgba(255,255,255,0.72); }
+.m-act-badge { display: inline-block; font-size: 9.5px; font-weight: 800; padding: 2px 7px; border-radius: 99px; margin-top: 2px; }
+.m-mods { display: flex; flex-direction: column; gap: 10px; }
+.m-mod { display: flex; align-items: center; gap: 13px; text-decoration: none; background: linear-gradient(150deg, #17171E, #121217); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 13px 14px; transition: transform 140ms ease; }
+.m-mod:active { transform: scale(0.98); }
+.m-mod-ico { width: 42px; height: 42px; border-radius: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.m-mod-tx { flex: 1; min-width: 0; }
+.m-mod-lbl { font-size: 14px; font-weight: 800; color: rgba(255,255,255,0.88); }
+.m-mod-desc { font-size: 11.5px; color: rgba(255,255,255,0.38); margin-top: 1px; }
+
+/* ══════════════════════════════════════════════
    MÓVIL / APK — Ajustes responsivos globales (≤640px)
    Solo afectan pantallas angostas (teléfono / APK). El desktop NO cambia.
    Se usa !important porque debe ganarle a estilos inline en las pantallas.

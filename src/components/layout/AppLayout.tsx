@@ -18,6 +18,8 @@ import { useToast } from '../ui/Toast';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import ErrorBoundary from '../ui/ErrorBoundary';
+import { isNativeApp } from '../../lib/platform';
+import MobileTabBar from '../mobile/MobileTabBar';
 
 export default function AppLayout() {
   const { user, isAdmin, isMecanico, isCliente, logout } = useAuth();
@@ -522,6 +524,7 @@ export default function AppLayout() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
             className="p-4 md:p-6 lg:p-8 max-w-screen-2xl mx-auto"
+            style={{ paddingBottom: isNativeApp ? 92 : undefined }}
           >
             {/* Boundary por página: si una pantalla falla, el menú sigue vivo
                 y al navegar a otra ruta (resetKey) se recupera sola.
@@ -533,6 +536,9 @@ export default function AppLayout() {
             )}
           </motion.div>
       </main>
+
+      {/* ══ BARRA DE TABS INFERIOR — solo en el APK ══ */}
+      {isNativeApp && <MobileTabBar onMore={() => setMobileOpen(true)} />}
 
       {/* ══ MODAL: crear / cambiar contraseña ══ */}
       <Modal
