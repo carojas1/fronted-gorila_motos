@@ -20,6 +20,7 @@ import Button from '../ui/Button';
 import ErrorBoundary from '../ui/ErrorBoundary';
 import { isNativeApp } from '../../lib/platform';
 import MobileTabBar from '../mobile/MobileTabBar';
+import MobileMore from '../mobile/MobileMore';
 
 export default function AppLayout() {
   const { user, isAdmin, isMecanico, isCliente, logout } = useAuth();
@@ -139,9 +140,23 @@ export default function AppLayout() {
       {/* Modal términos — solo primera vez */}
       {showTerms && <TermsModal onAccept={() => setShowTerms(false)} />}
 
-      {/* ══ MOBILE DRAWER ════════════════════════════════════════════ */}
+      {/* ══ MENÚ "MÁS" PREMIUM — solo APK ══ */}
+      {isNativeApp && (
+        <MobileMore
+          open={mobileMenuOpen}
+          onClose={() => setMobileOpen(false)}
+          items={[...NAV, ...NAV_MORE]}
+          nombre={user?.nombre_completo ?? 'Usuario'}
+          roleLabel={roleLabel}
+          roleColor={roleColor}
+          onChangePassword={() => { setPwOpen(true); setMobileOpen(false); }}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {/* ══ MOBILE DRAWER (web) ════════════════════════════════════════════ */}
       <AnimatePresence>
-        {mobileMenuOpen && (
+        {!isNativeApp && mobileMenuOpen && (
           <>
             {/* Backdrop */}
             <motion.div
