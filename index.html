@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Gorila Motos — Sistema interno de gestión del taller" />
     <title>Gorila Motos · Acceso</title>
+    <!-- Tema (claro/oscuro) aplicado ANTES de renderizar para evitar parpadeo -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('gm_theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+      })();
+    </script>
     <!-- Detector de errores de arranque (script clásico: corre aunque el módulo falle al parsear) -->
     <script>
       (function () {

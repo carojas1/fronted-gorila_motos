@@ -1412,6 +1412,71 @@ body {
 .m-more-row-lbl { flex: 1; text-align: left; font-size: 13.5px; font-weight: 700; color: rgba(255,255,255,0.8); }
 .m-more-foot { text-align: center; font-size: 11px; color: rgba(255,255,255,0.2); margin-top: 6px; }
 
+/* Fondo principal de la app (theme-aware) */
+.gm-app-bg { background: #0C0C10; }
+
+/* ══════════════════════════════════════════════
+   TEMA CLARO — html[data-theme="light"]
+   Solo cambia cuando el usuario activa el modo claro.
+   ══════════════════════════════════════════════ */
+html[data-theme="light"] body { background-color: #EEF0F3; color: #15151B; }
+html[data-theme="light"] .gm-app-bg { background: #EEF0F3 !important; }
+html[data-theme="light"] header { background: #FFFFFF !important; border-color: #E4E7EC !important; }
+
+/* Texto: variantes text-white/X (secundario) → oscuro; text-white pleno (botones) se respeta */
+html[data-theme="light"] [class*="text-white/"] { color: rgba(21,21,27,0.6) !important; }
+html[data-theme="light"] .text-white\/92,
+html[data-theme="light"] .text-white\/90,
+html[data-theme="light"] .text-white\/85,
+html[data-theme="light"] .text-white\/80,
+html[data-theme="light"] .text-white\/75 { color: #15151B !important; }
+html[data-theme="light"] .text-white\/70,
+html[data-theme="light"] .text-white\/65,
+html[data-theme="light"] .text-white\/60 { color: rgba(21,21,27,0.78) !important; }
+
+/* Fondos sutiles y bordes blancos → equivalentes oscuros tenues */
+html[data-theme="light"] [class*="bg-white/"] { background-color: rgba(21,21,27,0.035) !important; }
+html[data-theme="light"] [class*="border-white/"] { border-color: rgba(21,21,27,0.1) !important; }
+
+/* Tarjetas / inputs / tablas / buscadores */
+html[data-theme="light"] .gm-card-d {
+  background: #FFFFFF !important; border-color: #E4E7EC !important;
+  box-shadow: 0 1px 3px rgba(16,24,40,0.06), 0 1px 2px rgba(16,24,40,0.04) !important;
+}
+html[data-theme="light"] .gm-input-d,
+html[data-theme="light"] .gm-select-d { background: #FFFFFF !important; border-color: #D9DCE1 !important; color: #15151B !important; }
+html[data-theme="light"] .gm-table-d th { color: #6B7280 !important; border-color: #EAECEF !important; }
+html[data-theme="light"] .gm-table-d td { border-color: #F0F1F4 !important; color: #1F2937 !important; }
+html[data-theme="light"] .search-d { background: #FFFFFF !important; border-color: #D9DCE1 !important; }
+html[data-theme="light"] .skeleton-d { background: linear-gradient(90deg,#EDEFF2,#F6F7F9,#EDEFF2) !important; }
+
+/* ── UI móvil premium en claro ── */
+html[data-theme="light"] .gm-tabbar { background: rgba(255,255,255,0.96) !important; border-color: #E4E7EC !important; box-shadow: 0 -8px 30px rgba(16,24,40,0.08) !important; }
+html[data-theme="light"] .gm-tabbar-item { color: rgba(21,21,27,0.45); }
+html[data-theme="light"] .m-hero { background: linear-gradient(140deg,#FFFFFF,#F6F7F9 60%,rgba(225,20,40,0.06)) !important; border-color: #E4E7EC !important; box-shadow: 0 6px 20px rgba(16,24,40,0.06) !important; }
+html[data-theme="light"] .m-hero-name,
+html[data-theme="light"] .m-hs-num,
+html[data-theme="light"] .m-kpi-val,
+html[data-theme="light"] .m-hero-income-val { color: #15151B !important; }
+html[data-theme="light"] .m-kpi,
+html[data-theme="light"] .m-card,
+html[data-theme="light"] .m-mod { background: #FFFFFF !important; border-color: #E4E7EC !important; }
+html[data-theme="light"] .m-card-t,
+html[data-theme="light"] .m-mod-lbl,
+html[data-theme="light"] .m-act-t { color: #15151B !important; }
+html[data-theme="light"] .m-act { border-color: #F0F1F4 !important; }
+html[data-theme="light"] .m-hs-sep { background: #E4E7EC !important; }
+
+/* Menú "Más" en claro */
+html[data-theme="light"] .m-more-overlay { background: #EEF0F3 !important; }
+html[data-theme="light"] .m-more-head { border-color: #E4E7EC !important; }
+html[data-theme="light"] .m-more-name { color: #15151B !important; }
+html[data-theme="light"] .m-more-item,
+html[data-theme="light"] .m-more-row { background: #FFFFFF !important; border-color: #E4E7EC !important; }
+html[data-theme="light"] .m-more-lbl,
+html[data-theme="light"] .m-more-row-lbl { color: #15151B !important; }
+html[data-theme="light"] .m-more-close { background: #F0F1F4 !important; border-color: #E4E7EC !important; color: #374151 !important; }
+
 /* ══════════════════════════════════════════════
    MÓVIL / APK — Ajustes responsivos globales (≤640px)
    Solo afectan pantallas angostas (teléfono / APK). El desktop NO cambia.

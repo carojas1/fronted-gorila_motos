@@ -9,8 +9,10 @@ import {
   Users, Star, Bell, ClipboardList, Fuel, Wallet, BookOpen, Globe,
   KeyRound, LogOut, X, ChevronRight, type LucideIcon,
 } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
 import { initials } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../lib/theme';
 
 /* Rutas que YA están en la barra de tabs inferior — no se repiten en "Más". */
 function rutasDelTabBar(esClientePuro: boolean): Set<string> {
@@ -63,6 +65,7 @@ export default function MobileMore({
   const nav = useNavigate();
   const loc = useLocation();
   const { isAdmin, isMecanico, isCliente } = useAuth();
+  const [theme, toggleTheme] = useTheme();
   if (!open) return null;
 
   /* Quitar lo que ya aparece en el tab bar inferior (sin redundancia) */
@@ -120,6 +123,16 @@ export default function MobileMore({
         {/* Cuenta */}
         <div className="m-more-group">
           <p className="m-more-gt">Cuenta</p>
+          {/* Modo claro / oscuro */}
+          <button onClick={toggleTheme} className="m-more-row">
+            <div className="m-more-ico" style={{ background: theme === 'dark' ? 'rgba(245,158,11,0.12)' : 'rgba(59,130,246,0.12)', border: theme === 'dark' ? '1px solid rgba(245,158,11,0.25)' : '1px solid rgba(59,130,246,0.25)' }}>
+              {theme === 'dark' ? <Sun size={16} style={{ color: '#F59E0B' }} /> : <Moon size={16} style={{ color: '#3B82F6' }} />}
+            </div>
+            <span className="m-more-row-lbl">{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(125,125,135,0.9)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {theme === 'dark' ? 'Oscuro' : 'Claro'}
+            </span>
+          </button>
           <button onClick={() => { onClose(); onChangePassword(); }} className="m-more-row">
             <div className="m-more-ico" style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)' }}>
               <KeyRound size={16} style={{ color: '#3B82F6' }} />

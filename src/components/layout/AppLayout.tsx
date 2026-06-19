@@ -21,6 +21,8 @@ import ErrorBoundary from '../ui/ErrorBoundary';
 import { isNativeApp } from '../../lib/platform';
 import MobileTabBar from '../mobile/MobileTabBar';
 import MobileMore from '../mobile/MobileMore';
+import { useTheme } from '../../lib/theme';
+import { Sun, Moon } from 'lucide-react';
 
 export default function AppLayout() {
   const { user, isAdmin, isMecanico, isCliente, logout } = useAuth();
@@ -28,6 +30,7 @@ export default function AppLayout() {
   const navigate  = useNavigate();
   const toast      = useToast();
   const { unread } = useNotifications();
+  const [theme, toggleTheme] = useTheme();
 
   /* Cambiar/crear contraseña (sirve para quien entró con Google y quiere
      poder iniciar sesión también escribiendo su correo y contraseña) */
@@ -135,7 +138,7 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: '#0C0C10' }}>
+    <div className="gm-app-bg flex flex-col min-h-screen">
 
       {/* Modal términos — solo primera vez */}
       {showTerms && <TermsModal onAccept={() => setShowTerms(false)} />}
@@ -414,6 +417,18 @@ export default function AppLayout() {
 
           {/* Derecha: notif + saludo + avatar */}
           <div className="flex items-center gap-2 ml-auto shrink-0" ref={menuRef}>
+            {/* Toggle de tema claro / oscuro */}
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center w-9 h-9 rounded-xl transition-all shrink-0"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+              title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              aria-label="Cambiar tema"
+            >
+              {theme === 'dark'
+                ? <Sun size={16} style={{ color: '#F59E0B' }} />
+                : <Moon size={16} style={{ color: '#3B82F6' }} />}
+            </button>
             {/* Bell de notificaciones */}
             <div className="relative" ref={notifRef}>
               <NotificationBell onClick={() => setNotifOpen(v => !v)} unread={unread} />
