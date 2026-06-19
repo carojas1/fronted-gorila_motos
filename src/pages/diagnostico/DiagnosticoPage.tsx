@@ -94,7 +94,7 @@ function DiagnosticoCard({ d, motos, usuarios }: { d: DiagnosticoMoto; motos: Mo
               {d.observaciones_generales}
             </p>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8, marginTop: 12 }}>
+          <div className="gm-respgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8, marginTop: 12 }}>
             {d.detalles.map(det => {
               const pc = ESTADO_CONFIG[det.estado as 1 | 2 | 3];
               const part = PARTES.find(p => p.key === det.parte);
@@ -393,7 +393,7 @@ export default function DiagnosticoPage() {
         )}
 
         {/* Kilometraje de ingreso */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, marginBottom: 18 }}>
+        <div className="gm-respgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, marginBottom: 18 }}>
           <div>
             <label style={lbl}>Kilometraje de ingreso *</label>
             <div style={{ position: 'relative' }}>

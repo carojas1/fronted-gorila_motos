@@ -176,7 +176,7 @@ export default function AlertasPage() {
         <div className="search-d">
           <Search size={14} />
           <input
-            className="gm-input-d"
+            className="gm-input-d gm-wfull-m"
             style={{ width: 280 }}
             placeholder="Placa, marca, propietario…"
             value={search}

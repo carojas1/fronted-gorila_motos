@@ -1285,3 +1285,52 @@ body {
 .enterprise-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(225,20,40,0.4);
 }
+
+/* ══════════════════════════════════════════════
+   MÓVIL / APK — Ajustes responsivos globales (≤640px)
+   Solo afectan pantallas angostas (teléfono / APK). El desktop NO cambia.
+   Se usa !important porque debe ganarle a estilos inline en las pantallas.
+   ══════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* Grids de 3+ columnas fijas → 1 columna (los grid-cols-2 se mantienen) */
+  .grid-cols-3,
+  .grid-cols-4,
+  .grid-cols-5,
+  .grid-cols-6 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+  /* Cualquier col-span deja de ocupar varias columnas en móvil */
+  [class*="col-span-"] { grid-column: auto !important; }
+  /* Grids con gridTemplateColumns inline marcados como responsivos */
+  .gm-respgrid { grid-template-columns: 1fr !important; }
+
+  /* Tablas: eliminar min-width fijo (incluso inline) y compactar para que quepan */
+  .gm-table-d { min-width: 0 !important; font-size: 11px !important; }
+  .gm-table-d th,
+  .gm-table-d td { padding: 8px 8px !important; }
+
+  /* Inputs y buscadores de ancho fijo → ancho completo */
+  .w-64, .w-52 { width: 100% !important; }
+  .max-w-sm, .max-w-md { max-width: 100% !important; }
+  .search-d { min-width: 0 !important; max-width: 100% !important; width: 100% !important; }
+  /* Utilidad para inputs con width inline que deben ser full en móvil */
+  .gm-wfull-m { width: 100% !important; min-width: 0 !important; }
+
+  /* MotosPage: strip de KPIs y búsqueda de ancho fijo */
+  .mp-kpi-strip {
+    width: 100% !important;
+    padding: 12px 8px !important;
+    justify-content: space-around !important;
+  }
+  .mp-kpi { padding: 0 6px !important; }
+  .mp-kpi-num { font-size: 1.05rem !important; }
+  .mp-search-input { width: 100% !important; }
+  .mp-controls { width: 100%; }
+
+  /* Títulos gigantes: reducir para que no desborden ni se vean fuera de escala */
+  .text-5xl { font-size: 2.25rem !important; }
+  .text-4xl { font-size: 1.9rem !important; }
+
+  /* Padding generoso de tarjetas → más compacto en móvil */
+  .p-6 { padding: 1rem !important; }
+}

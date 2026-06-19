@@ -332,7 +332,7 @@ export default function CombustiblePage() {
           ))}
         </select>
         <input
-          type="month" className="gm-input-d" style={{ width: 180 }}
+          type="month" className="gm-input-d gm-wfull-m" style={{ width: 180 }}
           value={month} onChange={e => setMonth(e.target.value)}
         />
       </div>

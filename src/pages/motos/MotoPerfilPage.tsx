@@ -97,7 +97,7 @@ function DiagCard({ d, usuarios }: { d: DiagnosticoMoto; usuarios: Usuario[] }) 
 
       {/* Detalles expandidos */}
       {open && (d.detalles ?? []).length > 0 && (
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '12px 18px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: 8 }}>
+        <div className="gm-respgrid" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '12px 18px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: 8 }}>
           {(d.detalles ?? []).map(det => {
             const pc   = ESTADO_CFG[det.estado as 1 | 2 | 3];
             const Icon = PARTES_ICON[det.parte] ?? Cog;
