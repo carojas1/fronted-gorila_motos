@@ -10,6 +10,16 @@ import {
   KeyRound, LogOut, X, ChevronRight, type LucideIcon,
 } from 'lucide-react';
 import { initials } from '../../lib/utils';
+import { useAuth } from '../../contexts/AuthContext';
+
+/* Rutas que YA están en la barra de tabs inferior — no se repiten en "Más". */
+function rutasDelTabBar(esClientePuro: boolean): Set<string> {
+  return new Set(
+    esClientePuro
+      ? ['/dashboard', '/mi-moto', '/combustible', '/puntos']
+      : ['/dashboard', '/registros', '/motos', '/inventario'],
+  );
+}
 
 interface NavItem { label: string; to: string }
 
@@ -52,9 +62,14 @@ export default function MobileMore({
 }) {
   const nav = useNavigate();
   const loc = useLocation();
+  const { isAdmin, isMecanico, isCliente } = useAuth();
   if (!open) return null;
 
-  const byLabel = new Map(items.map(i => [i.label, i]));
+  /* Quitar lo que ya aparece en el tab bar inferior (sin redundancia) */
+  const esClientePuro = isCliente && !isAdmin && !isMecanico;
+  const enTab = rutasDelTabBar(esClientePuro);
+  const visibles = items.filter(i => !enTab.has(i.to));
+  const byLabel = new Map(visibles.map(i => [i.label, i]));
   const go = (to: string) => { onClose(); nav(to); };
 
   return (
