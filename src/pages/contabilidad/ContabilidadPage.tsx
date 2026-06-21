@@ -7,7 +7,12 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   TrendingUp, DollarSign, Wallet, Plus, Trash2,
   ArrowUpRight, ArrowDownRight, BarChart2, Receipt, Calendar,
+  Download, TrendingDown, Target, Activity,
 } from 'lucide-react';
+import {
+  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid, ReferenceLine,
+} from 'recharts';
 import { registrosApi, pagosEmpleadoApi, usuariosApi, type PagoEmpleadoAPI } from '../../lib/api';
 import { fmtMoney, fmtDate, getErrorMsg, toIsoStr } from '../../lib/utils';
 import { useToast } from '../../components/ui/Toast';
@@ -15,6 +20,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import type { RegistroDetalle, Usuario } from '../../types';
 import { usePageEntrance } from '../../hooks/useGsap';
+import { useTheme } from '../../lib/theme';
 
 const MES_LABELS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MES_SHORT  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -40,37 +46,120 @@ function weekLabel(dateStr: string): string {
   return `${fm.toLocaleDateString('es-EC', opts)} – ${fs.toLocaleDateString('es-EC', opts)}`;
 }
 
-/* ─── Mini bar chart doble (CSS puro, labels variables) ─── */
-function DualBar({ ingresos, gastos, labels }: { ingresos: number[]; gastos: number[]; labels: string[] }) {
-  const max = Math.max(...ingresos, ...gastos, 1);
-  const hasData = ingresos.some(v=>v>0) || gastos.some(v=>v>0);
+/* ─── Tooltip personalizado ─── */
+function ChartTip({ active, payload, label }: {active?:boolean;payload?:{name:string;value:number;color:string}[];label?:string}) {
+  if (!active || !payload?.length) return null;
+  const ing = payload.find(p => p.name === 'Ingresos');
+  const gas = payload.find(p => p.name === 'Gastos');
+  const bal = payload.find(p => p.name === 'Balance');
   return (
-    <div>
-      <div className="flex items-end gap-1" style={{ height: 96 }}>
-        {labels.map((label, i) => {
-          const hi = Math.max((ingresos[i] / max) * 100, ingresos[i] > 0 ? 6 : 0);
-          const hg = Math.max((gastos[i]   / max) * 100, gastos[i]   > 0 ? 6 : 0);
-          const tooltipTxt = `${label}: +${fmtMoney(ingresos[i])} / -${fmtMoney(gastos[i])}`;
-          return (
-            <div key={label} className="flex-1 flex flex-col items-center gap-0.5 group relative" title={tooltipTxt}>
-              <div className="w-full flex gap-[1px] items-end" style={{ height: 90 }}>
-                <div className="flex-1 rounded-t-[3px] transition-all duration-700"
-                  style={{ height:`${hi}%`, minHeight: ingresos[i]>0 ? 3 : 0,
-                    background:'linear-gradient(to top,rgba(16,185,129,0.85),rgba(16,185,129,0.25))' }} />
-                <div className="flex-1 rounded-t-[3px] transition-all duration-700"
-                  style={{ height:`${hg}%`, minHeight: gastos[i]>0 ? 3 : 0,
-                    background:'linear-gradient(to top,rgba(225,20,40,0.85),rgba(225,20,40,0.25))' }} />
-              </div>
-              <span className="text-[8px]" style={{ color:'rgba(255,255,255,0.2)' }}>{label.slice(0,1)}</span>
-            </div>
-          );
-        })}
-      </div>
-      {!hasData && (
-        <p className="text-center text-xs mt-2" style={{ color:'rgba(255,255,255,0.2)' }}>Sin datos para este período</p>
+    <div className="rounded-xl px-4 py-3 text-xs font-semibold"
+         style={{ background:'#1A1A24', border:'1px solid rgba(255,255,255,0.1)', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}>
+      <p className="font-black text-white/70 mb-2 uppercase tracking-widest text-[10px]">{label}</p>
+      {ing && <p style={{ color:'#10B981' }}>↑ Ingresos: {fmtMoney(ing.value)}</p>}
+      {gas && <p style={{ color:'#F43F5E' }}>↓ Gastos: {fmtMoney(gas.value)}</p>}
+      {bal && (
+        <p className="mt-1.5 pt-1.5 border-t border-white/10"
+           style={{ color: (bal.value ?? 0) >= 0 ? '#10B981' : '#F43F5E' }}>
+          = Balance: {fmtMoney(bal.value)}
+        </p>
       )}
     </div>
   );
+}
+
+/* ─── Gráfica de negocio profesional con Recharts ─── */
+function BusinessChart({ ingresos, gastos, labels, isDark }: {
+  ingresos: number[]; gastos: number[]; labels: string[]; isDark: boolean;
+}) {
+  const data = labels.map((name, i) => ({
+    name,
+    Ingresos: ingresos[i] ?? 0,
+    Gastos:   gastos[i]   ?? 0,
+    Balance:  (ingresos[i] ?? 0) - (gastos[i] ?? 0),
+  }));
+  const hasData = data.some(d => d.Ingresos > 0 || d.Gastos > 0);
+  const tickColor  = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.45)';
+  const gridColor  = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+  const zeroColor  = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
+
+  if (!hasData) return (
+    <div className="flex flex-col items-center justify-center h-48 gap-3">
+      <BarChart2 size={28} style={{ color: tickColor, opacity: 0.4 }}/>
+      <p style={{ color: tickColor, fontSize: 12 }}>Sin datos para este período</p>
+    </div>
+  );
+
+  return (
+    <ResponsiveContainer width="100%" height={240}>
+      <ComposedChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
+        <defs>
+          <linearGradient id="gradIng" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#10B981" stopOpacity={0.9}/>
+            <stop offset="100%" stopColor="#059669" stopOpacity={0.55}/>
+          </linearGradient>
+          <linearGradient id="gradGas" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#F43F5E" stopOpacity={0.9}/>
+            <stop offset="100%" stopColor="#E11428" stopOpacity={0.55}/>
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} stroke={gridColor} strokeDasharray="3 3"/>
+        <XAxis dataKey="name" tick={{ fill: tickColor, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false}/>
+        <YAxis
+          tick={{ fill: tickColor, fontSize: 10 }}
+          axisLine={false} tickLine={false}
+          tickFormatter={v => `$${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`}
+          width={44}
+        />
+        <Tooltip content={<ChartTip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}/>
+        <ReferenceLine y={0} stroke={zeroColor} strokeWidth={1}/>
+        <Bar dataKey="Ingresos" fill="url(#gradIng)" radius={[4,4,0,0]} maxBarSize={32}/>
+        <Bar dataKey="Gastos"   fill="url(#gradGas)" radius={[4,4,0,0]} maxBarSize={32}/>
+        <Line
+          type="monotone" dataKey="Balance" stroke="#F59E0B" strokeWidth={2}
+          dot={{ fill:'#F59E0B', r:3, strokeWidth:0 }}
+          activeDot={{ r:5, fill:'#F59E0B', strokeWidth:0 }}
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* ─── Exportar datos filtrados a CSV ─── */
+function exportarCSV(
+  ingresos: RegistroDetalle[], gastos: PagoEmpleadoAPI[],
+  empleados: Usuario[], label: string
+) {
+  const nombreEmp = (id: number) => {
+    if (id === 0) return 'Gasto general';
+    const u = empleados.find(e => e.id_usuario === id);
+    return u ? u.nombre_completo.split(' ').slice(0,2).join(' ') : `Empleado #${id}`;
+  };
+  const rows: string[][] = [
+    ['Fecha', 'Descripción', 'Tipo', 'Monto (USD)'],
+    ...ingresos.map(r => [
+      toIsoStr(r.fecha),
+      `Servicio ${r.placa} - ${r.tipo_servicio ?? ''}`,
+      'Ingreso',
+      (r.costo_total ?? 0).toFixed(2),
+    ]),
+    ...gastos.map(g => [
+      toIsoStr(g.fecha),
+      `${g.concepto} — ${nombreEmp(g.id_empleado)}`,
+      'Gasto',
+      Number(g.monto).toFixed(2),
+    ]),
+  ];
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type:'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `contabilidad_${label.replace(/\s+/g,'-')}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /* ─── Label del filtro activo ─── */
@@ -87,6 +176,8 @@ function filtroLabel(tipo: FiltroTipo, fecha: string, mes: number, anio: number)
 export default function ContabilidadPage() {
   const toast   = useToast();
   const pageRef = usePageEntrance();
+  const { theme } = useTheme();
+  const isDark = theme !== 'light';
 
   const [registros,   setRegistros]   = useState<RegistroDetalle[]>([]);
   const [gastos,      setGastos]      = useState<PagoEmpleadoAPI[]>([]);
@@ -236,12 +327,44 @@ export default function ContabilidadPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [registros, gastos, empleados, filtrar]);
 
+  /* ── KPIs de negocio ampliados ── */
+  const serviciosPeriodo = useMemo(
+    () => filtrar(registros.filter(r => r.estado === 4)).length,
+    [registros, filtrar]
+  );
+  const ticketPromedio   = serviciosPeriodo > 0 ? ingresosPeriodo / serviciosPeriodo : 0;
+  const margenNeto       = ingresosPeriodo > 0 ? ((balance / ingresosPeriodo) * 100) : 0;
+
+  /* Crecimiento vs período anterior (solo para filtro mes) */
+  const crecimientoMes = useMemo(() => {
+    if (filtroTipo !== 'mes') return null;
+    let prevM = filtroMes - 1, prevY = filtroAnio;
+    if (prevM === 0) { prevM = 12; prevY -= 1; }
+    const cobradosPrev = registros.filter(r => r.estado === 4 && (() => {
+      const f = toIsoStr(r.fecha);
+      return f.startsWith(`${prevY}-${String(prevM).padStart(2,'0')}`);
+    })()).reduce((s, r) => s + (r.costo_total ?? 0), 0);
+    if (cobradosPrev === 0) return null;
+    return ((ingresosPeriodo - cobradosPrev) / cobradosPrev) * 100;
+  }, [filtroTipo, filtroMes, filtroAnio, registros, ingresosPeriodo]);
+
   const KPIs = [
-    { label:'Ingresos',        value:fmtMoney(ingresosPeriodo), sub:'Servicios facturados',   icon:TrendingUp,    color:'#10B981', bg:'rgba(16,185,129,0.08)',  border:'rgba(16,185,129,0.2)'  },
-    { label:'Gastos empleados',value:fmtMoney(gastosEmpleados), sub:'Sueldos, bonos, etc.',   icon:DollarSign,    color:'#F59E0B', bg:'rgba(245,158,11,0.08)', border:'rgba(245,158,11,0.2)'  },
-    { label:'Gastos generales',value:fmtMoney(gastosGenerales), sub:'Compras, servicios ext.', icon:Receipt,       color:'#8B5CF6', bg:'rgba(139,92,246,0.08)', border:'rgba(139,92,246,0.2)'  },
-    { label:'Balance neto',    value:fmtMoney(balance),         sub:balance>=0?'Ganancia':'Pérdida', icon:balance>=0?ArrowUpRight:ArrowDownRight,
-      color:balance>=0?'#10B981':'#E11428', bg:balance>=0?'rgba(16,185,129,0.08)':'rgba(225,20,40,0.08)', border:balance>=0?'rgba(16,185,129,0.2)':'rgba(225,20,40,0.2)' },
+    {
+      label:'Ingresos', value:fmtMoney(ingresosPeriodo),
+      sub: crecimientoMes != null
+        ? `${crecimientoMes >= 0 ? '▲' : '▼'} ${Math.abs(crecimientoMes).toFixed(1)}% vs mes anterior`
+        : 'Servicios facturados',
+      icon: crecimientoMes != null && crecimientoMes < 0 ? TrendingDown : TrendingUp,
+      color:'#10B981', bg:'rgba(16,185,129,0.08)', border:'rgba(16,185,129,0.2)',
+    },
+    { label:'Gastos totales',  value:fmtMoney(totalGastos),    sub:`Empleados $${fmtMoney(gastosEmpleados)} + gral. $${fmtMoney(gastosGenerales)}`, icon:DollarSign, color:'#F43F5E', bg:'rgba(244,63,94,0.08)',  border:'rgba(244,63,94,0.2)'   },
+    { label:'Balance neto',    value:fmtMoney(balance),         sub:`Margen: ${margenNeto.toFixed(1)}%`,
+      icon: balance >= 0 ? ArrowUpRight : ArrowDownRight,
+      color: balance >= 0 ? '#10B981' : '#E11428',
+      bg: balance >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(225,20,40,0.08)',
+      border: balance >= 0 ? 'rgba(16,185,129,0.2)' : 'rgba(225,20,40,0.2)',
+    },
+    { label:'Ticket promedio', value:fmtMoney(ticketPromedio),  sub:`${serviciosPeriodo} servicios facturados`, icon:Target, color:'#8B5CF6', bg:'rgba(139,92,246,0.08)', border:'rgba(139,92,246,0.2)' },
   ];
 
   const FILTROS: { key: FiltroTipo; label: string }[] = [
@@ -265,9 +388,24 @@ export default function ContabilidadPage() {
             <h1 className="text-3xl font-black text-white">Contabilidad</h1>
             <p className="text-white/30 text-sm mt-1">Ingresos, gastos y balance del negocio</p>
           </div>
-          <Button icon={<Plus size={14}/>} onClick={() => setModalGasto(true)}>
-            Registrar gasto
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportarCSV(
+                filtrar(registros.filter(r => r.estado === 4)),
+                filtrar(gastos),
+                empleados,
+                filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio)
+              )}
+              className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-xl transition-all"
+              style={{ background:'rgba(16,185,129,0.1)', color:'#10B981', border:'1px solid rgba(16,185,129,0.2)' }}
+              title="Exportar a CSV (abre en Excel)"
+            >
+              <Download size={13}/> Exportar CSV
+            </button>
+            <Button icon={<Plus size={14}/>} onClick={() => setModalGasto(true)}>
+              Registrar gasto
+            </Button>
+          </div>
         </div>
 
         {/* Filtros de fecha */}
@@ -372,30 +510,64 @@ export default function ContabilidadPage() {
         </div>
       )}
 
-      {/* ─── Gráfico comparativo ─── */}
+      {/* ─── Gráfico de negocio profesional ─── */}
       <div className="section-enter gm-card-d rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-start justify-between mb-5">
           <div>
             <p className="text-sm font-bold text-white/85 flex items-center gap-2">
-              <BarChart2 size={15} className="text-gm-red"/>
-              {filtroTipo === 'anio' ? `Comparativo ${filtroAnio}` :
-               filtroTipo === 'todo' ? `Comparativo ${anioActual}` :
+              <Activity size={15} className="text-gm-red"/>
+              {filtroTipo === 'anio' ? `Análisis financiero ${filtroAnio}` :
+               filtroTipo === 'todo' ? `Resumen anual ${anioActual}` :
                `Últimos 6 meses`}
             </p>
-            <p className="text-[11px] text-white/30 mt-0.5">Verde = ingresos · Rojo = gastos</p>
+            <p className="text-[11px] text-white/30 mt-0.5">
+              Barras: ingresos / gastos · Línea amarilla: balance neto por período
+            </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ background:'rgba(16,185,129,0.7)' }}/>
-              <span className="text-[10px] text-white/30 font-semibold">Ingresos</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ background:'rgba(225,20,40,0.7)' }}/>
-              <span className="text-[10px] text-white/30 font-semibold">Gastos</span>
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm" style={{ background:'#10B981' }}/><span className="text-[10px] text-white/35 font-semibold">Ingresos</span></div>
+              <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm" style={{ background:'#F43F5E' }}/><span className="text-[10px] text-white/35 font-semibold">Gastos</span></div>
+              <div className="flex items-center gap-1"><div className="w-5 h-0.5 rounded-full" style={{ background:'#F59E0B' }}/><span className="text-[10px] text-white/35 font-semibold">Balance</span></div>
             </div>
           </div>
         </div>
-        <DualBar ingresos={chartIngresos} gastos={chartGastos} labels={chartLabels}/>
+        <BusinessChart ingresos={chartIngresos} gastos={chartGastos} labels={chartLabels} isDark={isDark}/>
+
+        {/* ── Análisis de tendencia por período ── */}
+        {!loading && (() => {
+          const nonZero = chartIngresos.filter(v => v > 0);
+          if (nonZero.length < 2) return null;
+          const last3Avg = nonZero.slice(-3).reduce((s,v)=>s+v,0) / Math.min(3, nonZero.length);
+          const first3Avg = nonZero.slice(0,3).reduce((s,v)=>s+v,0) / Math.min(3, nonZero.length);
+          const tendencia = last3Avg > first3Avg * 1.05 ? 'creciente' : last3Avg < first3Avg * 0.95 ? 'decreciente' : 'estable';
+          const tendColor = tendencia === 'creciente' ? '#10B981' : tendencia === 'decreciente' ? '#F43F5E' : '#F59E0B';
+          const maxMes = chartLabels[chartIngresos.indexOf(Math.max(...chartIngresos))];
+          const totalIng = chartIngresos.reduce((s,v)=>s+v,0);
+          const totalGas = chartGastos.reduce((s,v)=>s+v,0);
+          const rentabilidad = totalIng > 0 ? ((totalIng - totalGas) / totalIng * 100) : 0;
+          return (
+            <div className="mt-5 pt-5 border-t grid grid-cols-3 gap-4"
+                 style={{ borderColor:'rgba(255,255,255,0.05)' }}>
+              <div className="text-center">
+                <p className="text-[10px] text-white/25 uppercase tracking-widest mb-1">Tendencia</p>
+                <p className="text-sm font-black capitalize" style={{ color: tendColor }}>
+                  {tendencia === 'creciente' ? '▲' : tendencia === 'decreciente' ? '▼' : '→'} {tendencia}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-white/25 uppercase tracking-widest mb-1">Mejor mes</p>
+                <p className="text-sm font-black text-white/80">{maxMes}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-white/25 uppercase tracking-widest mb-1">Rentabilidad</p>
+                <p className="text-sm font-black" style={{ color: rentabilidad >= 0 ? '#10B981' : '#F43F5E' }}>
+                  {rentabilidad.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ─── Tabla de movimientos ─── */}

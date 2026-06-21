@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import type { Moto, Producto, RegistroDetalle } from '../types';
 
 export type NotifPriority = 'high' | 'medium' | 'low';
-export type NotifType     = 'oil_alert' | 'low_stock' | 'pending_order' | 'info';
+export type NotifType     = 'oil_alert' | 'low_stock' | 'pending_order' | 'moto_ready' | 'info';
 
 export interface Notification {
   id:       string;
@@ -23,26 +23,45 @@ export interface Notification {
   createdAt:string;
 }
 
-const STORAGE_KEY    = 'gm_notifications';
-const STORAGE_VER    = 'gm_notif_v';
-const CURRENT_VER    = '2';   // bump when message format changes
+const CURRENT_VER = '3';  // bump para resetear caché al cambiar formato
 
-function loadStored(): Notification[] {
-  try {
-    /* Migración: si la versión no coincide, limpiar para evitar fechas mal formateadas */
-    if (localStorage.getItem(STORAGE_VER) !== CURRENT_VER) {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.setItem(STORAGE_VER, CURRENT_VER);
-      return [];
-    }
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-  }
-  catch { return []; }
+/* Claves por usuario para que cada cuenta tenga sus propias notificaciones */
+function keys(uid: number) {
+  return {
+    notifs:    `gm_notifs_${uid}`,
+    dismissed: `gm_dismissed_${uid}`,
+    ver:       `gm_notif_ver_${uid}`,
+  };
 }
 
-function saveNotifs(n: Notification[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(n));
-  localStorage.setItem(STORAGE_VER, CURRENT_VER);
+function loadStored(uid: number): Notification[] {
+  try {
+    const k = keys(uid);
+    if (localStorage.getItem(k.ver) !== CURRENT_VER) {
+      localStorage.removeItem(k.notifs);
+      localStorage.removeItem(k.dismissed);
+      localStorage.setItem(k.ver, CURRENT_VER);
+      return [];
+    }
+    return JSON.parse(localStorage.getItem(k.notifs) ?? '[]');
+  } catch { return []; }
+}
+
+function loadDismissed(uid: number): Set<string> {
+  try {
+    const raw = localStorage.getItem(keys(uid).dismissed);
+    return new Set(JSON.parse(raw ?? '[]'));
+  } catch { return new Set(); }
+}
+
+function saveNotifs(uid: number, n: Notification[]) {
+  const k = keys(uid);
+  localStorage.setItem(k.notifs, JSON.stringify(n));
+  localStorage.setItem(k.ver, CURRENT_VER);
+}
+
+function saveDismissed(uid: number, set: Set<string>) {
+  localStorage.setItem(keys(uid).dismissed, JSON.stringify([...set]));
 }
 
 function genId(prefix: string, id: number | string) {
@@ -54,103 +73,119 @@ function oilThreshold(cc: number) { return cc >= 300 ? 5000 : 1000; }
 export function useNotifications() {
   const { user, isAdmin, isMecanico, isCliente } = useAuth();
   const canManage = isAdmin || isMecanico;
-  const [notifications, setNotifications] = useState<Notification[]>(loadStored);
-  const [loading, setLoading]             = useState(false);
+  const uid = user?.id_usuario ?? 0;
+
+  const [notifications, setNotifications] = useState<Notification[]>(() =>
+    uid > 0 ? loadStored(uid) : []
+  );
+  const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
-    /* Sin usuario o sin token → no llamar APIs protegidas (evita 401 en /login) */
     if (!user || !localStorage.getItem('gm_token')) return;
     setLoading(true);
     try {
-      /* Cliente: solo sus motos. Admin/mecánico: todo. */
       const motosReq = (isCliente && !canManage)
         ? motosApi.byUser(user.id_usuario)
         : motosApi.list();
       const [mr, pr, rr] = await Promise.allSettled([
         motosReq,
         canManage ? productosApi.list() : Promise.reject(),
-        canManage ? registrosApi.list() : Promise.reject(),
+        registrosApi.list(),
       ]);
       const motos:    Moto[]            = mr.status === 'fulfilled' ? mr.value.data : [];
       const productos:Producto[]        = pr.status === 'fulfilled' ? pr.value.data : [];
       const registros:RegistroDetalle[] = rr.status === 'fulfilled' ? rr.value.data : [];
 
       const newNotifs: Notification[] = [];
-      const today = new Date().toISOString();
-      const stored = loadStored();
-      const storedIds = new Set(stored.map(n => n.id));
+      const today      = new Date().toISOString();
+      const stored     = loadStored(uid);
+      const storedIds  = new Set(stored.map(n => n.id));
+      const dismissed  = loadDismissed(uid);           // IDs aceptadas/descartadas para siempre
 
-      /* ── Alertas de aceite (cliente: solo sus motos; admin/mec: todas) ── */
+      const isNew = (nid: string) => !storedIds.has(nid) && !dismissed.has(nid);
+
+      /* ── 1. Alertas de aceite ── */
       const OIL_KW = ['cambio de aceite', 'aceite', 'oil'];
       motos.forEach(m => {
         const oilRecs = registros
-          .filter(r => r.placa === m.placa &&
-            OIL_KW.some(k => r.tipo_servicio?.toLowerCase().includes(k))
-          )
-          .filter(r => r.kilometraje != null)
+          .filter(r => r.placa === m.placa && OIL_KW.some(k => r.tipo_servicio?.toLowerCase().includes(k)) && r.kilometraje != null)
           .sort((a, b) => (b.kilometraje ?? 0) - (a.kilometraje ?? 0));
-
         const lastKm  = oilRecs[0]?.kilometraje ?? null;
         const thr     = oilThreshold(m.cilindraje);
         const kmSince = lastKm != null ? m.kilometraje - lastKm : null;
-
         if (kmSince != null && kmSince >= thr) {
           const nid = genId('oil', m.id_moto);
-          if (!storedIds.has(nid)) {
-            newNotifs.push({
-              id: nid, type: 'oil_alert', priority: 'high', read: false, createdAt: today,
-              title: `Cambio de aceite vencido — ${m.placa}`,
-              message: `${m.marca} ${m.modelo}: ${(kmSince - thr).toLocaleString()} km de retraso`,
-              link: '/alertas',
-            });
-          }
+          if (isNew(nid)) newNotifs.push({
+            id: nid, type: 'oil_alert', priority: 'high', read: false, createdAt: today,
+            title: `Cambio de aceite vencido — ${m.placa}`,
+            message: `${m.marca} ${m.modelo}: ${(kmSince - thr).toLocaleString()} km de retraso`,
+            link: '/alertas',
+          });
         } else if (kmSince != null && kmSince >= thr * 0.8) {
           const nid = genId('oil_soon', m.id_moto);
-          if (!storedIds.has(nid)) {
-            newNotifs.push({
-              id: nid, type: 'oil_alert', priority: 'medium', read: false, createdAt: today,
-              title: `Cambio de aceite próximo — ${m.placa}`,
-              message: `${m.marca} ${m.modelo}: faltan ${(thr - kmSince).toLocaleString()} km`,
-              link: '/alertas',
-            });
-          }
+          if (isNew(nid)) newNotifs.push({
+            id: nid, type: 'oil_alert', priority: 'medium', read: false, createdAt: today,
+            title: `Cambio de aceite próximo — ${m.placa}`,
+            message: `${m.marca} ${m.modelo}: faltan ${(thr - kmSince).toLocaleString()} km`,
+            link: '/alertas',
+          });
         }
       });
 
-      /* ── Stock bajo ── */
-      productos.filter(p => p.stock <= 3 && p.stock >= 0).forEach(p => {
-        const nid = genId('stock', p.id_producto);
-        if (!storedIds.has(nid)) {
-          newNotifs.push({
+      /* ── 2. Stock bajo (solo admin/mecánico) ── */
+      if (canManage) {
+        productos.filter(p => p.stock <= 3 && p.stock >= 0).forEach(p => {
+          const nid = genId('stock', p.id_producto);
+          if (isNew(nid)) newNotifs.push({
             id: nid, type: 'low_stock', priority: p.stock === 0 ? 'high' : 'medium',
             read: false, createdAt: today,
             title: p.stock === 0 ? `Sin stock: ${p.nombre}` : `Stock bajo: ${p.nombre}`,
             message: `Quedan ${p.stock} unidades. Código: ${p.codigo_personal}`,
             link: '/inventario',
           });
-        }
-      });
+        });
+      }
 
-      /* ── Órdenes pendientes > 24h ── */
-      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      registros
-        .filter(r => r.estado === 0 && new Date(toIsoStr(r.fecha) + 'T00:00:00') < cutoff)
-        .slice(0, 5)
-        .forEach(r => {
-          const nid = genId('pending', r.id_registro);
-          if (!storedIds.has(nid)) {
-            newNotifs.push({
+      /* ── 3. Órdenes pendientes > 24h (admin/mecánico) ── */
+      if (canManage) {
+        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        registros
+          .filter(r => r.estado === 0 && new Date(toIsoStr(r.fecha) + 'T00:00:00') < cutoff)
+          .slice(0, 5)
+          .forEach(r => {
+            const nid = genId('pending', r.id_registro);
+            if (isNew(nid)) newNotifs.push({
               id: nid, type: 'pending_order', priority: 'low', read: false, createdAt: today,
-              title: `Orden pendiente sin atender`,
+              title: 'Orden pendiente sin atender',
               message: `${r.placa} — ${r.nombre_cliente} desde ${toIsoStr(r.fecha)}`,
               link: '/registros',
             });
-          }
-        });
+          });
+      }
+
+      /* ── 4. Moto lista para retirar (cliente: sus órdenes completadas/entregadas) ── */
+      if (isCliente || canManage) {
+        registros
+          .filter(r => {
+            if (canManage) return false;  // mecánico/admin no necesitan este aviso
+            const esMiMoto = motos.some(m => m.placa === r.placa);
+            return esMiMoto && (r.estado === 2 || r.estado === 3);
+          })
+          .slice(0, 3)
+          .forEach(r => {
+            const nid = genId('ready', r.id_registro);
+            if (isNew(nid)) newNotifs.push({
+              id: nid, type: 'moto_ready', priority: 'high', read: false, createdAt: today,
+              title: r.estado === 3 ? `Tu moto está lista para retirar` : `Servicio completado`,
+              message: `${r.placa} — ${r.tipo_servicio ?? 'Servicio'}. Pasa por el taller.`,
+              link: '/mi-moto',
+            });
+          });
+      }
 
       if (newNotifs.length > 0) {
-        const merged = [...newNotifs, ...stored].slice(0, 50);
-        saveNotifs(merged);
+        const merged = [...newNotifs, ...stored].slice(0, 60);
+        saveNotifs(uid, merged);
         setNotifications(merged);
       }
     } catch { /* silent */ }
@@ -158,30 +193,36 @@ export function useNotifications() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id_usuario, isCliente, canManage]);
 
-  /* Refresco inicial + polling en tiempo real cada 30 s (solo con pestaña visible) */
+  useEffect(() => {
+    if (uid > 0) setNotifications(loadStored(uid));
+  }, [uid]);
+
   useEffect(() => {
     refresh();
-    const tick = () => {
-      if (typeof document === 'undefined' || document.visibilityState === 'visible') refresh();
-    };
+    const tick = () => { if (document.visibilityState === 'visible') refresh(); };
     const id = setInterval(tick, 30_000);
     document.addEventListener('visibilitychange', tick);
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
   }, [refresh]);
 
-  const markRead    = (id: string) => setNotifications(prev => {
+  const markRead = (id: string) => setNotifications(prev => {
     const updated = prev.map(n => n.id === id ? { ...n, read: true } : n);
-    saveNotifs(updated); return updated;
+    saveNotifs(uid, updated); return updated;
   });
 
   const markAllRead = () => setNotifications(prev => {
     const updated = prev.map(n => ({ ...n, read: true }));
-    saveNotifs(updated); return updated;
+    saveNotifs(uid, updated); return updated;
   });
 
-  const dismiss     = (id: string) => setNotifications(prev => {
+  /* dismiss = acepta/descarta para siempre: nunca vuelve a aparecer */
+  const dismiss = (id: string) => setNotifications(prev => {
     const updated = prev.filter(n => n.id !== id);
-    saveNotifs(updated); return updated;
+    const dis = loadDismissed(uid);
+    dis.add(id);
+    saveDismissed(uid, dis);
+    saveNotifs(uid, updated);
+    return updated;
   });
 
   const unread = notifications.filter(n => !n.read).length;

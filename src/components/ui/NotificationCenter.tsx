@@ -7,7 +7,7 @@ import { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bell, X, CheckCheck, ChevronRight,
-  AlertTriangle, Package, Wrench, Info,
+  AlertTriangle, Package, Wrench, Info, CheckCircle,
 } from 'lucide-react';
 import { useNotifications, type Notification, type NotifType } from '../../hooks/useNotifications';
 
@@ -16,6 +16,7 @@ const TYPE_CONFIG: Record<NotifType, { icon: typeof Bell; color: string; bg: str
   oil_alert:     { icon: Wrench,        color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
   low_stock:     { icon: Package,       color: '#EF4444', bg: 'rgba(239,68,68,0.12)'  },
   pending_order: { icon: AlertTriangle, color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
+  moto_ready:    { icon: CheckCircle,   color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
   info:          { icon: Info,          color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
 };
 
@@ -74,12 +75,22 @@ function NotifRow({ n, onRead, onDismiss }: {
         </div>
       </div>
 
-      <button
-        onClick={e => { e.stopPropagation(); onDismiss(n.id); }}
-        className="icon-btn shrink-0 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6"
-      >
-        <X size={11} />
-      </button>
+      {n.type === 'moto_ready' ? (
+        <button
+          onClick={e => { e.stopPropagation(); onDismiss(n.id); }}
+          className="shrink-0 px-2 py-1 rounded-lg text-[9px] font-black transition-all"
+          style={{ background:'rgba(16,185,129,0.15)', color:'#10B981', border:'1px solid rgba(16,185,129,0.25)' }}
+        >
+          Aceptar
+        </button>
+      ) : (
+        <button
+          onClick={e => { e.stopPropagation(); onDismiss(n.id); }}
+          className="icon-btn shrink-0 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6"
+        >
+          <X size={11} />
+        </button>
+      )}
     </div>
   );
 }
