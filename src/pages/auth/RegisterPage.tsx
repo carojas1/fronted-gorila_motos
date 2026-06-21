@@ -378,13 +378,13 @@ export default function RegisterPage() {
                 </div>
                 <span style={{ fontSize:12, color:'rgba(255,255,255,0.45)', lineHeight:1.65 }}>
                   He leído y acepto la{' '}
-                  <a href="/privacidad" target="_blank" rel="noopener" style={{ color:'#EBEBEB', fontWeight:700, textDecoration:'none' }} onClick={e => e.stopPropagation()}>
+                  <Link to="/privacidad" target="_blank" rel="noopener" style={{ color:'#EBEBEB', fontWeight:700, textDecoration:'none' }} onClick={e => e.stopPropagation()}>
                     Política de Privacidad
-                  </a>
+                  </Link>
                   {' '}y los{' '}
-                  <a href="/terminos" target="_blank" rel="noopener" style={{ color:'#EBEBEB', fontWeight:700, textDecoration:'none' }} onClick={e => e.stopPropagation()}>
+                  <Link to="/terminos" target="_blank" rel="noopener" style={{ color:'#EBEBEB', fontWeight:700, textDecoration:'none' }} onClick={e => e.stopPropagation()}>
                     Términos de Uso
-                  </a>.
+                  </Link>.
                 </span>
               </label>
               <input type="checkbox" style={{ display:'none' }} {...register('terms')}/>

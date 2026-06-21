@@ -74,7 +74,16 @@ export function tokenVencido(token: string | null): boolean {
 api.interceptors.response.use(
   (res) => res,
   (err: AxiosError) => {
-    if (err.response?.status === 401) {
+    // Endpoints públicos de auth: un 401 aquí (credenciales malas) NO debe disparar
+    // un logout global aunque haya quedado un token vencido residual en localStorage.
+    const url = err.config?.url ?? '';
+    const method = (err.config?.method ?? '').toLowerCase();
+    const isAuthPublico =
+      url.includes('/usuarios/login') ||
+      url.includes('/usuarios/recuperacion') ||
+      (url.endsWith('/usuarios') && method === 'post'); // registro
+
+    if (err.response?.status === 401 && !isAuthPublico) {
       const token = localStorage.getItem('gm_token');
       if (token && tokenVencido(token)) {
         localStorage.removeItem('gm_token');

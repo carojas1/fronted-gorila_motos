@@ -12,8 +12,7 @@ import { useState, useRef, useEffect } from 'react';
 import { initials, parsePermisos, getErrorMsg } from '../../lib/utils';
 import { NotificationBell, NotificationPanel } from '../ui/NotificationCenter';
 import { useNotifications } from '../../hooks/useNotifications';
-import TermsModal, { useTermsAccepted } from '../ui/TermsModal';
-import { healthApi, usuariosApi } from '../../lib/api';
+import { healthApi, usuariosApi, authApi } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -32,22 +31,28 @@ export default function AppLayout() {
   const { unread } = useNotifications();
   const [theme, toggleTheme] = useTheme();
 
-  /* Cambiar/crear contraseña (sirve para quien entró con Google y quiere
-     poder iniciar sesión también escribiendo su correo y contraseña) */
+  /* Cambiar/crear contraseña */
   const [pwOpen,    setPwOpen]    = useState(false);
+  const [pwCurrent, setPwCurrent] = useState('');
   const [pw1,       setPw1]       = useState('');
   const [pw2,       setPw2]       = useState('');
   const [pwSaving,  setPwSaving]  = useState(false);
 
+  const resetPw = () => { setPwCurrent(''); setPw1(''); setPw2(''); };
+
   const guardarPassword = async () => {
     if (pw1.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
     if (pw1 !== pw2)    { toast.error('Las contraseñas no coinciden'); return; }
-    if (!user?.id_usuario) { toast.error('Sesión no válida'); return; }
+    if (!user?.id_usuario || !user.correo) { toast.error('Sesión no válida'); return; }
     setPwSaving(true);
     try {
+      if (pwCurrent.trim()) {
+        try { await authApi.login(user.correo, pwCurrent.trim()); }
+        catch { toast.error('La contraseña actual es incorrecta'); setPwSaving(false); return; }
+      }
       await usuariosApi.update(user.id_usuario, { contrasena: pw1 });
-      toast.success('Contraseña actualizada · ya puedes entrar escribiendo tu correo', 'Listo');
-      setPwOpen(false); setPw1(''); setPw2(''); setOpen(false);
+      toast.success('Contraseña actualizada · ya puedes entrar con tu correo y nueva contraseña', 'Listo');
+      setPwOpen(false); resetPw(); setOpen(false);
     } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setPwSaving(false); }
   };
@@ -55,7 +60,9 @@ export default function AppLayout() {
   const notifRef                        = useRef<HTMLDivElement>(null);
   const [open, setOpen]                 = useState(false);
   const menuRef                         = useRef<HTMLDivElement>(null);
-  const [showTerms, setShowTerms]       = useState(!useTermsAccepted());
+  // El consentimiento legal se captura en el registro (checkbox obligatorio).
+  // No se vuelve a pedir en cada login. Los enlaces a /privacidad y /terminos
+  // están en el pie de Login y Registro.
   const [mobileMenuOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen]         = useState(false);
   const moreRef                         = useRef<HTMLDivElement>(null);
@@ -65,6 +72,12 @@ export default function AppLayout() {
   const firstName = user?.nombre_completo?.split(' ')[0] ?? 'Usuario';
   const roleLabel = isAdmin ? 'Administrador' : isMecanico ? 'Mecánico' : 'Cliente';
   const roleColor = isAdmin ? '#E11428' : isMecanico ? '#3B82F6' : '#10B981';
+  const isDark    = theme === 'dark';
+  const topText   = isDark ? 'rgba(255,255,255,0.38)'  : 'rgba(22,22,26,0.50)';
+  const topTextHi = isDark ? 'rgba(255,255,255,0.80)'  : 'rgba(22,22,26,0.90)';
+  const topBtnBg  = isDark ? 'rgba(255,255,255,0.05)'  : 'rgba(0,0,0,0.05)';
+  const topBtnBdr = isDark ? 'rgba(255,255,255,0.08)'  : 'rgba(0,0,0,0.10)';
+  const topBrand  = isDark ? '#ffffff'                 : '#16161A';
 
   /* Permisos de módulos (mecánicos): null = sin restricción, array = lista permitida */
   const mecPermisos = isMecanico ? parsePermisos(user?.descripcion) : null;
@@ -139,9 +152,6 @@ export default function AppLayout() {
 
   return (
     <div className="gm-app-bg flex flex-col min-h-screen">
-
-      {/* Modal términos — solo primera vez */}
-      {showTerms && <TermsModal onAccept={() => setShowTerms(false)} />}
 
       {/* ══ MENÚ "MÁS" PREMIUM — solo APK ══ */}
       {isNativeApp && (
@@ -289,24 +299,19 @@ export default function AppLayout() {
 
       {/* ══ TOPBAR ══════════════════════════════════════════════════ */}
       <header
-        className="sticky top-0 z-50 flex-none"
-        style={{
-          background: 'linear-gradient(180deg, rgba(11,11,15,0.98) 0%, rgba(9,9,13,0.96) 100%)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-        }}
+        className="gm-topbar sticky top-0 z-50 flex-none"
+        style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
       >
         <div className="flex items-center gap-3 px-4 lg:px-10 h-[62px] max-w-screen-2xl mx-auto">
 
           {/* Hamburger — solo mobile */}
           <button
             className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl shrink-0 transition-all"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={{ background: topBtnBg, border: `1px solid ${topBtnBdr}` }}
             onClick={() => setMobileOpen(true)}
             aria-label="Abrir menú"
           >
-            <Menu size={18} style={{ color: 'rgba(255,255,255,0.72)' }} />
+            <Menu size={18} style={{ color: topTextHi }} />
           </button>
 
           {/* Logo */}
@@ -325,8 +330,8 @@ export default function AppLayout() {
             </div>
             <div style={{ lineHeight: 1 }}>
               <span
-                className="hidden sm:block font-black text-white drop-shadow-lg"
-                style={{ fontFamily: "'Dancing Script', cursive", fontSize: 38, fontWeight: 700 }}
+                className="hidden sm:block font-black drop-shadow-lg"
+                style={{ fontFamily: "'Dancing Script', cursive", fontSize: 38, fontWeight: 700, color: topBrand }}
               >
                 Gorila <span style={{
                   background: 'linear-gradient(135deg, #FF3B47 0%, #E11428 60%, #C00018 100%)',
@@ -350,14 +355,14 @@ export default function AppLayout() {
                   to={to}
                   className="relative px-3 py-2 rounded-lg text-[11.5px] font-bold tracking-[0.12em] uppercase transition-all duration-150"
                   style={active ? {
-                    color: '#fff',
+                    color: isDark ? '#fff' : '#16161A',
                     background: 'rgba(225,20,40,0.15)',
                     boxShadow: '0 0 0 1px rgba(225,20,40,0.3)',
                   } : {
-                    color: 'rgba(255,255,255,0.38)',
+                    color: topText,
                   }}
-                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.75)'; }}
-                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.38)'; }}
+                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = topTextHi; }}
+                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = topText; }}
                 >
                   {active && (
                     <span
@@ -379,8 +384,8 @@ export default function AppLayout() {
                 onClick={() => setMoreOpen(v => !v)}
                 className="relative flex items-center gap-1 px-3 py-2 rounded-lg text-[11.5px] font-bold tracking-[0.12em] uppercase transition-all duration-150"
                 style={{
-                  color: moreOpen ? '#fff' : 'rgba(255,255,255,0.38)',
-                  background: moreOpen ? 'rgba(255,255,255,0.06)' : 'transparent',
+                  color: moreOpen ? (isDark ? '#fff' : '#16161A') : topText,
+                  background: moreOpen ? topBtnBg : 'transparent',
                 }}
               >
                 Más <ChevronDown size={12} style={{ transform: moreOpen ? 'rotate(180deg)' : '', transition: 'transform 180ms' }} />
@@ -421,7 +426,7 @@ export default function AppLayout() {
             <button
               onClick={toggleTheme}
               className="flex items-center justify-center w-9 h-9 rounded-xl transition-all shrink-0"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+              style={{ background: topBtnBg, border: `1px solid ${topBtnBdr}` }}
               title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
               aria-label="Cambiar tema"
             >
@@ -435,8 +440,8 @@ export default function AppLayout() {
               <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>
             <div className="hidden lg:block text-right">
-              <p className="text-[12px] font-semibold leading-snug" style={{ color:'rgba(255,255,255,0.55)' }}>
-                {greeting}, <span style={{ color:'rgba(255,255,255,0.92)', fontWeight:700 }}>{firstName}</span>
+              <p className="text-[12px] font-semibold leading-snug" style={{ color: topText }}>
+                {greeting}, <span style={{ color: topTextHi, fontWeight:700 }}>{firstName}</span>
               </p>
               <p className="text-[12px] font-bold tracking-[0.12em] uppercase" style={{ color: roleColor }}>
                 {roleLabel}
@@ -457,8 +462,8 @@ export default function AppLayout() {
                 onClick={() => setOpen(v => !v)}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl transition-all"
                 style={{
-                  background: open ? `${roleColor}22` : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${open ? roleColor + '40' : 'rgba(255,255,255,0.08)'}`,
+                  background: open ? `${roleColor}22` : topBtnBg,
+                  border: `1px solid ${open ? roleColor + '40' : topBtnBdr}`,
                 }}
               >
                 <div
@@ -467,7 +472,7 @@ export default function AppLayout() {
                 >
                   {initials(user?.nombre_completo ?? 'U')}
                 </div>
-                <ChevronDown size={12} style={{ color:'rgba(255,255,255,0.4)', transform: open ? 'rotate(180deg)' : '', transition:'transform 200ms' }} />
+                <ChevronDown size={12} style={{ color: topText, transform: open ? 'rotate(180deg)' : '', transition:'transform 200ms' }} />
               </button>
 
               {open && (
@@ -557,13 +562,10 @@ export default function AppLayout() {
             style={{ paddingBottom: isNativeApp ? 92 : undefined }}
           >
             {/* Boundary por página: si una pantalla falla, el menú sigue vivo
-                y al navegar a otra ruta (resetKey) se recupera sola.
-                Términos: no renderizar nada hasta que el usuario acepte. */}
-            {!showTerms && (
-              <ErrorBoundary resetKey={location.pathname}>
-                <Outlet />
-              </ErrorBoundary>
-            )}
+                y al navegar a otra ruta (resetKey) se recupera sola. */}
+            <ErrorBoundary resetKey={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </motion.div>
       </main>
 
@@ -573,12 +575,12 @@ export default function AppLayout() {
       {/* ══ MODAL: crear / cambiar contraseña ══ */}
       <Modal
         open={pwOpen}
-        onClose={() => { setPwOpen(false); setPw1(''); setPw2(''); }}
+        onClose={() => { setPwOpen(false); resetPw(); }}
         title="Crear o cambiar contraseña"
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => { setPwOpen(false); setPw1(''); setPw2(''); }}>Cancelar</Button>
+            <Button variant="secondary" onClick={() => { setPwOpen(false); resetPw(); }}>Cancelar</Button>
             <Button onClick={guardarPassword} loading={pwSaving} disabled={!pw1 || !pw2}>
               <KeyRound size={14} /> Guardar contraseña
             </Button>
@@ -587,9 +589,16 @@ export default function AppLayout() {
       >
         <div className="space-y-4">
           <p className="text-[12px] text-white/45 leading-relaxed">
-            Define una contraseña para tu cuenta <strong className="text-white/70">{user?.correo}</strong>.
-            Así podrás iniciar sesión escribiendo tu correo y contraseña (además de Google).
+            Cuenta: <strong className="text-white/70">{user?.correo}</strong>
           </p>
+          <div>
+            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+              Contraseña actual
+              <span className="normal-case font-normal ml-1 text-white/25">(déjala vacía si es la primera vez)</span>
+            </label>
+            <input type="password" className="gm-input-d w-full" placeholder="Contraseña actual (opcional)"
+                   value={pwCurrent} onChange={e => setPwCurrent(e.target.value)} autoComplete="current-password" />
+          </div>
           <div>
             <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Nueva contraseña</label>
             <input type="password" className="gm-input-d w-full" placeholder="Mínimo 6 caracteres"
@@ -600,6 +609,7 @@ export default function AppLayout() {
             <input type="password" className="gm-input-d w-full" placeholder="Vuelve a escribirla"
                    value={pw2} onChange={e => setPw2(e.target.value)} autoComplete="new-password" />
           </div>
+          {pw1 && pw2 && pw1 !== pw2 && <p className="text-xs text-red-400">Las contraseñas no coinciden</p>}
         </div>
       </Modal>
     </div>

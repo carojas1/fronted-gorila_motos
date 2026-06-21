@@ -4,8 +4,8 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, X, ShoppingCart, Tags, FolderPlus, Minus, UserCheck, Mail } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, ShoppingCart, Tags, FolderPlus, Minus, UserCheck, Mail } from 'lucide-react';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import gsap from 'gsap';
@@ -74,18 +74,18 @@ export default function InventoryPage() {
   /* Venta Normal — con cliente registrado, busca por email o placa */
   const [vnTarget,      setVnTarget]      = useState<Producto | null>(null);
   const [vnStep,        setVnStep]        = useState<'search' | 'confirm'>('search');
-  const [vnMode,        setVnMode]        = useState<'email' | 'placa'>('email');
+  const [vnMode]                          = useState<'email' | 'placa'>('email');
   const [vnQuery,       setVnQuery]       = useState('');
-  const [vnSearching,   setVnSearching]   = useState(false);
+  const [, setVnSearching]                = useState(false);
   const [vnCliente,     setVnCliente]     = useState<{ nombre: string; correo: string; id_usuario: number } | null>(null);
-  const [vnNotFound,    setVnNotFound]    = useState(false);
+  const [, setVnNotFound]                 = useState(false);
   const [vnQty,         setVnQty]         = useState('1');
   const [vnSending,     setVnSending]     = useState(false);
   const [sellEmail,     setSellEmail]     = useState('');
   const [vnUsuarios,    setVnUsuarios]    = useState<Usuario[]>([]);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Form>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as Resolver<Form>,
   });
 
   const fetchData = useCallback(async () => {
@@ -236,7 +236,8 @@ export default function InventoryPage() {
   };
 
   /* ─── Venta Normal: buscar cliente ─── */
-  const buscarCliente = async () => {
+  /* Búsqueda de cliente para "Venta Normal" — función lista, pendiente de cablear a la UI */
+  const _buscarCliente = async () => {
     const q = vnQuery.trim();
     if (!q) { toast.error('Ingresa un ' + (vnMode === 'email' ? 'correo' : 'número de placa')); return; }
     setVnSearching(true);
@@ -359,7 +360,6 @@ export default function InventoryPage() {
   /* KPI cards */
   const lowStock  = productos.filter((p) => p.stock > 0 && p.stock <= 5).length;
   const outStock  = productos.filter((p) => p.stock === 0).length;
-  const totalCats = new Set(productos.map((p) => p.id_categoria)).size;
 
   const stockVariant = (stock: number): 'success' | 'warning' | 'danger' => {
     if (stock > 10) return 'success';

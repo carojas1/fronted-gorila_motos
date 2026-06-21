@@ -3,7 +3,6 @@
    Logout visible · roles · design refinado
    ───────────────────────────────────────────── */
 
-import { useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Wrench, Package, Users,

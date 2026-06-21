@@ -88,8 +88,8 @@ export function useAuthEntrance() {
 }
 
 /** Contador animado de un número */
-export function useCountUp(target: number, duration = 1.2) {
-  const ref = useRef<HTMLSpanElement>(null);
+export function useCountUp<T extends HTMLElement = HTMLSpanElement>(target: number, duration = 1.2) {
+  const ref = useRef<T>(null);
 
   useEffect(() => {
     if (!ref.current) return;

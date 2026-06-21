@@ -5,10 +5,10 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import {
   Search, Shield, Users, Mail, MapPin, UserPlus,
-  ChevronRight, Wrench, Crown, User, X, TrendingUp,
+  ChevronRight, Wrench, Crown, User, X,
   Lock, Zap, Star, Activity, Trash2,
 } from "lucide-react";
 import { usuariosApi, rolesApi, authApi, motosApi } from "../../lib/api";
@@ -18,7 +18,6 @@ import { initials, extractCedula, getErrorMsg, parsePermisos, setPermisos } from
 import type { Usuario, Rol, Moto } from "../../types";
 import { useNavigate } from "react-router-dom";
 import { Bike, Gauge } from "lucide-react";
-import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import Input from "../../components/ui/Input";
@@ -69,14 +68,14 @@ const regSchema = z.object({
 });
 
 /* ── Framer variants ── */
-const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.055 } } };
-const cardV   = {
+const stagger: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.055 } } };
+const cardV: Variants = {
   hidden: { opacity: 0, y: 22, scale: 0.97 },
   show:   { opacity: 1, y: 0,  scale: 1,
             transition: { type: "spring", stiffness: 280, damping: 22 } },
   exit:   { opacity: 0, y: -10, scale: 0.97, transition: { duration: 0.15 } },
 };
-const statV = {
+const statV: Variants = {
   hidden: { opacity: 0, y: 14 },
   show:   { opacity: 1, y: 0, transition: { type: "spring", stiffness: 320, damping: 26 } },
 };
@@ -278,7 +277,8 @@ export default function ProfilesPage() {
   const [motos,      setMotos]      = useState<Moto[]>([]);
   const [roles,      setRoles]      = useState<Rol[]>([]);
   const [loading,    setLoading]    = useState(true);
-  const [search,     setSearch]     = useState("");
+  const [search,      setSearch]      = useState("");
+  const [searchEmail, setSearchEmail] = useState("");
   const [activeTab,  setActiveTab]  = useState("ADMIN");
   const [roleModal,      setRoleModal]      = useState<{ user: Usuario } | null>(null);
   const [selectedRol,    setSelectedRol]    = useState(0);
@@ -326,22 +326,23 @@ export default function ProfilesPage() {
     }).length, [usuarios]);
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
+    const q  = search.toLowerCase().trim();
+    const qm = searchEmail.toLowerCase().trim();
     return usuarios.filter(u => {
       const rn = getRolName((u.roles ?? []) as unknown[]);
       const matchTab = activeTab === "SINROL" ? rn === "" : rn === activeTab;
       if (!matchTab) return false;
+      if (qm && !u.correo?.toLowerCase().includes(qm)) return false;
       if (!q) return true;
       const placas = (motosByUser.get(u.id_usuario) ?? []).map(m => m.placa.toLowerCase());
       return (
         u.nombre_completo?.toLowerCase().includes(q) ||
-        u.correo?.toLowerCase().includes(q) ||
         u.nombre_usuario?.toLowerCase().includes(q) ||
         (extractCedula(u.descripcion) ?? "").includes(q) ||
         placas.some(p => p.includes(q))
       );
     });
-  }, [usuarios, activeTab, search, motosByUser]);
+  }, [usuarios, activeTab, search, searchEmail, motosByUser]);
 
   const openRoleModal = (u: Usuario) => {
     const currentPerms = parsePermisos(u.descripcion);
@@ -493,7 +494,7 @@ export default function ProfilesPage() {
           return (
             <button
               key={key}
-              onClick={() => { setActiveTab(key); setSearch(""); }}
+              onClick={() => { setActiveTab(key); setSearch(""); setSearchEmail(""); }}
               className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 border overflow-hidden"
               style={isActive
                 ? { background: bg, borderColor: `${color}40`, color, boxShadow: `0 0 20px ${color}18` }
@@ -518,26 +519,38 @@ export default function ProfilesPage() {
 
       {/* ── Búsqueda ── */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="search-d flex-1 min-w-[200px] max-w-sm">
+        {/* Nombre / usuario / placa */}
+        <div className="search-d flex-1 min-w-[180px] max-w-xs">
           <Search size={14} />
           <input
             className="gm-input-d w-full"
-            placeholder="Buscar por nombre, correo o placa…"
+            placeholder="Nombre, usuario o placa…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+        {/* Correo electrónico */}
+        <div className="search-d flex-1 min-w-[180px] max-w-xs">
+          <Search size={14} />
+          <input
+            className="gm-input-d w-full"
+            placeholder="Filtrar por correo…"
+            value={searchEmail}
+            onChange={e => setSearchEmail(e.target.value)}
+            type="email"
+          />
+        </div>
         <AnimatePresence>
-          {search && (
+          {(search || searchEmail) && (
             <motion.button
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85 }}
               transition={{ duration: 0.12 }}
-              onClick={() => setSearch("")}
+              onClick={() => { setSearch(""); setSearchEmail(""); }}
               className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/70 font-semibold transition-colors"
             >
-              <X size={12} /> Limpiar
+              <X size={12} /> Limpiar filtros
             </motion.button>
           )}
         </AnimatePresence>
@@ -571,7 +584,7 @@ export default function ProfilesPage() {
         </motion.div>
       ) : (
         <motion.div
-          key={activeTab + search}
+          key={activeTab}
           variants={stagger}
           initial="hidden"
           animate="show"

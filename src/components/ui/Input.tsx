@@ -3,11 +3,11 @@
    Dark-compatible (funciona en fondos oscuros)
    ───────────────────────────────────────────── */
 
-import { InputHTMLAttributes, forwardRef, useState, ReactNode } from 'react';
+import { forwardRef, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'prefix'> {
   label?:   string;
   error?:   string;
   hint?:    string;

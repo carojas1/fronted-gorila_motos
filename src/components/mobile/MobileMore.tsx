@@ -7,7 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Wrench, Bike, Package, Truck, UserCheck, CreditCard,
   Users, Star, Bell, ClipboardList, Fuel, Wallet, BookOpen, Globe,
-  KeyRound, LogOut, X, ChevronRight, type LucideIcon,
+  Settings, LogOut, X, ChevronRight, type LucideIcon,
 } from 'lucide-react';
 import { Sun, Moon } from 'lucide-react';
 import { initials } from '../../lib/utils';
@@ -133,11 +133,11 @@ export default function MobileMore({
               {theme === 'dark' ? 'Oscuro' : 'Claro'}
             </span>
           </button>
-          <button onClick={() => { onClose(); onChangePassword(); }} className="m-more-row">
-            <div className="m-more-ico" style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)' }}>
-              <KeyRound size={16} style={{ color: '#3B82F6' }} />
+          <button onClick={() => go('/ajustes')} className="m-more-row">
+            <div className="m-more-ico" style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}>
+              <Settings size={16} style={{ color: '#8B5CF6' }} />
             </div>
-            <span className="m-more-row-lbl">Crear / cambiar contraseña</span>
+            <span className="m-more-row-lbl">Configuración</span>
             <ChevronRight size={15} className="text-white/25" />
           </button>
           <button onClick={onLogout} className="m-more-row">

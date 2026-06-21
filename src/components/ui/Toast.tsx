@@ -4,7 +4,7 @@
 
 import {
   createContext, useContext, useState,
-  useCallback, useRef, ReactNode, useEffect,
+  useCallback, useRef, useEffect, type ReactNode,
 } from 'react';
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
 import gsap from 'gsap';

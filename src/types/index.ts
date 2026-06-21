@@ -108,6 +108,7 @@ export interface Registro {
 export interface RegistroDetalle {
   id_registro:      number;
   nombre_cliente:   string;
+  nombre_encargado?: string;
   marca_moto:       string;
   modelo_moto:      string;
   placa:            string;

@@ -8,7 +8,6 @@ import { AuthProvider, useAuth }  from './contexts/AuthContext';
 import { ToastProvider }          from './components/ui/Toast';
 import ProtectedRoute             from './components/layout/ProtectedRoute';
 import AppLayout                  from './components/layout/AppLayout';
-import PasswordGate               from './components/auth/PasswordGate';
 
 /* Auth pages */
 import LoginPage               from './pages/auth/LoginPage';
@@ -40,6 +39,7 @@ import PagosPage         from './pages/pagos/PagosPage';
 import ContabilidadPage  from './pages/contabilidad/ContabilidadPage';
 import ProveedoresPage   from './pages/proveedores/ProveedoresPage';
 import MetodologiaPage   from './pages/metodologia/MetodologiaPage';
+import AjustesPage       from './pages/settings/AjustesPage';
 
 /* ─── Guarda de roles ─────────────────────────────────────────────────────────
    Redirige a /dashboard si el usuario no tiene ninguno de los roles indicados.
@@ -82,7 +82,7 @@ export default function App() {
                 <Route path="/portal"      element={<PortalClientePage />} />
                 <Route path="/mi-moto"    element={<MiMotoPage />}        />
                 <Route path="/metodologia" element={<MetodologiaPage />}  />
-                <Route path="/ajustes"     element={<DashboardPage />}     />
+                <Route path="/ajustes"     element={<AjustesPage />}       />
 
                 {/* Solo ADMIN + MECÁNICO */}
                 <Route element={<RequireRole roles={['admin', 'mecanico']} />}>
@@ -96,10 +96,10 @@ export default function App() {
 
                 {/* Solo ADMIN */}
                 <Route element={<RequireRole roles={['admin']} />}>
-                  <Route path="/perfiles"       element={<PasswordGate scope="perfiles" title="Perfiles de usuarios"><ProfilesPage /></PasswordGate>} />
-                  <Route path="/perfiles/:id" element={<PasswordGate scope="perfiles" title="Ficha de usuario"><EmpleadoDetailPage /></PasswordGate>} />
-                  <Route path="/pagos"        element={<PagosPage />}        />
-                  <Route path="/contabilidad" element={<ContabilidadPage />} />
+                  <Route path="/perfiles"     element={<ProfilesPage />}        />
+                  <Route path="/perfiles/:id" element={<EmpleadoDetailPage />}  />
+                  <Route path="/pagos"        element={<PagosPage />}           />
+                  <Route path="/contabilidad" element={<ContabilidadPage />}    />
                 </Route>
 
               </Route>

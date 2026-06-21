@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, CheckCircle2, X } from 'lucide-react';
+import { Shield, CheckCircle2 } from 'lucide-react';
 
 const STORAGE_KEY = 'gm_terms_v1';
 

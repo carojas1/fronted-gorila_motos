@@ -11,18 +11,56 @@ import {
   Bell, Star, AlertTriangle, ChevronRight, Printer,
 } from 'lucide-react';
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
-import { motosApi, registrosApi, productosApi, usuariosApi } from '../../lib/api';
-import { fmtDate, fmtMoney, ESTADO_REGISTRO } from '../../lib/utils';
+import { motosApi, registrosApi, productosApi, usuariosApi, combustibleApi } from '../../lib/api';
+import { fmtDate, fmtMoney } from '../../lib/utils';
 import { usePolling } from '../../hooks/usePolling';
 import { useCountUp } from '../../hooks/useGsap';
-import Badge from '../../components/ui/Badge';
 import type { RegistroDetalle, Moto, Producto } from '../../types';
 import { isNativeApp } from '../../lib/platform';
 import MobileDashboard from '../../components/mobile/MobileDashboard';
+
+/* ── Barras CSS (reemplaza Recharts BarChart: evita label-clip y funciona en light mode) ── */
+function ServiceBar({ data }: { data: { name: string; value: number }[] }) {
+  if (!data.length) return (
+    <div className="flex items-center justify-center h-32">
+      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>Sin datos de servicios</p>
+    </div>
+  );
+  const max = Math.max(...data.map(d => d.value), 1);
+  return (
+    <div className="space-y-2.5">
+      {data.map((item, i) => (
+        <div key={item.name} className="flex items-center gap-3">
+          <div className="shrink-0 text-right" style={{ width: 130 }}>
+            <span className="text-[11.5px] font-semibold block truncate"
+                  style={{ color: 'rgba(255,255,255,0.55)' }} title={item.name}>
+              {item.name}
+            </span>
+          </div>
+          <div className="flex-1 h-7 rounded-lg overflow-hidden relative"
+               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.04)' }}>
+            <div className="h-full rounded-lg flex items-center px-2.5 transition-all duration-700"
+                 style={{
+                   width: `${Math.max((item.value / max) * 100, 8)}%`,
+                   background: `rgba(225,20,40,${0.88 - i * 0.09})`,
+                   minWidth: 32,
+                 }}>
+              <span className="text-[11px] font-black text-white tabular-nums">{item.value}</span>
+            </div>
+          </div>
+          <span className="text-[10px] font-semibold shrink-0"
+                style={{ color: `rgba(225,20,40,${0.88 - i * 0.09})`, minWidth: 22 }}>
+            {Math.round((item.value / max) * 100)}%
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /* ── Tooltip dark para recharts ── */
 function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
@@ -45,10 +83,10 @@ function KpiCard({ icon: Icon, label, target, sub, to, color, trend }: {
   icon: React.ElementType; label: string; target: number;
   sub: string; to: string; color: string; trend?: number;
 }) {
-  const ref = useCountUp(target, 1.6);
+  const ref = useCountUp<HTMLParagraphElement>(target, 1.6);
   const up  = (trend ?? 0) >= 0;
   return (
-    <Link to={to} className="metric-card group block" style={{ '--metric-color': color } as React.CSSProperties}>
+    <Link to={to} className="metric-card gm-pressable group block" style={{ '--metric-color': color } as React.CSSProperties}>
       <div className="absolute top-3 right-3">
         <div className="w-9 h-9 rounded-xl flex items-center justify-center"
              style={{ background: `${color}18`, border: `1px solid ${color}28` }}>
@@ -74,19 +112,21 @@ const ESTADO_COLORS: Record<number, string> = {
 };
 const ESTADO_LABELS = ['Pendiente', 'En proceso', 'Completado', 'Entregado', 'Facturado'];
 
+/* En el APK se usa el dashboard móvil premium; en web, el dashboard completo.
+   Se separa en dos componentes para no llamar hooks tras un return condicional. */
 export default function DashboardPage() {
-  /* En el APK se usa el dashboard móvil premium (isNativeApp es constante,
-     por lo que este return temprano no rompe el orden de hooks). */
-  if (isNativeApp) return <MobileDashboard />;
+  return isNativeApp ? <MobileDashboard /> : <WebDashboard />;
+}
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+function WebDashboard() {
   const { user, isAdmin, isMecanico, isCliente } = useAuth();
 
-  const [motos,     setMotos]     = useState<Moto[]>([]);
-  const [registros, setRegistros] = useState<RegistroDetalle[]>([]);
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [usuarios,  setUsuarios]  = useState<unknown[]>([]);
-  const [loading,   setLoading]   = useState(true);
+  const [motos,       setMotos]       = useState<Moto[]>([]);
+  const [registros,   setRegistros]   = useState<RegistroDetalle[]>([]);
+  const [productos,   setProductos]   = useState<Producto[]>([]);
+  const [usuarios,    setUsuarios]    = useState<unknown[]>([]);
+  const [combustible, setCombustible] = useState<{ id:number; fecha:string }[]>([]);
+  const [loading,     setLoading]     = useState(true);
 
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches';
@@ -94,13 +134,15 @@ export default function DashboardPage() {
   const isOpen   = hour >= 8 && hour < 18;
 
   const load = useCallback(async () => {
-    const [m, r, p, u] = await Promise.allSettled([
+    const [m, r, p, u, c] = await Promise.allSettled([
       motosApi.list(), registrosApi.list(), productosApi.list(), usuariosApi.list(),
+      combustibleApi.list(),
     ]);
     if (m.status === 'fulfilled') setMotos(m.value.data);
     if (r.status === 'fulfilled') setRegistros(r.value.data);
     if (p.status === 'fulfilled') setProductos(p.value.data);
     if (u.status === 'fulfilled') setUsuarios(u.value.data);
+    if (c.status === 'fulfilled') setCombustible(Array.isArray(c.value.data) ? c.value.data : []);
     setLoading(false);
   }, []);
 
@@ -372,6 +414,67 @@ export default function DashboardPage() {
         {isAdmin && <KpiCard icon={Users} label="Usuarios" target={usuarios.length} sub="cuentas del sistema" to="/perfiles"   color="#8B5CF6" />}
       </div>
 
+      {/* ── Panel general de módulos (SOLO admin/mecánico · sin Contabilidad) ── */}
+      {(isAdmin || isMecanico) && !loading && (() => {
+        const hoyStr  = new Date().toISOString().slice(0, 7); // yyyy-MM
+        const combMes = combustible.filter(c => String(c.fecha ?? '').slice(0, 7) === hoyStr).length;
+        const facturados = registros.filter(r => r.estado === 4).length;
+        const pct = (n: number, total: number) => total > 0 ? Math.round((n / total) * 100) : 0;
+
+        const MODS: {
+          to: string; label: string; icon: React.ElementType;
+          color: string; val: number; sub: string; pct?: number;
+        }[] = [
+          { to:'/registros',   label:'Registros',   icon:Wrench,      color:'#E11428',
+            val: registros.length,  sub:`${activas} activos · ${facturados} facturados`,
+            pct: pct(facturados, registros.length) },
+          { to:'/motos',       label:'Motos',        icon:Bike,        color:'#3B82F6',
+            val: motos.length,      sub:`vehículos registrados`, pct: 100 },
+          { to:'/inventario',  label:'Inventario',   icon:Package,     color:'#F59E0B',
+            val: productos.length,  sub:`${stockCritico} con stock crítico`,
+            pct: productos.length > 0 ? Math.round(((productos.length - stockCritico) / productos.length) * 100) : 100 },
+          { to:'/combustible', label:'Combustible',  icon:Zap,         color:'#8B5CF6',
+            val: combustible.length, sub:`${combMes} cargas este mes`, pct: 100 },
+          { to:'/clientes',    label:'Clientes',     icon:Users,       color:'#10B981',
+            val: usuarios.length,   sub:`usuarios del sistema`, pct: 100 },
+          ...(isAdmin ? [
+            { to:'/perfiles',  label:'Perfiles',     icon:Star,        color:'#14B8A6',
+              val: usuarios.length, sub:`cuentas activas`, pct: 100 },
+          ] : []),
+        ];
+
+        return (
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] mb-3"
+               style={{ color:'rgba(255,255,255,0.22)' }}>
+              Panel general · haz clic para ir al módulo
+            </p>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+              {MODS.map(({ to, label, icon: Icon, color, val, sub, pct: p }) => (
+                <Link key={to} to={to}
+                  className="gm-mod-card rounded-xl p-3.5 text-center block"
+                  style={{ textDecoration:'none' }}
+                >
+                  <div className="w-8 h-8 rounded-xl mx-auto mb-2 flex items-center justify-center"
+                       style={{ background:`${color}18`, border:`1px solid ${color}30` }}>
+                    <Icon size={14} style={{ color }} />
+                  </div>
+                  <p className="text-xl font-black tabular-nums" style={{ color }}>{val}</p>
+                  <p className="gm-mod-label mt-0.5">{label}</p>
+                  <p className="gm-mod-sub mt-0.5 leading-tight">{sub}</p>
+                  {p !== undefined && (
+                    <div className="gm-mod-track">
+                      <div className="h-full rounded-full transition-all duration-700"
+                           style={{ width:`${Math.max(p, 4)}%`, background: color, opacity: 0.7 }} />
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Gráfica principal: órdenes + ingresos ── */}
       <div className="gm-card-d rounded-2xl p-5">
         <div className="flex items-center justify-between mb-5">
@@ -415,27 +518,16 @@ export default function DashboardPage() {
       {/* ── Row: BarChart + PieChart ── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
 
-        {/* Top servicios */}
+        {/* Top servicios — CSS puro, sin Recharts (labels visibles + light mode) */}
         <div className="gm-card-d rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={13} className="text-gm-red/60" />
-            <p className="text-[10px] tracking-[0.28em] uppercase text-white/28 font-bold">Top servicios</p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp size={13} className="text-gm-red/60" />
+              <p className="text-[10px] tracking-[0.28em] uppercase text-white/28 font-bold">Top servicios</p>
+            </div>
+            <span className="text-[10px] text-white/20 font-semibold">{tiposData.length} tipos</span>
           </div>
-          <div className="recharts-custom h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={tiposData} layout="vertical" margin={{ left: 0, right: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-                <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.28)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" width={110} tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<DarkTooltip />} />
-                <Bar dataKey="value" name="Órdenes" fill="#E11428" radius={[0, 4, 4, 0]}>
-                  {tiposData.map((_, i) => (
-                    <Cell key={i} fill={`rgba(225,20,40,${0.9 - i * 0.12})`} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <ServiceBar data={tiposData} />
         </div>
 
         {/* Donut estados */}

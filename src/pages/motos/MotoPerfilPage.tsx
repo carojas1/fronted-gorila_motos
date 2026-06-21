@@ -6,7 +6,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowLeft, Bike, Gauge, Calendar, User, Pencil,
+  ArrowLeft, Bike, Gauge, Calendar, User,
   ClipboardList, Plus, Clock, CheckCircle, AlertTriangle,
   XCircle, ChevronDown, ChevronUp, Cog, Link2, Shield,
   Circle, ArrowUpDown, Droplets, Zap, Activity, type LucideIcon,

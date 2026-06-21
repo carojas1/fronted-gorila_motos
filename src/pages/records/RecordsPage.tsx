@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Search, Wrench, CheckCircle, Clock, Loader, ChevronRight,
   Plus, Printer, Phone, Package, FileText, History, X, Gauge,
-  Bike, UserPlus, Zap, AlertTriangle,
+  UserPlus, Zap, AlertTriangle,
 } from 'lucide-react';
 import gsap from 'gsap';
 import { registrosApi, usuariosApi, motosApi, tiposApi, authApi, mantenimientosApi } from '../../lib/api';
@@ -490,11 +490,6 @@ export default function RecordsPage() {
     4: registros.filter((r) => r.estado === 4).length,
   };
 
-  /* ─── Motos filtradas por cliente seleccionado ─── */
-  const clientMotos = nCliente
-    ? todasMotos.filter((m) => m.id_usuario === nCliente.id_usuario)
-    : [];
-
   const clientPhone = isAdmin && nCliente ? extractPhone(nCliente.descripcion) : null;
 
   /* Motos que coinciden con la placa buscada */
@@ -875,7 +870,7 @@ export default function RecordsPage() {
             placeholder="Buscar servicio..."
             items={tipos}
             selected={nTipo}
-            onSelect={setNTipo}
+            onSelect={(t) => setNTipo(t)}
             getLabel={(t) => t.nombre}
             getSubLabel={(t) => t.descripcion}
           />

@@ -13,7 +13,6 @@ import {
 import { registrosApi } from '../../lib/api';
 import { fmtMoney, fmtDate } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
-import Badge from '../../components/ui/Badge';
 import type { RegistroDetalle } from '../../types';
 
 const TABS = [
@@ -86,7 +85,7 @@ export default function PagosPage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return registros
-      .filter(r => tab.estados.includes(r.estado as 0 | 1 | 2 | 3 | 4))
+      .filter(r => (tab.estados as readonly number[]).includes(r.estado))
       .filter(r =>
         !q ||
         (r.placa?.toLowerCase().includes(q)) ||
@@ -98,7 +97,7 @@ export default function PagosPage() {
   const sums = useMemo(() => {
     const result = {} as Record<TabKey, { count: number; total: number }>;
     TABS.forEach(t => {
-      const group = registros.filter(r => t.estados.includes(r.estado as 0|1|2|3|4));
+      const group = registros.filter(r => (t.estados as readonly number[]).includes(r.estado));
       result[t.key] = {
         count: group.length,
         total: group.reduce((s, r) => s + (r.costo_total ?? 0), 0),

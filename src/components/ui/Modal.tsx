@@ -3,7 +3,7 @@
    Dark-compatible, GSAP animate in/out
    ───────────────────────────────────────────── */
 
-import { useEffect, useRef, ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import gsap from 'gsap';
 import { cn } from '../../lib/utils';

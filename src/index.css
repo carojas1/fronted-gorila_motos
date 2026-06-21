@@ -1070,7 +1070,7 @@ body {
   transform: translateY(-4px);
 }
 
-/* ── Metric card ── */
+/* ── Metric card (KPI cards del Dashboard) ── */
 .metric-card {
   background: linear-gradient(150deg, #17171E 0%, #111115 100%);
   border: 1px solid rgba(255,255,255,0.06);
@@ -1078,7 +1078,8 @@ body {
   padding: 20px;
   position: relative;
   overflow: hidden;
-  transition: all 200ms ease;
+  transition: transform 200ms var(--spring-ease, cubic-bezier(0.34,1.56,0.64,1)),
+              box-shadow 200ms ease;
 }
 .metric-card::after {
   content: '';
@@ -1090,7 +1091,19 @@ body {
   transition: opacity 200ms;
 }
 .metric-card:hover::after { opacity: 0.9; }
-.metric-card:hover { transform: translateY(-3px); }
+.metric-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 20px 48px rgba(0,0,0,0.4); }
+.metric-card:active { transform: translateY(-1px) scale(0.99); transition-duration: 80ms; }
+
+/* ── Metric card: MODO CLARO ── */
+html[data-theme="light"] .metric-card {
+  background: #FFFFFF !important;
+  border-color: #E4E7EC !important;
+  box-shadow: 0 2px 8px rgba(16,24,40,0.07) !important;
+}
+html[data-theme="light"] .metric-card:hover {
+  box-shadow: 0 12px 32px rgba(16,24,40,0.12) !important;
+}
+
 .metric-num {
   font-size: 2.5rem;
   font-weight: 900;
@@ -1099,6 +1112,8 @@ body {
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
+html[data-theme="light"] .metric-num { color: #15151B !important; }
+
 .metric-label {
   font-size: 11px;
   font-weight: 700;
@@ -1107,6 +1122,38 @@ body {
   letter-spacing: 0.08em;
   margin-top: 6px;
 }
+html[data-theme="light"] .metric-label { color: rgba(21,21,27,0.45) !important; }
+
+/* ── Módulo cards del panel de resumen ── */
+.gm-mod-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  transition: transform 180ms var(--spring-ease, cubic-bezier(0.34,1.56,0.64,1)),
+              box-shadow 200ms ease, background 200ms ease, border-color 200ms ease;
+}
+.gm-mod-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  background: rgba(255,255,255,0.05);
+}
+.gm-mod-card:active { transform: translateY(-1px) scale(0.99); transition-duration: 80ms; }
+html[data-theme="light"] .gm-mod-card {
+  background: #FFFFFF !important;
+  border-color: #E4E7EC !important;
+  box-shadow: 0 2px 8px rgba(16,24,40,0.06) !important;
+}
+html[data-theme="light"] .gm-mod-card:hover {
+  background: #F9FAFB !important;
+  box-shadow: 0 8px 24px rgba(16,24,40,0.11) !important;
+}
+
+/* Textos dentro de mod cards → compatibles con ambos temas */
+.gm-mod-label { color: rgba(255,255,255,0.65); font-size: 11px; font-weight: 700; }
+.gm-mod-sub   { color: rgba(255,255,255,0.28); font-size: 10px; }
+.gm-mod-track { background: rgba(255,255,255,0.07); border-radius: 99px; height: 3px; overflow: hidden; margin-top: 8px; }
+html[data-theme="light"] .gm-mod-label { color: rgba(21,21,27,0.65) !important; }
+html[data-theme="light"] .gm-mod-sub   { color: rgba(21,21,27,0.38) !important; }
+html[data-theme="light"] .gm-mod-track { background: rgba(0,0,0,0.07) !important; }
 
 /* ── Trend badges ── */
 .stat-trend-up {
@@ -1147,6 +1194,54 @@ body {
 }
 .recharts-custom .recharts-tooltip-item { color: rgba(255,255,255,0.8) !important; }
 .recharts-custom .recharts-legend-item-text { color: rgba(255,255,255,0.5) !important; }
+
+/* ── Recharts light mode: los SVG usan fill inline → necesita override SVG ── */
+html[data-theme="light"] .recharts-custom text {
+  fill: rgba(21,21,27,0.5) !important;
+}
+html[data-theme="light"] .recharts-custom .recharts-cartesian-grid-horizontal line,
+html[data-theme="light"] .recharts-custom .recharts-cartesian-grid-vertical line {
+  stroke: rgba(0,0,0,0.06) !important;
+}
+html[data-theme="light"] .recharts-custom .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: #fff !important;
+  border-color: #E4E7EC !important;
+  color: #15151B !important;
+}
+html[data-theme="light"] .recharts-custom .recharts-tooltip-item { color: #15151B !important; }
+
+/* (metric-card light mode override ya está en el bloque .metric-card más arriba) */
+
+/* ── Gradientes de fondo inline en páginas (gm-card-d cubre cards, aquí cubre divs con style={{background}}) ── */
+html[data-theme="light"] [style*="rgba(255,255,255,0.02)"],
+html[data-theme="light"] [style*="rgba(255,255,255,0.03)"],
+html[data-theme="light"] [style*="rgba(255,255,255,0.04)"],
+html[data-theme="light"] [style*="rgba(255,255,255,0.05)"],
+html[data-theme="light"] [style*="rgba(255,255,255,0.06)"],
+html[data-theme="light"] [style*="rgba(255,255,255,0.07)"],
+html[data-theme="light"] [style*="rgba(255,255,255,0.035)"] {
+  background: rgba(21,21,27,0.03) !important;
+}
+
+/* ── Bordes blancos con opacidad muy baja (inline style) → visibles en claro ── */
+html[data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.06)"],
+html[data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.07)"],
+html[data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.08)"],
+html[data-theme="light"] [style*="border-color: rgba(255,255,255,0.06)"],
+html[data-theme="light"] [style*="border-color: rgba(255,255,255,0.08)"] {
+  border-color: rgba(21,21,27,0.08) !important;
+}
+
+/* ── Plate tag ── */
+html[data-theme="light"] .plate-tag {
+  background: rgba(225,20,40,0.07) !important;
+  border: 1px solid rgba(225,20,40,0.22) !important;
+  color: #C60015 !important;
+}
+
+/* ── stat-trend ── */
+html[data-theme="light"] .stat-trend-up   { color: #059669 !important; background: rgba(5,150,105,0.08) !important; }
+html[data-theme="light"] .stat-trend-down { color: #C60015 !important; background: rgba(198,0,21,0.08) !important; }
 
 /* ── Notification dot pulsante ── */
 @keyframes notifPulse {
@@ -1525,3 +1620,213 @@ html[data-theme="light"] .m-more-close { background: #F0F1F4 !important; border-
   /* Padding generoso de tarjetas → más compacto en móvil */
   .p-6 { padding: 1rem !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   TOPBAR + complementos de tema claro
+   El tema claro base (body, gm-app-bg, cards, inputs, tablas, skeleton)
+   ya vive arriba en el bloque html[data-theme="light"] con !important.
+   Aquí SOLO lo que ese bloque no cubre, para no duplicar.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Topbar (clase usada por AppLayout; antes era estilo inline) ── */
+.gm-topbar {
+  background: linear-gradient(180deg, rgba(11,11,15,0.98) 0%, rgba(9,9,13,0.96) 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+[data-theme="light"] .gm-topbar {
+  background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(245,245,252,0.98) 100%);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+}
+
+/* ── Filter chip dark → light ── */
+[data-theme="light"] .filter-chip {
+  border: 1px solid rgba(0,0,0,0.1);
+  background: rgba(0,0,0,0.04);
+  color: rgba(22,22,26,0.55);
+}
+[data-theme="light"] .filter-chip:hover {
+  border-color: rgba(225,20,40,0.28);
+  color: rgba(22,22,26,0.85);
+  background: rgba(225,20,40,0.05);
+}
+[data-theme="light"] .filter-chip.active {
+  background: rgba(225,20,40,0.12);
+  border-color: rgba(225,20,40,0.40);
+  color: #C60015;
+}
+
+/* ── Tab nav dark → light ── */
+[data-theme="light"] .tab-nav {
+  background: rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.08);
+}
+[data-theme="light"] .tab-btn { color: rgba(22,22,26,0.45); }
+[data-theme="light"] .tab-btn:hover { color: rgba(22,22,26,0.8); }
+[data-theme="light"] .tab-btn.active {
+  background: rgba(225,20,40,0.12);
+  color: #C60015;
+  box-shadow: 0 0 16px rgba(225,20,40,0.08);
+}
+
+/* ── Icon button dark → light ── */
+[data-theme="light"] .icon-btn {
+  border: 1px solid rgba(0,0,0,0.1);
+  color: rgba(22,22,26,0.45);
+}
+[data-theme="light"] .icon-btn:hover {
+  background: rgba(0,0,0,0.06);
+  color: rgba(22,22,26,0.8);
+  border-color: rgba(0,0,0,0.15);
+}
+[data-theme="light"] .icon-btn.danger:hover {
+  background: rgba(225,20,40,0.08);
+  color: #C60015;
+  border-color: rgba(225,20,40,0.2);
+}
+
+/* ── Dark scrollbar dark → light ── */
+[data-theme="light"] .dark-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); }
+[data-theme="light"] .dark-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+
+/* ── Prog bar dark → light ── */
+[data-theme="light"] .prog-bar { background: rgba(0,0,0,0.07); }
+
+/* ── Text colors en modo claro (para clases Tailwind text-white/XX) ── */
+[data-theme="light"] .gm-text-primary { color: #16161A; }
+[data-theme="light"] .gm-text-dim     { color: rgba(22,22,26,0.55); }
+[data-theme="light"] .gm-text-faint   { color: rgba(22,22,26,0.35); }
+
+/* FIX CRÍTICO: text-white sin opacidad → negro en modo claro (sin este fix el texto es blanco sobre blanco) */
+html[data-theme="light"] .text-white { color: #15151B !important; }
+
+/* Hover de fila en tabla — en claro debe ser visible */
+html[data-theme="light"] .gm-table-d tbody tr:hover td { background: rgba(0,0,0,0.025) !important; }
+html[data-theme="light"] .gm-table-d th { background: rgba(0,0,0,0.02) !important; }
+
+/* Select options en claro */
+html[data-theme="light"] .gm-select-d option { background: #FFFFFF; color: #15151B; }
+
+/* Search icon en claro */
+html[data-theme="light"] .search-d svg { color: rgba(22,22,26,0.35) !important; }
+
+/* ── Plate tag en modo claro ── */
+[data-theme="light"] .plate-tag {
+  background: rgba(225,20,40,0.07);
+  border: 1px solid rgba(225,20,40,0.18);
+  color: #C60015;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ACCESIBILIDAD — Respetar "reduce el movimiento" del sistema
+   Usuarios con sensibilidad vestibular o batería baja en el APK:
+   se desactivan las animaciones decorativas e infinitas.
+   ══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .float-y, .float-y-soft, .rotate-slow, .rotate-slow-reverse,
+  .neon-pulse, .spin-slow {
+    animation: none !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MICRO-INTERACCIONES — Inspiradas en Emil Kowalski
+   Spring-feel, press-scale, hover-lift, shimmer
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Spring bounce (custom cubic-bezier que simula spring) ── */
+:root {
+  --spring-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ── Press scale: feedback táctil inmediato ── */
+.gm-pressable {
+  transition: transform 120ms var(--spring-ease), box-shadow 200ms ease, opacity 120ms ease;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.gm-pressable:hover  { transform: translateY(-2px) scale(1.01); }
+.gm-pressable:active { transform: translateY(0px) scale(0.97); transition-duration: 60ms; }
+
+/* ── Hover lift para tarjetas secundarias (más sutil) ── */
+.gm-hover-lift {
+  transition: transform 200ms var(--ease-out-expo), box-shadow 200ms ease;
+}
+.gm-hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.22);
+}
+
+/* ── Shimmer de entrada (para elementos que cargan) ── */
+@keyframes gm-shimmer {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+.gm-enter {
+  animation: gm-shimmer 350ms var(--ease-out-expo) both;
+}
+.gm-enter-delay-1 { animation-delay: 60ms; }
+.gm-enter-delay-2 { animation-delay: 120ms; }
+.gm-enter-delay-3 { animation-delay: 180ms; }
+.gm-enter-delay-4 { animation-delay: 240ms; }
+
+/* ── Fade-slide para modales y overlays ── */
+@keyframes gm-modal-in {
+  0%   { opacity: 0; transform: scale(0.95) translateY(8px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+.gm-modal-enter {
+  animation: gm-modal-in 280ms var(--spring-ease) both;
+}
+
+/* ── Fade slide horizontal (para tabs y drawers) ── */
+@keyframes gm-slide-right {
+  0%   { opacity: 0; transform: translateX(-10px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes gm-slide-left {
+  0%   { opacity: 0; transform: translateX(10px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.gm-slide-right { animation: gm-slide-right 240ms var(--ease-out-expo) both; }
+.gm-slide-left  { animation: gm-slide-left  240ms var(--ease-out-expo) both; }
+
+/* ── Focus ring premium (accesibilidad + estilo) ── */
+.gm-focus:focus-visible {
+  outline: 2px solid rgba(225,20,40,0.6);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/* ── Button bounce (para botones CTA primarios) ── */
+.gm-btn-bounce {
+  transition: transform 150ms var(--spring-ease), box-shadow 200ms ease, background 200ms ease;
+}
+.gm-btn-bounce:hover  { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(225,20,40,0.35); }
+.gm-btn-bounce:active { transform: translateY(0) scale(0.97); transition-duration: 80ms; }
+
+/* ── Skeleton pulse mejorado ── */
+@keyframes gm-skeleton {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
+}
+.gm-skeleton-pulse { animation: gm-skeleton 1.4s ease-in-out infinite; }
+
+/* ── Módulos clickables del dashboard (hover específico) ── */
+.gm-mod-card {
+  transition: transform 180ms var(--spring-ease), background 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+.gm-mod-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.gm-mod-card:active { transform: translateY(-1px) scale(0.99); transition-duration: 80ms; }

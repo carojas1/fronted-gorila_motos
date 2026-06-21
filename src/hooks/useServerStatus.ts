@@ -35,7 +35,7 @@ export function useServerStatus(): ServerStatus {
           if (r.status > 0) setStatus('online');
           else { setStatus('starting'); retryId = setTimeout(attempt, 8_000); }
         })
-        .catch((e: Error) => {
+        .catch(() => {
           clearTimeout(tid);
           if (dead) return;
           // CORS block, timeout o red caída → servidor dormido → reintentar

@@ -12,7 +12,7 @@ import {
   AlertTriangle, TrendingUp, Activity, Wrench, Search, Users, Mail,
 } from 'lucide-react';
 import {
-  ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
 import { motosApi, combustibleApi, usuariosApi } from '../../lib/api';

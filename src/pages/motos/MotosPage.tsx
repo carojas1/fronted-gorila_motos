@@ -6,9 +6,9 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Pencil, Trash2, Bike, Gauge, User,
-  Calendar, Zap, Shield, ChevronRight, SlidersHorizontal, ClipboardList, ImageIcon, BookOpen,
+  Calendar, Zap, Shield, SlidersHorizontal, ClipboardList, ImageIcon, BookOpen,
 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import gsap from 'gsap';
@@ -90,9 +90,9 @@ function SkeletonCard() {
 
 /* ─── Moto Card Premium ─── */
 function MotoCard({
-  moto, ownerName, onEdit, onDelete, index, canManage = false,
+  moto, ownerName, onEdit, onDelete, canManage = false,
 }: {
-  moto: Moto; ownerName: string; index: number;
+  moto: Moto; ownerName: string; index?: number;
   onEdit: (m: Moto) => void; onDelete: (m: Moto) => void;
   canManage?: boolean;
 }) {
@@ -283,7 +283,7 @@ export default function MotosPage() {
   const [uploadMsg,    setUploadMsg]    = useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Form>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as Resolver<Form>,
   });
 
   const fetchData = useCallback(async () => {

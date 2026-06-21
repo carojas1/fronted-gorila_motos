@@ -9,8 +9,8 @@ import {
   Lock, Unlock, ChevronRight, Wrench,
   Shield, ArrowLeft, CreditCard, TrendingUp,
   Calendar, Bike, Activity, CheckCircle,
-  Clock, Package, FileText, Star,
-  ChevronDown, ChevronUp, Fuel, Trophy, Gift,
+  Clock, Package, Star,
+  ChevronDown, ChevronUp, Fuel, Gift,
   Gauge, Zap,
 } from 'lucide-react';
 import gsap from 'gsap';
@@ -632,8 +632,8 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-[13px] font-bold text-white/85">
                             {c.litros} L
-                            {(c as Record<string,unknown>).tipo_combustible
-                              ? ` · ${(c as Record<string,unknown>).tipo_combustible}`
+                            {(c as unknown as Record<string, unknown>).tipo_combustible
+                              ? ` · ${(c as unknown as Record<string, unknown>).tipo_combustible}`
                               : c.marca_aceite ? ` · ${c.marca_aceite}` : ''}
                           </p>
                           {c.placa && <span className="plate-tag text-[10px] py-0">{c.placa}</span>}

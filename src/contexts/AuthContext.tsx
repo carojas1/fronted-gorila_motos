@@ -71,12 +71,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userStr = localStorage.getItem(USER_KEY);
     if (!token || !userStr) return;
 
-    let stored: { id_usuario?: number } | null = null;
+    let stored: { id_usuario?: number } | null;
     try { stored = JSON.parse(userStr); } catch { return; }
     if (!stored?.id_usuario) return;
 
     const API = (import.meta.env.VITE_API_URL as string | undefined)
       ?? 'https://backend-gorila-motos.onrender.com/api';
+
+    // Guard de cancelación: si el usuario hace logout o inicia sesión con OTRA
+    // cuenta antes de que llegue esta respuesta, no pisar el estado con datos viejos.
+    let cancelled = false;
+    const idEsperado = stored.id_usuario;
 
     fetch(`${API}/usuarios/${stored.id_usuario}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -84,14 +89,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(async res => {
         if (!res.ok) return; // token expirado / servidor dormido → mantener datos guardados
         const data = await res.json() as Record<string, unknown>;
-        if (data?.id_usuario) {
+        if (cancelled) return; // respuesta tardía: el contexto ya cambió
+        // Solo aplicar si la sesión vigente sigue siendo la misma cuenta
+        const tokenVigente = localStorage.getItem(TOKEN_KEY);
+        if (!tokenVigente || tokenVigente !== token) return;
+        if (data?.id_usuario === idEsperado) {
           delete data.contrasena; // nunca guardar hash en localStorage
           localStorage.setItem(USER_KEY, JSON.stringify(data));
           setState(s => ({ ...s, user: data as unknown as Usuario }));
         }
       })
       .catch(() => {}); // red caída o backend dormido → mantener datos guardados
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    return () => { cancelled = true; };
   }, []); // solo al montar
 
   /* ── Login con email + contraseña (backend directo, sin Firebase) ── */
@@ -115,8 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * Intenta login con contraseña determinista; si falla, auto-registra.
    * No abre popup — el redirect ya fue manejado por LoginPage.
    */
-  const processGoogleUser = firebaseEnabled
-    ? useCallback(async (fbUser: FirebaseUser) => {
+  const processGoogleUserCb = useCallback(async (fbUser: FirebaseUser) => {
         setState((s) => ({ ...s, loading: true }));
         try {
           /* Admin usa contraseña fija; otros Google-users usan su UID */
@@ -130,8 +139,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const { data } = await authApi.login(fbUser.email!, googlePass);
             ({ token, user } = extractAuth(data));
-          } catch {
-            /* 2. Primera vez → registrar en el backend */
+          } catch (loginErr: unknown) {
+            const st = (loginErr as { response?: { status?: number } })?.response?.status;
+            // Si el backend NO respondió (red caída / Render dormido) o dio 5xx,
+            // NO asumir "primera vez" ni registrar: es un fallo del servidor.
+            if (st === undefined) {
+              throw new Error('No se pudo conectar con el servidor. Intenta de nuevo en un momento.', { cause: loginErr });
+            }
+            if (st >= 500) {
+              throw new Error('El servidor tuvo un problema temporal. Intenta de nuevo.', { cause: loginErr });
+            }
+            /* 2. 4xx (usuario no existe / credencial google no aplica) → registrar */
             const base = (fbUser.email!.split('@')[0].replace(/[^a-z0-9]/gi, '').slice(0, 14) || 'gmuser');
             try {
               await authApi.register({
@@ -149,7 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 /* El correo ya existe con diferente contraseña */
                 throw new Error(
                   'Este correo ya tiene cuenta. Ingresa con tu contraseña normal ' +
-                  'o usa "¿Olvidaste tu contraseña?" para restablecerla.'
+                  'o usa "¿Olvidaste tu contraseña?" para restablecerla.',
+                  { cause: regErr }
                 );
               }
               throw regErr;
@@ -172,8 +191,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setState((s) => ({ ...s, loading: false }));
           throw err;
         }
-      }, [])
-    : undefined;
+      }, []);
+  /* Solo se expone si Firebase está configurado (mantiene la semántica previa) */
+  const processGoogleUser = firebaseEnabled ? processGoogleUserCb : undefined;
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);

@@ -5,7 +5,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -90,7 +90,7 @@ export default function MiMotoPage() {
     handleSubmit: handleMoto,
     reset: resetMoto,
     formState: { errors: errMoto },
-  } = useForm<MotoForm>({ resolver: zodResolver(motoSchema) });
+  } = useForm<MotoForm>({ resolver: zodResolver(motoSchema) as Resolver<MotoForm> });
 
   /* ── Perfil form ── */
   const {

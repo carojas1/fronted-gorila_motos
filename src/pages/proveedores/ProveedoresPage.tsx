@@ -125,8 +125,23 @@ function ProveedorCard({ codigo, productos, contacto, onEdit }: ProveedorCardPro
               </p>
             </div>
             {contacto?.telefono && (() => {
+              // Normalizar a formato internacional Ecuador (593 + 9 dígitos del celular)
               const raw = contacto.telefono.replace(/\D/g, '');
-              const intl = raw.startsWith('0') ? `593${raw.slice(1)}` : raw.startsWith('593') ? raw : `593${raw}`;
+              let intl = raw.startsWith('0') ? `593${raw.slice(1)}` : raw.startsWith('593') ? raw : `593${raw}`;
+              intl = intl.replace(/^5930/, '593'); // quita el 0 intermedio si quedó "5930..."
+              const valid = /^593\d{9}$/.test(intl); // celular EC válido
+              // Si el teléfono no es un celular válido, mostrar el número sin enlace (no abrir un chat a un número inexistente)
+              if (!valid) {
+                return (
+                  <span
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}
+                    title="Número no válido para WhatsApp (se requiere celular de Ecuador)"
+                  >
+                    <MessageCircle size={11} /> {contacto.telefono}
+                  </span>
+                );
+              }
               const items = productos.filter(p => p.stock <= 5).map(p => `• ${p.nombre} (${p.stock} u.)`).join('\n');
               const msg = encodeURIComponent(`Hola! Soy Gorila Motos\n\nNecesitamos reponer:\n${items}\n\nGracias.`);
               return (
@@ -194,7 +209,9 @@ function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose, onDel
   const [producto, setProducto] = useState(contacto?.producto ?? '');
 
   const save = () => {
-    const cod = codigoState.trim().toUpperCase();
+    // Al EDITAR se conserva la clave existente tal cual (puede venir en minúsculas
+    // desde Inventario); solo al CREAR se normaliza a mayúsculas. Evita claves huérfanas.
+    const cod = isNew ? codigoState.trim().toUpperCase() : codigo;
     if (!cod)    { return; }
     if (!nombre.trim()) { return; }
     onSave(cod, { nombre, telefono, email, producto });
@@ -359,12 +376,23 @@ export default function ProveedoresPage() {
   );
 
   const handleSave = (codigo: string, data: Contacto) => {
+    const prevVal = contactos[codigo]; // undefined si es proveedor nuevo
     setContactos(prev => ({ ...prev, [codigo]: data }));
     setEditCodigo(null);
     setCreatingNew(false);
-    proveedorContactosApi.guardar(codigo, data)
+    proveedorContactosApi.guardar(codigo, data as unknown as Record<string, unknown>)
       .then(() => toast.success('Proveedor guardado'))
-      .catch(err => { toast.error(getErrorMsg(err)); cargarContactos(); });
+      .catch(err => {
+        toast.error(getErrorMsg(err));
+        // Revertir la mutación optimista sincrónicamente (no depender de un refetch
+        // que también puede fallar si el backend está caído → dejaría datos divergentes).
+        setContactos(prev => {
+          const next = { ...prev };
+          if (prevVal !== undefined) next[codigo] = prevVal;
+          else delete next[codigo];
+          return next;
+        });
+      });
   };
 
   const handleDelete = async (codigo: string) => {
@@ -378,17 +406,20 @@ export default function ProveedoresPage() {
     setContactos(prev => { const n = { ...prev }; delete n[codigo]; return n; });
     setProductos(prev => prev.filter(p => p.codigo_proveedor !== codigo));
 
-    try {
-      await Promise.all([
-        proveedorContactosApi.borrar(codigo),
-        ...productosProveedor.map(p => productosApi.remove(p.id_producto)),
-      ]);
+    // allSettled: si falla el borrado de algún producto, sabemos exactamente cuántos
+    // y avisamos del fallo parcial en vez de un error genérico que oculta lo que quedó a medias.
+    const resultados = await Promise.allSettled([
+      proveedorContactosApi.borrar(codigo),
+      ...productosProveedor.map(p => productosApi.remove(p.id_producto)),
+    ]);
+    const fallidos = resultados.filter(r => r.status === 'rejected').length;
+    if (fallidos === 0) {
       toast.success(productosProveedor.length > 0
         ? `Proveedor y ${productosProveedor.length} producto(s) eliminados`
         : 'Proveedor eliminado');
-    } catch (err) {
-      toast.error(getErrorMsg(err));
-      fetchData();
+    } else {
+      toast.error(`Eliminación parcial: ${fallidos} operación(es) fallaron. Reintenta.`);
+      fetchData(); // re-sincroniza el estado con el backend real
     }
   };
 
@@ -533,6 +564,7 @@ export default function ProveedoresPage() {
       {/* ─── Modal de contacto (editar) ─── */}
       {editCodigo !== null && (
         <ContactoModal
+          key={editCodigo}
           codigo={editCodigo}
           contacto={contactos[editCodigo] ?? null}
           onSave={handleSave}
