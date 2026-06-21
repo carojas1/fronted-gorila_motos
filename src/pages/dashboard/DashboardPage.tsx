@@ -22,6 +22,7 @@ import { useCountUp } from '../../hooks/useGsap';
 import type { RegistroDetalle, Moto, Producto } from '../../types';
 import { isNativeApp } from '../../lib/platform';
 import MobileDashboard from '../../components/mobile/MobileDashboard';
+import TermsModal, { acceptTerms } from '../../components/ui/TermsModal';
 
 /* ── Barras CSS (reemplaza Recharts BarChart: evita label-clip y funciona en light mode) ── */
 function ServiceBar({ data }: { data: { name: string; value: number }[] }) {
@@ -115,7 +116,13 @@ const ESTADO_LABELS = ['Pendiente', 'En proceso', 'Completado', 'Entregado', 'Fa
 /* En el APK se usa el dashboard móvil premium; en web, el dashboard completo.
    Se separa en dos componentes para no llamar hooks tras un return condicional. */
 export default function DashboardPage() {
-  return isNativeApp ? <MobileDashboard /> : <WebDashboard />;
+  const [termsOk, setTermsOk] = useState(() => localStorage.getItem('gm_terms_v1') === 'accepted');
+  return (
+    <>
+      {!termsOk && <TermsModal onAccept={() => { acceptTerms(); setTermsOk(true); }} />}
+      {isNativeApp ? <MobileDashboard /> : <WebDashboard />}
+    </>
+  );
 }
 
 function WebDashboard() {

@@ -4,6 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
+import * as XLSX from 'xlsx';
 import {
   TrendingUp, DollarSign, Wallet, Plus, Trash2,
   ArrowUpRight, ArrowDownRight, BarChart2, Receipt, Calendar,
@@ -160,41 +161,101 @@ function BusinessChart({ ingresos, gastos, labels, isDark }: {
   );
 }
 
-/* ─── Exportar datos filtrados a CSV ─── */
-function exportarCSV(
+/* ─── Exportar datos filtrados a Excel (.xlsx) ─── */
+function exportarExcel(
   ingresos: RegistroDetalle[], gastos: PagoEmpleadoAPI[],
   empleados: Usuario[], label: string
 ) {
+  const hoy    = new Date().toISOString().slice(0, 10);
   const nombreEmp = (id: number) => {
     if (id === 0) return 'Gasto general';
     const u = empleados.find(e => e.id_usuario === id);
-    return u ? u.nombre_completo.split(' ').slice(0,2).join(' ') : `Empleado #${id}`;
+    return u ? u.nombre_completo.split(' ').slice(0, 3).join(' ') : `Empleado #${id}`;
   };
-  const rows: string[][] = [
-    ['Fecha', 'Descripción', 'Tipo', 'Monto (USD)'],
+
+  const totalIng = ingresos.reduce((s, r) => s + (r.costo_total ?? 0), 0);
+  const gasEmpl  = gastos.filter(g => g.id_empleado > 0).reduce((s, g) => s + Number(g.monto), 0);
+  const gasGen   = gastos.filter(g => g.id_empleado === 0).reduce((s, g) => s + Number(g.monto), 0);
+  const totalGas = gasEmpl + gasGen;
+  const balance  = totalIng - totalGas;
+
+  const wb = XLSX.utils.book_new();
+
+  /* ── Hoja 1: RESUMEN ── */
+  const resumen = [
+    ['GORILA MOTOS — Reporte Contable'],
+    [`Período: ${label}`],
+    [`Generado: ${hoy}`],
+    [],
+    ['Concepto', 'Monto (USD)'],
+    ['INGRESOS TOTALES',        +totalIng.toFixed(2)],
+    ['GASTOS EMPLEADOS',        +gasEmpl.toFixed(2)],
+    ['GASTOS GENERALES',        +gasGen.toFixed(2)],
+    ['TOTAL GASTOS',            +totalGas.toFixed(2)],
+    ['BALANCE NETO',            +balance.toFixed(2)],
+    ['RENTABILIDAD (%)',        totalIng > 0 ? +((balance / totalIng) * 100).toFixed(1) : 0],
+  ];
+  const wsRes = XLSX.utils.aoa_to_sheet(resumen);
+  wsRes['!cols'] = [{ wch: 28 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen');
+
+  /* ── Hoja 2: INGRESOS ── */
+  const ingRows = [
+    ['Fecha', 'Placa', 'Tipo de servicio', 'Estado', 'Monto (USD)'],
     ...ingresos.map(r => [
       toIsoStr(r.fecha),
-      `Servicio ${r.placa} - ${r.tipo_servicio ?? ''}`,
-      'Ingreso',
-      (r.costo_total ?? 0).toFixed(2),
+      r.placa ?? '',
+      r.tipo_servicio ?? 'Servicio general',
+      'Cobrado',
+      +(r.costo_total ?? 0).toFixed(2),
     ]),
+    [],
+    ['', '', '', 'TOTAL', +totalIng.toFixed(2)],
+  ];
+  const wsIng = XLSX.utils.aoa_to_sheet(ingRows);
+  wsIng['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 26 }, { wch: 12 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, wsIng, 'Ingresos');
+
+  /* ── Hoja 3: GASTOS ── */
+  const gasRows = [
+    ['Fecha', 'Concepto', 'Empleado / Proveedor', 'Categoría', 'Monto (USD)'],
     ...gastos.map(g => [
       toIsoStr(g.fecha),
-      `${g.concepto} — ${nombreEmp(g.id_empleado)}`,
-      'Gasto',
-      Number(g.monto).toFixed(2),
+      g.concepto,
+      nombreEmp(g.id_empleado),
+      g.id_empleado > 0 ? 'Pago empleado' : 'Gasto general',
+      +Number(g.monto).toFixed(2),
     ]),
+    [],
+    ['', '', '', 'TOTAL GASTOS',    +totalGas.toFixed(2)],
+    ['', '', '', 'Empleados',       +gasEmpl.toFixed(2)],
+    ['', '', '', 'Generales',       +gasGen.toFixed(2)],
   ];
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
-  const blob = new Blob(['﻿' + csv], { type:'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `contabilidad_${label.replace(/\s+/g,'-')}_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const wsGas = XLSX.utils.aoa_to_sheet(gasRows);
+  wsGas['!cols'] = [{ wch: 12 }, { wch: 24 }, { wch: 26 }, { wch: 16 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, wsGas, 'Gastos');
+
+  /* ── Hoja 4: PAGOS EMPLEADOS (desglose) ── */
+  const pagoEmplRows = gastos.filter(g => g.id_empleado > 0).map(g => [
+    toIsoStr(g.fecha),
+    nombreEmp(g.id_empleado),
+    g.concepto,
+    g.notas ?? '',
+    +Number(g.monto).toFixed(2),
+  ]);
+  if (pagoEmplRows.length > 0) {
+    const wsPag = XLSX.utils.aoa_to_sheet([
+      ['Fecha', 'Empleado', 'Concepto', 'Notas', 'Monto (USD)'],
+      ...pagoEmplRows,
+      [],
+      ['', '', '', 'TOTAL', +gasEmpl.toFixed(2)],
+    ]);
+    wsPag['!cols'] = [{ wch: 12 }, { wch: 26 }, { wch: 22 }, { wch: 20 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, wsPag, 'Pagos empleados');
+  }
+
+  const filename = `gorila_motos_${label.replace(/[\s/\\:*?"<>|]/g, '-')}_${hoy}.xlsx`;
+  XLSX.writeFile(wb, filename);
 }
 
 /* ─── Label del filtro activo ─── */
@@ -425,7 +486,7 @@ export default function ContabilidadPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => exportarCSV(
+              onClick={() => exportarExcel(
                 filtrar(registros.filter(r => r.estado === 4)),
                 filtrar(gastos),
                 empleados,
@@ -433,9 +494,9 @@ export default function ContabilidadPage() {
               )}
               className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-xl transition-all"
               style={{ background:'rgba(16,185,129,0.1)', color:'#10B981', border:'1px solid rgba(16,185,129,0.2)' }}
-              title="Exportar a CSV (abre en Excel)"
+              title="Exportar a Excel (.xlsx)"
             >
-              <Download size={13}/> Exportar CSV
+              <Download size={13}/> Exportar Excel
             </button>
             <Button icon={<Plus size={14}/>} onClick={() => setModalGasto(true)}>
               Registrar gasto

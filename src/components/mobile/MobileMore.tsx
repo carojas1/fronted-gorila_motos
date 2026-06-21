@@ -7,7 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Wrench, Bike, Package, Truck, UserCheck, CreditCard,
   Users, Star, Bell, ClipboardList, Fuel, Wallet, BookOpen, Globe,
-  Settings, LogOut, X, ChevronRight, type LucideIcon,
+  LogOut, X, ChevronRight, type LucideIcon,
 } from 'lucide-react';
 import { Sun, Moon } from 'lucide-react';
 import { initials } from '../../lib/utils';
@@ -128,17 +128,10 @@ export default function MobileMore({
             <div className="m-more-ico" style={{ background: theme === 'dark' ? 'rgba(245,158,11,0.12)' : 'rgba(59,130,246,0.12)', border: theme === 'dark' ? '1px solid rgba(245,158,11,0.25)' : '1px solid rgba(59,130,246,0.25)' }}>
               {theme === 'dark' ? <Sun size={16} style={{ color: '#F59E0B' }} /> : <Moon size={16} style={{ color: '#3B82F6' }} />}
             </div>
-            <span className="m-more-row-lbl">{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>
+            <span className="m-more-row-lbl">{theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}</span>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(125,125,135,0.9)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {theme === 'dark' ? 'Oscuro' : 'Claro'}
             </span>
-          </button>
-          <button onClick={() => go('/ajustes')} className="m-more-row">
-            <div className="m-more-ico" style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}>
-              <Settings size={16} style={{ color: '#8B5CF6' }} />
-            </div>
-            <span className="m-more-row-lbl">Configuración</span>
-            <ChevronRight size={15} className="text-white/25" />
           </button>
           <button onClick={onLogout} className="m-more-row">
             <div className="m-more-ico" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}>
