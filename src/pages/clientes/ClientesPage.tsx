@@ -11,12 +11,12 @@ import {
   Calendar, Bike, Activity, CheckCircle,
   Clock, Package, Star,
   ChevronDown, ChevronUp, Fuel, Gift,
-  Gauge, Zap,
+  Gauge, Zap, Send,
 } from 'lucide-react';
 import gsap from 'gsap';
 import {
   usuariosApi, registrosApi, motosApi,
-  combustibleApi, facturasApi, detallesFacturaApi, authApi,
+  combustibleApi, facturasApi, detallesFacturaApi, authApi, ofertaApi,
 } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
@@ -817,6 +817,29 @@ export default function ClientesPage() {
   const [reAuthLoading, setReAuthLoading] = useState(false);
   const [unlocked, setUnlocked] = useState<Set<number>>(new Set());
 
+  /* Ofertas / email masivo */
+  const [ofertaOpen,    setOfertaOpen]    = useState(false);
+  const [ofertaAsunto,  setOfertaAsunto]  = useState('');
+  const [ofertaMensaje, setOfertaMensaje] = useState('');
+  const [ofertaRoles,   setOfertaRoles]   = useState<number[]>([2]);
+  const [ofertaLoading, setOfertaLoading] = useState(false);
+
+  const enviarOferta = async () => {
+    if (!ofertaAsunto.trim() || !ofertaMensaje.trim()) { toast.error('Completa asunto y mensaje'); return; }
+    setOfertaLoading(true);
+    try {
+      const r = await ofertaApi.enviar(ofertaAsunto.trim(), ofertaMensaje.trim(), ofertaRoles);
+      const d = r.data as { enviados: number; total: number };
+      toast.success(`${d.enviados} de ${d.total} correos enviados correctamente`);
+      setOfertaOpen(false);
+      setOfertaAsunto('');
+      setOfertaMensaje('');
+      setOfertaRoles([2]);
+    } catch {
+      toast.error('Error al enviar la campaña');
+    } finally { setOfertaLoading(false); }
+  };
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -963,6 +986,13 @@ export default function ClientesPage() {
                 {clientes.length} clientes · {totalVisitas} visitas en total
               </p>
             </div>
+            <button
+              onClick={() => setOfertaOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{ background:'rgba(225,20,40,0.1)', color:'#E11428', border:'1px solid rgba(225,20,40,0.25)' }}
+            >
+              <Send size={14} /> Enviar oferta a clientes
+            </button>
           </div>
 
           {/* KPI strip */}
@@ -1087,6 +1117,103 @@ export default function ClientesPage() {
           <p className="text-[11px] text-white/20 flex items-center gap-1.5">
             <Lock size={9} />
             El desbloqueo dura toda la sesión — no tendrás que volver a verificar
+          </p>
+        </div>
+      </Modal>
+
+      {/* ── Modal: Enviar oferta por email ── */}
+      <Modal
+        open={ofertaOpen}
+        onClose={() => { setOfertaOpen(false); setOfertaAsunto(''); setOfertaMensaje(''); setOfertaRoles([2]); }}
+        title="Enviar oferta a clientes"
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setOfertaOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={enviarOferta} loading={ofertaLoading} disabled={!ofertaAsunto.trim() || !ofertaMensaje.trim()}>
+              <Send size={14} /> Enviar campaña
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          {/* Preview estadístico */}
+          <div className="flex items-center gap-3 p-4 rounded-xl"
+               style={{ background:'rgba(225,20,40,0.06)', border:'1px solid rgba(225,20,40,0.15)' }}>
+            <Mail size={18} className="text-gm-red shrink-0" />
+            <div>
+              <p className="text-[12px] font-black text-white/80">
+                Se enviará a {clientes.filter(c =>
+                  !c.correo?.endsWith('@gmotors.local') && ofertaRoles.includes(2)
+                ).length} clientes con correo real
+              </p>
+              <p className="text-[11px] text-white/35 mt-0.5">
+                Los correos @gmotors.local (seed) se omiten automáticamente
+              </p>
+            </div>
+          </div>
+
+          {/* Destinatarios */}
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-white/35 mb-2">Destinatarios</p>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { id: 2, label: 'Clientes',   color: '#3B82F6' },
+                { id: 3, label: 'Mecánicos',  color: '#10B981' },
+              ].map(({ id, label, color }) => {
+                const active = ofertaRoles.includes(id);
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setOfertaRoles(prev =>
+                      active ? prev.filter(r => r !== id) : [...prev, id]
+                    )}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all"
+                    style={{
+                      background: active ? `${color}18` : 'rgba(255,255,255,0.04)',
+                      color:      active ? color          : 'rgba(255,255,255,0.35)',
+                      border:     `1px solid ${active ? `${color}35` : 'rgba(255,255,255,0.08)'}`,
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <Input
+            label="Asunto del correo"
+            placeholder="Ej: ¡20% de descuento en cambio de aceite este mes!"
+            value={ofertaAsunto}
+            onChange={e => setOfertaAsunto(e.target.value)}
+          />
+
+          <div>
+            <label className="block text-[11px] font-black uppercase tracking-[0.15em] text-white/35 mb-2">
+              Mensaje (HTML permitido)
+            </label>
+            <textarea
+              rows={6}
+              placeholder="Escribe el cuerpo del correo. Puedes usar HTML para dar formato: <b>negrita</b>, <br> para saltos de línea, etc."
+              value={ofertaMensaje}
+              onChange={e => setOfertaMensaje(e.target.value)}
+              className="w-full rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-1"
+              style={{
+                background:'rgba(255,255,255,0.04)',
+                border:'1px solid rgba(255,255,255,0.1)',
+                color:'rgba(255,255,255,0.8)',
+                lineHeight:'1.6',
+              }}
+            />
+          </div>
+
+          <p className="text-[10px] text-white/20 leading-relaxed">
+            El email se envía con la plantilla oficial de Gorila Motos. Incluye el asunto como título
+            y un botón "Ver portal" al final. El sistema retoma intentos fallidos — si Render está dormido
+            puede tardar hasta 60 s.
           </p>
         </div>
       </Modal>

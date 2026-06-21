@@ -273,6 +273,13 @@ export const healthApi = {
   wake:  () => api.get('/health', { timeout: 65_000 }),
 };
 
+export const ofertaApi = {
+  /** Envía una campaña de email a todos los usuarios de los roles indicados.
+   *  roles: 2=CLIENTE, 3=MECANICO, 1=ADMIN — se pueden combinar. */
+  enviar: (asunto: string, mensaje: string, roles: number[] = [2]) =>
+    api.post('/ofertas/enviar', { asunto, mensaje, roles }),
+};
+
 /* ── Upload con retry: despierta backend si está dormido y reintenta ─────────
    Render free duerme tras 15 min. Primera petición tarda 30-50s.
    Estrategia: ping → upload con timeout 90s → reintenta 2 veces si falla.
