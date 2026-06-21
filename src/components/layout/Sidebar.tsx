@@ -45,7 +45,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-64 flex flex-col z-30"
+    <aside className="gm-sidebar fixed inset-y-0 left-0 w-64 flex flex-col z-30"
       style={{ background: 'linear-gradient(180deg,#131317 0%,#0f0f13 100%)', borderRight:'1px solid rgba(255,255,255,0.05)' }}>
 
       {/* ── Logo ── */}

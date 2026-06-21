@@ -119,7 +119,7 @@ export function NotificationPanel({
   return (
     <div
       ref={panelRef}
-      className="absolute right-0 top-full mt-2 w-[380px] rounded-2xl overflow-hidden z-50 dark-scroll"
+      className="notif-panel absolute right-0 top-full mt-2 w-[380px] rounded-2xl overflow-hidden z-50 dark-scroll"
       style={{
         background: 'linear-gradient(150deg, #1C1C26 0%, #14141C 100%)',
         border: '1px solid rgba(255,255,255,0.08)',
@@ -129,7 +129,7 @@ export function NotificationPanel({
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] sticky top-0"
+      <div className="notif-header flex items-center justify-between px-4 py-3 border-b border-white/[0.06] sticky top-0"
            style={{ background: 'rgba(20,20,28,0.95)', backdropFilter: 'blur(12px)' }}>
         <div className="flex items-center gap-2">
           <Bell size={15} className="text-gm-red" />
@@ -193,7 +193,7 @@ export function NotificationPanel({
       )}
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-white/[0.04] flex justify-between items-center sticky bottom-0"
+      <div className="notif-footer px-4 py-3 border-t border-white/[0.04] flex justify-between items-center sticky bottom-0"
            style={{ background: 'rgba(14,14,20,0.95)' }}>
         <span className="text-[11px] text-white/20">{notifications.length} alertas totales</span>
         <Link

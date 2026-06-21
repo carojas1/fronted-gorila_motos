@@ -3,7 +3,7 @@
    Filtros: Día · Semana · Mes · Año · Todo
    ───────────────────────────────────────────── */
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
 import {
   TrendingUp, DollarSign, Wallet, Plus, Trash2,
   ArrowUpRight, ArrowDownRight, BarChart2, Receipt, Calendar,
@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, ReferenceLine,
+  CartesianGrid, ReferenceLine,
 } from 'recharts';
 import { registrosApi, pagosEmpleadoApi, usuariosApi, type PagoEmpleadoAPI } from '../../lib/api';
 import { fmtMoney, fmtDate, getErrorMsg, toIsoStr } from '../../lib/utils';
@@ -47,20 +47,31 @@ function weekLabel(dateStr: string): string {
 }
 
 /* ─── Tooltip personalizado ─── */
-function ChartTip({ active, payload, label }: {active?:boolean;payload?:{name:string;value:number;color:string}[];label?:string}) {
+function ChartTip({ active, payload, label, isDark }: {
+  active?:boolean; payload?:{name:string;value:number;color:string}[]; label?:string; isDark?:boolean;
+}) {
   if (!active || !payload?.length) return null;
   const ing = payload.find(p => p.name === 'Ingresos');
   const gas = payload.find(p => p.name === 'Gastos');
   const bal = payload.find(p => p.name === 'Balance');
+  const dark = isDark !== false;
   return (
     <div className="rounded-xl px-4 py-3 text-xs font-semibold"
-         style={{ background:'#1A1A24', border:'1px solid rgba(255,255,255,0.1)', boxShadow:'0 8px 24px rgba(0,0,0,0.4)' }}>
-      <p className="font-black text-white/70 mb-2 uppercase tracking-widest text-[10px]">{label}</p>
+         style={{
+           background:   dark ? '#1A1A24' : '#FFFFFF',
+           border:       dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC',
+           boxShadow:    dark ? '0 8px 24px rgba(0,0,0,0.4)' : '0 8px 24px rgba(0,0,0,0.12)',
+           color:        dark ? 'rgba(255,255,255,0.7)' : 'rgba(21,21,27,0.7)',
+         }}>
+      <p className="font-black mb-2 uppercase tracking-widest text-[10px]">{label}</p>
       {ing && <p style={{ color:'#10B981' }}>↑ Ingresos: {fmtMoney(ing.value)}</p>}
       {gas && <p style={{ color:'#F43F5E' }}>↓ Gastos: {fmtMoney(gas.value)}</p>}
       {bal && (
-        <p className="mt-1.5 pt-1.5 border-t border-white/10"
-           style={{ color: (bal.value ?? 0) >= 0 ? '#10B981' : '#F43F5E' }}>
+        <p className="mt-1.5 pt-1.5 border-t"
+           style={{
+             borderColor: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+             color: (bal.value ?? 0) >= 0 ? '#10B981' : '#F43F5E',
+           }}>
           = Balance: {fmtMoney(bal.value)}
         </p>
       )}
@@ -68,10 +79,31 @@ function ChartTip({ active, payload, label }: {active?:boolean;payload?:{name:st
   );
 }
 
-/* ─── Gráfica de negocio profesional con Recharts ─── */
+/* ─── Gráfica de negocio profesional con Recharts ───
+   Usa ancho explícito medido con ResizeObserver para garantizar
+   visibilidad en Android WebView (Capacitor APK) donde
+   ResponsiveContainer a veces recibe ancho 0 del layout.         */
 function BusinessChart({ ingresos, gastos, labels, isDark }: {
   ingresos: number[]; gastos: number[]; labels: string[]; isDark: boolean;
 }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [cw, setCw] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth || el.offsetWidth || el.getBoundingClientRect().width;
+      if (w > 0) setCw(Math.floor(w));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    /* Fallback: si el layout del WebView no dispara ResizeObserver de inmediato */
+    const t = setTimeout(measure, 120);
+    return () => { ro.disconnect(); clearTimeout(t); };
+  }, []);
+
   const data = labels.map((name, i) => ({
     name,
     Ingresos: ingresos[i] ?? 0,
@@ -79,49 +111,52 @@ function BusinessChart({ ingresos, gastos, labels, isDark }: {
     Balance:  (ingresos[i] ?? 0) - (gastos[i] ?? 0),
   }));
   const hasData = data.some(d => d.Ingresos > 0 || d.Gastos > 0);
-  const tickColor  = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.45)';
-  const gridColor  = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
-  const zeroColor  = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
-
-  if (!hasData) return (
-    <div className="flex flex-col items-center justify-center h-48 gap-3">
-      <BarChart2 size={28} style={{ color: tickColor, opacity: 0.4 }}/>
-      <p style={{ color: tickColor, fontSize: 12 }}>Sin datos para este período</p>
-    </div>
-  );
+  const tickColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.45)';
+  const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+  const zeroColor = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
 
   return (
-    <ResponsiveContainer width="100%" height={240}>
-      <ComposedChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
-        <defs>
-          <linearGradient id="gradIng" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="#10B981" stopOpacity={0.9}/>
-            <stop offset="100%" stopColor="#059669" stopOpacity={0.55}/>
-          </linearGradient>
-          <linearGradient id="gradGas" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="#F43F5E" stopOpacity={0.9}/>
-            <stop offset="100%" stopColor="#E11428" stopOpacity={0.55}/>
-          </linearGradient>
-        </defs>
-        <CartesianGrid vertical={false} stroke={gridColor} strokeDasharray="3 3"/>
-        <XAxis dataKey="name" tick={{ fill: tickColor, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false}/>
-        <YAxis
-          tick={{ fill: tickColor, fontSize: 10 }}
-          axisLine={false} tickLine={false}
-          tickFormatter={v => `$${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`}
-          width={44}
-        />
-        <Tooltip content={<ChartTip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}/>
-        <ReferenceLine y={0} stroke={zeroColor} strokeWidth={1}/>
-        <Bar dataKey="Ingresos" fill="url(#gradIng)" radius={[4,4,0,0]} maxBarSize={32}/>
-        <Bar dataKey="Gastos"   fill="url(#gradGas)" radius={[4,4,0,0]} maxBarSize={32}/>
-        <Line
-          type="monotone" dataKey="Balance" stroke="#F59E0B" strokeWidth={2}
-          dot={{ fill:'#F59E0B', r:3, strokeWidth:0 }}
-          activeDot={{ r:5, fill:'#F59E0B', strokeWidth:0 }}
-        />
-      </ComposedChart>
-    </ResponsiveContainer>
+    <div ref={wrapRef} style={{ width: '100%', height: 240, minHeight: 240 }}>
+      {!hasData ? (
+        <div className="flex flex-col items-center justify-center h-full gap-3">
+          <BarChart2 size={28} style={{ color: tickColor, opacity: 0.4 }}/>
+          <p style={{ color: tickColor, fontSize: 12 }}>Sin datos para este período</p>
+        </div>
+      ) : cw > 0 ? (
+        <ComposedChart width={cw} height={240} data={data} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
+          <defs>
+            <linearGradient id="gm-gradIng" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="#10B981" stopOpacity={0.9}/>
+              <stop offset="100%" stopColor="#059669" stopOpacity={0.55}/>
+            </linearGradient>
+            <linearGradient id="gm-gradGas" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="#F43F5E" stopOpacity={0.9}/>
+              <stop offset="100%" stopColor="#E11428" stopOpacity={0.55}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} stroke={gridColor} strokeDasharray="3 3"/>
+          <XAxis dataKey="name" tick={{ fill: tickColor, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false}/>
+          <YAxis
+            tick={{ fill: tickColor, fontSize: 10 }}
+            axisLine={false} tickLine={false}
+            tickFormatter={v => `$${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`}
+            width={44}
+          />
+          <Tooltip
+            content={(props) => <ChartTip {...(props as { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string })} isDark={isDark}/>}
+            cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
+          />
+          <ReferenceLine y={0} stroke={zeroColor} strokeWidth={1}/>
+          <Bar dataKey="Ingresos" fill="url(#gm-gradIng)" radius={[4,4,0,0]} maxBarSize={32}/>
+          <Bar dataKey="Gastos"   fill="url(#gm-gradGas)" radius={[4,4,0,0]} maxBarSize={32}/>
+          <Line
+            type="monotone" dataKey="Balance" stroke="#F59E0B" strokeWidth={2}
+            dot={{ fill:'#F59E0B', r:3, strokeWidth:0 }}
+            activeDot={{ r:5, fill:'#F59E0B', strokeWidth:0 }}
+          />
+        </ComposedChart>
+      ) : null}
+    </div>
   );
 }
 
@@ -411,16 +446,23 @@ export default function ContabilidadPage() {
         {/* Filtros de fecha */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Tabs de tipo */}
-          <div className="flex rounded-xl overflow-hidden border border-white/[0.08] shrink-0">
+          <div className="flex rounded-xl overflow-hidden shrink-0"
+               style={{ border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#E4E7EC'}` }}>
             {FILTROS.map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setFiltroTipo(key)}
                 className="px-3 py-2 text-[11px] font-bold tracking-wide transition-all"
                 style={{
-                  background: filtroTipo === key ? 'rgba(225,20,40,0.18)' : 'transparent',
-                  color:      filtroTipo === key ? '#fff' : 'rgba(255,255,255,0.35)',
-                  borderRight: key !== 'todo' ? '1px solid rgba(255,255,255,0.06)' : undefined,
+                  background: filtroTipo === key
+                    ? isDark ? 'rgba(225,20,40,0.18)' : 'rgba(225,20,40,0.12)'
+                    : 'transparent',
+                  color: filtroTipo === key
+                    ? isDark ? '#fff' : '#C8001A'
+                    : isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.45)',
+                  borderRight: key !== 'todo'
+                    ? `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`
+                    : undefined,
                 }}
               >
                 {label}
@@ -482,7 +524,11 @@ export default function ContabilidadPage() {
           {/* Label del filtro activo */}
           <span
             className="text-[11px] font-semibold px-3 py-1.5 rounded-lg"
-            style={{ background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.4)', border:'1px solid rgba(255,255,255,0.07)' }}
+            style={{
+              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+              color:      isDark ? 'rgba(255,255,255,0.40)' : 'rgba(21,21,27,0.52)',
+              border:     `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+            }}
           >
             {filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio)}
           </span>
@@ -548,7 +594,7 @@ export default function ContabilidadPage() {
           const rentabilidad = totalIng > 0 ? ((totalIng - totalGas) / totalIng * 100) : 0;
           return (
             <div className="mt-5 pt-5 border-t grid grid-cols-3 gap-4"
-                 style={{ borderColor:'rgba(255,255,255,0.05)' }}>
+                 style={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)' }}>
               <div className="text-center">
                 <p className="text-[10px] text-white/25 uppercase tracking-widest mb-1">Tendencia</p>
                 <p className="text-sm font-black capitalize" style={{ color: tendColor }}>

@@ -1830,3 +1830,140 @@ html[data-theme="light"] .search-d svg { color: rgba(22,22,26,0.35) !important; 
   box-shadow: 0 8px 24px rgba(0,0,0,0.2);
 }
 .gm-mod-card:active { transform: translateY(-1px) scale(0.99); transition-duration: 80ms; }
+
+/* ══════════════════════════════════════════════════════════════
+   LIGHT MODE — OVERRIDES DEFINITIVOS
+   Aplica a todos los componentes del dashboard oscuro cuando
+   el usuario activa el tema claro (html[data-theme="light"])
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Cards oscuras → blancas ── */
+html[data-theme="light"] .gm-card-d {
+  background: #FFFFFF !important;
+  border-color: #E4E7EC !important;
+  box-shadow: 0 2px 8px rgba(16,24,40,0.07) !important;
+}
+html[data-theme="light"] .gm-card-d::before { display: none !important; }
+html[data-theme="light"] .gm-card-d:hover {
+  border-color: rgba(225,20,40,0.25) !important;
+  box-shadow: 0 6px 20px rgba(225,20,40,0.08), 0 2px 8px rgba(16,24,40,0.08) !important;
+}
+
+/* ── Tabla oscura → clara ── */
+html[data-theme="light"] .gm-table-d thead tr { border-color: #E4E7EC !important; }
+html[data-theme="light"] .gm-table-d th {
+  color: rgba(21,21,27,0.42) !important;
+  background: rgba(0,0,0,0.02) !important;
+}
+html[data-theme="light"] .gm-table-d td { color: #15151B; }
+html[data-theme="light"] .gm-table-d tbody tr { border-color: rgba(0,0,0,0.05) !important; }
+html[data-theme="light"] .gm-table-d tbody tr:hover td { background: rgba(0,0,0,0.025) !important; }
+
+/* ── Inputs y selects oscuros → claros ── */
+html[data-theme="light"] .gm-input-d {
+  background: #F9FAFB !important;
+  border-color: #D1D5DB !important;
+  color: #15151B !important;
+}
+html[data-theme="light"] .gm-input-d::placeholder { color: rgba(21,21,27,0.35) !important; }
+html[data-theme="light"] .gm-input-d:-webkit-autofill,
+html[data-theme="light"] .gm-input-d:-webkit-autofill:hover,
+html[data-theme="light"] .gm-input-d:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #F9FAFB inset !important;
+  -webkit-text-fill-color: #15151B !important;
+}
+html[data-theme="light"] .gm-select-d {
+  background: #F9FAFB !important;
+  border-color: #D1D5DB !important;
+  color: #15151B !important;
+}
+html[data-theme="light"] .gm-select-d option { background: #fff; color: #15151B; }
+
+/* ── Skeleton → claro ── */
+html[data-theme="light"] .skeleton-d {
+  background: linear-gradient(90deg, #E8E5DE 25%, #F2EFEA 50%, #E8E5DE 75%) !important;
+  background-size: 200% 100% !important;
+}
+
+/* ── Filter chips → claros ── */
+html[data-theme="light"] .filter-chip {
+  background: #F3F4F6 !important; border-color: #D1D5DB !important; color: rgba(21,21,27,0.55) !important;
+}
+html[data-theme="light"] .filter-chip:hover {
+  background: rgba(225,20,40,0.05) !important; border-color: rgba(225,20,40,0.35) !important; color: rgba(21,21,27,0.80) !important;
+}
+html[data-theme="light"] .filter-chip.active {
+  background: rgba(225,20,40,0.09) !important; border-color: rgba(225,20,40,0.4) !important; color: #C8001A !important;
+}
+
+/* ── Tab nav → claro ── */
+html[data-theme="light"] .tab-nav { background: rgba(0,0,0,0.03) !important; border-color: #E4E7EC !important; }
+html[data-theme="light"] .tab-btn { color: rgba(21,21,27,0.45) !important; }
+html[data-theme="light"] .tab-btn:hover { color: rgba(21,21,27,0.75) !important; }
+html[data-theme="light"] .tab-btn.active { background: rgba(225,20,40,0.10) !important; color: #C8001A !important; }
+
+/* ── Icon buttons → claros ── */
+html[data-theme="light"] .icon-btn { border-color: #E4E7EC !important; color: rgba(21,21,27,0.40) !important; background: transparent !important; }
+html[data-theme="light"] .icon-btn:hover { background: rgba(0,0,0,0.04) !important; color: #15151B !important; border-color: #D1D5DB !important; }
+html[data-theme="light"] .icon-btn.danger:hover { background: rgba(225,20,40,0.08) !important; color: #C8001A !important; border-color: rgba(225,20,40,0.25) !important; }
+
+/* ── Scrollbar + search → claros ── */
+html[data-theme="light"] .dark-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.14) !important; }
+html[data-theme="light"] .search-d svg { color: rgba(21,21,27,0.35) !important; }
+
+/* ── Tailwind text-white/* → equivalentes oscuros en modo claro ── */
+html[data-theme="light"] .text-white    { color: #15151B !important; }
+html[data-theme="light"] .text-white\/10 { color: rgba(21,21,27,0.10) !important; }
+html[data-theme="light"] .text-white\/12 { color: rgba(21,21,27,0.12) !important; }
+html[data-theme="light"] .text-white\/18 { color: rgba(21,21,27,0.18) !important; }
+html[data-theme="light"] .text-white\/20 { color: rgba(21,21,27,0.20) !important; }
+html[data-theme="light"] .text-white\/22 { color: rgba(21,21,27,0.22) !important; }
+html[data-theme="light"] .text-white\/25 { color: rgba(21,21,27,0.25) !important; }
+html[data-theme="light"] .text-white\/28 { color: rgba(21,21,27,0.28) !important; }
+html[data-theme="light"] .text-white\/30 { color: rgba(21,21,27,0.30) !important; }
+html[data-theme="light"] .text-white\/35 { color: rgba(21,21,27,0.38) !important; }
+html[data-theme="light"] .text-white\/40 { color: rgba(21,21,27,0.42) !important; }
+html[data-theme="light"] .text-white\/45 { color: rgba(21,21,27,0.48) !important; }
+html[data-theme="light"] .text-white\/50 { color: rgba(21,21,27,0.52) !important; }
+html[data-theme="light"] .text-white\/55 { color: rgba(21,21,27,0.55) !important; }
+html[data-theme="light"] .text-white\/60 { color: rgba(21,21,27,0.60) !important; }
+html[data-theme="light"] .text-white\/65 { color: rgba(21,21,27,0.65) !important; }
+html[data-theme="light"] .text-white\/70 { color: rgba(21,21,27,0.70) !important; }
+html[data-theme="light"] .text-white\/75 { color: rgba(21,21,27,0.75) !important; }
+html[data-theme="light"] .text-white\/80 { color: rgba(21,21,27,0.80) !important; }
+html[data-theme="light"] .text-white\/82 { color: rgba(21,21,27,0.82) !important; }
+html[data-theme="light"] .text-white\/85 { color: rgba(21,21,27,0.85) !important; }
+html[data-theme="light"] .text-white\/90 { color: rgba(21,21,27,0.90) !important; }
+
+/* ── Tailwind bg-white/* → superficies claras ── */
+html[data-theme="light"] .bg-white\/\[0\.02\] { background-color: rgba(0,0,0,0.02) !important; }
+html[data-theme="light"] .bg-white\/\[0\.03\] { background-color: rgba(0,0,0,0.03) !important; }
+html[data-theme="light"] .bg-white\/\[0\.04\] { background-color: rgba(0,0,0,0.04) !important; }
+html[data-theme="light"] .bg-white\/\[0\.05\] { background-color: rgba(0,0,0,0.05) !important; }
+html[data-theme="light"] .bg-white\/\[0\.06\] { background-color: rgba(0,0,0,0.06) !important; }
+html[data-theme="light"] .bg-white\/\[0\.07\] { background-color: rgba(0,0,0,0.07) !important; }
+html[data-theme="light"] .bg-white\/\[0\.08\] { background-color: rgba(0,0,0,0.08) !important; }
+
+/* ── Tailwind border-white/* → bordes claros ── */
+html[data-theme="light"] .border-white\/\[0\.04\],
+html[data-theme="light"] .border-white\/\[0\.05\],
+html[data-theme="light"] .border-white\/\[0\.06\],
+html[data-theme="light"] .border-white\/\[0\.07\],
+html[data-theme="light"] .border-white\/\[0\.08\],
+html[data-theme="light"] .border-white\/\[0\.09\],
+html[data-theme="light"] .border-white\/\[0\.1\]  { border-color: #E4E7EC !important; }
+
+/* ── Sidebar → claro ── */
+html[data-theme="light"] .gm-sidebar {
+  background: linear-gradient(180deg, #FAFAFA 0%, #F4F3F0 100%) !important;
+  border-right-color: #E4E7EC !important;
+}
+
+/* ── Panel de notificaciones → claro ── */
+html[data-theme="light"] .notif-panel {
+  background: linear-gradient(150deg, #FFFFFF 0%, #F8F9FB 100%) !important;
+  border-color: #E4E7EC !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04) !important;
+}
+html[data-theme="light"] .notif-header { background: rgba(248,249,251,0.98) !important; }
+html[data-theme="light"] .notif-footer { background: rgba(242,243,246,0.98) !important; }
