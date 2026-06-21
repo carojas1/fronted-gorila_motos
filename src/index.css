@@ -1967,3 +1967,116 @@ html[data-theme="light"] .notif-panel {
 }
 html[data-theme="light"] .notif-header { background: rgba(248,249,251,0.98) !important; }
 html[data-theme="light"] .notif-footer { background: rgba(242,243,246,0.98) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   LIGHT MODE — MÓDULOS ADICIONALES
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Mobile More overlay ── */
+html[data-theme="light"] .m-more-overlay {
+  background: #F7F8FA !important;
+}
+html[data-theme="light"] .m-more-head {
+  background: rgba(255,255,255,0.98) !important;
+  border-bottom-color: #E4E7EC !important;
+}
+html[data-theme="light"] .m-more-name  { color: #15151B !important; }
+html[data-theme="light"] .m-more-group { border-color: rgba(0,0,0,0.06) !important; }
+html[data-theme="light"] .m-more-gt    { color: rgba(21,21,27,0.35) !important; }
+html[data-theme="light"] .m-more-item  {
+  background: #FFFFFF !important;
+  border-color: #E4E7EC !important;
+}
+html[data-theme="light"] .m-more-item:hover {
+  background: rgba(225,20,40,0.04) !important;
+  border-color: rgba(225,20,40,0.2) !important;
+}
+html[data-theme="light"] .m-more-lbl   { color: rgba(21,21,27,0.75) !important; }
+html[data-theme="light"] .m-more-row   {
+  background: #FFFFFF !important;
+  border-color: #E4E7EC !important;
+}
+html[data-theme="light"] .m-more-row-lbl { color: #15151B !important; }
+html[data-theme="light"] .m-more-foot  { color: rgba(21,21,27,0.30) !important; }
+html[data-theme="light"] .m-more-close { color: rgba(21,21,27,0.40) !important; }
+
+/* ── Historial / cards de actividad ── */
+html[data-theme="light"] .bg-white\/\[0\.03\] { background-color: rgba(0,0,0,0.025) !important; }
+html[data-theme="light"] .border-white\/\[0\.05\] { border-color: #EEF0F3 !important; }
+html[data-theme="light"] .border-white\/\[0\.12\] { border-color: #D4D7DC !important; }
+
+/* ── Dashboard módulos (cards de acceso rápido) ── */
+html[data-theme="light"] .gm-mod-card {
+  background: #FFFFFF !important;
+  border-color: #E4E7EC !important;
+}
+html[data-theme="light"] .gm-mod-card:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important;
+}
+
+/* ── Dropdown popup genérico (buscadores internos) ── */
+html[data-theme="light"] .gm-dropdown {
+  background: #FFFFFF !important;
+  border-color: #E4E7EC !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+}
+html[data-theme="light"] .gm-dropdown button:hover { background: rgba(0,0,0,0.04) !important; }
+
+/* ── Texto muted genérico de Tailwind extra ── */
+html[data-theme="light"] .text-white\/92 { color: rgba(21,21,27,0.92) !important; }
+html[data-theme="light"] .text-white\/95 { color: rgba(21,21,27,0.95) !important; }
+
+/* ── Bordes extra ── */
+html[data-theme="light"] .border-white\/\[0\.11\] { border-color: #D8DBE0 !important; }
+html[data-theme="light"] .border-white\/\[0\.13\] { border-color: #CDD1D8 !important; }
+html[data-theme="light"] .border-white\/\[0\.15\] { border-color: #C5C9D1 !important; }
+
+/* ── Fondos extra ── */
+html[data-theme="light"] .bg-white\/\[0\.09\] { background-color: rgba(0,0,0,0.04) !important; }
+html[data-theme="light"] .bg-white\/\[0\.10\] { background-color: rgba(0,0,0,0.05) !important; }
+
+/* ── Mobile Tab Bar en modo claro ── */
+html[data-theme="light"] .m-tab-bar {
+  background: rgba(255,255,255,0.97) !important;
+  border-top-color: #E4E7EC !important;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.07) !important;
+}
+html[data-theme="light"] .m-tab-btn  { color: rgba(21,21,27,0.40) !important; }
+html[data-theme="light"] .m-tab-label { color: rgba(21,21,27,0.40) !important; }
+
+/* ── App header móvil ── */
+html[data-theme="light"] .m-header {
+  background: rgba(255,255,255,0.97) !important;
+  border-bottom-color: #E4E7EC !important;
+}
+
+/* ── Search wrapper ── */
+html[data-theme="light"] .search-d {
+  background: #F3F4F6 !important;
+  border-color: #D1D5DB !important;
+}
+
+/* ── Moto cards ── */
+html[data-theme="light"] .moto-card {
+  background: #FFFFFF !important;
+  border-color: #E4E7EC !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
+}
+
+/* ── Combustible / pagos rows ── */
+html[data-theme="light"] .comb-row,
+html[data-theme="light"] .pago-row {
+  background: rgba(0,0,0,0.018) !important;
+  border-color: #EEF0F3 !important;
+}
+
+/* ── Empty state icons ── */
+html[data-theme="light"] .text-white\/12 { color: rgba(21,21,27,0.12) !important; }
+
+/* ── Fondo global de la app en modo claro ── */
+html[data-theme="light"] body,
+html[data-theme="light"] #root,
+html[data-theme="light"] .app-bg {
+  background: #F4F5F7 !important;
+  color: #15151B !important;
+}

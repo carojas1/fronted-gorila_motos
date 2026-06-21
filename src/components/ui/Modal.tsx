@@ -7,6 +7,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import gsap from 'gsap';
 import { cn } from '../../lib/utils';
+import { useTheme } from '../../lib/theme';
 
 interface ModalProps {
   open:     boolean;
@@ -22,6 +23,8 @@ const sizes = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-2xl' 
 export default function Modal({ open, onClose, title, children, size = 'md', footer }: ModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null);
   const panelRef    = useRef<HTMLDivElement>(null);
+  const [theme]     = useTheme();
+  const isDark      = theme === 'dark';
 
   useEffect(() => {
     if (!backdropRef.current || !panelRef.current) return;
@@ -63,23 +66,29 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
-        className={cn(
-          'relative w-full rounded-2xl flex flex-col max-h-[90vh]',
-          'border border-white/[0.08]',
-          sizes[size],
-        )}
+        className={cn('relative w-full rounded-2xl flex flex-col max-h-[90vh]', sizes[size])}
         style={{
-          background: 'linear-gradient(145deg, #1C1C24 0%, #141418 100%)',
-          boxShadow: '0 0 0 1px rgba(255,255,255,0.05), 0 24px 80px rgba(0,0,0,0.7), 0 0 60px rgba(225,20,40,0.06)',
+          background: isDark
+            ? 'linear-gradient(145deg, #1C1C24 0%, #141418 100%)'
+            : '#FFFFFF',
+          border: isDark
+            ? '1px solid rgba(255,255,255,0.08)'
+            : '1px solid #E4E7EC',
+          boxShadow: isDark
+            ? '0 0 0 1px rgba(255,255,255,0.05), 0 24px 80px rgba(0,0,0,0.7), 0 0 60px rgba(225,20,40,0.06)'
+            : '0 0 0 1px rgba(0,0,0,0.06), 0 24px 80px rgba(0,0,0,0.15)',
         }}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
-            <h2 id="modal-title" className="text-base font-bold text-white/90">{title}</h2>
+          <div className="flex items-center justify-between px-6 py-4"
+            style={{ borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #F0F1F3' }}>
+            <h2 id="modal-title" className="text-base font-bold"
+              style={{ color: isDark ? 'rgba(255,255,255,0.9)' : '#15151B' }}>{title}</h2>
             <button
               onClick={handleClose}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 hover:bg-white/[0.06] transition-all"
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+              style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.4)' }}
               aria-label="Cerrar"
             >
               <X size={16} />
@@ -92,7 +101,8 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-white/[0.06] flex justify-end gap-3">
+          <div className="px-6 py-4 flex justify-end gap-3"
+            style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #F0F1F3' }}>
             {footer}
           </div>
         )}

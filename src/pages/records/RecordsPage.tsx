@@ -14,6 +14,7 @@ import gsap from 'gsap';
 import { registrosApi, usuariosApi, motosApi, tiposApi, authApi, mantenimientosApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../lib/theme';
 import {
   fmtDate, fmtMoney, getErrorMsg, ESTADO_REGISTRO, extractPhone, toIsoStr,
 } from '../../lib/utils';
@@ -107,8 +108,12 @@ function SearchDropdown<T>({
         </div>
       )}
       {open && !selected && filtered.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 rounded-xl border border-white/[0.08] overflow-hidden dark-scroll max-h-48 overflow-y-auto"
-          style={{ background: '#1C1C24', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+        <div className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden dark-scroll max-h-48 overflow-y-auto"
+          style={{
+            background: isDark ? '#1C1C24' : '#FFFFFF',
+            border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E4E7EC',
+            boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.5)' : '0 8px 24px rgba(0,0,0,0.12)',
+          }}>
           {filtered.slice(0, 8).map((item, i) => (
             <button
               key={i}
@@ -130,6 +135,8 @@ export default function RecordsPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   const toast   = useToast();
   const { user: me, isAdmin } = useAuth();
+  const [theme] = useTheme();
+  const isDark  = theme === 'dark';
 
   /* ─── Estado principal ─── */
   const [registros,  setRegistros]  = useState<RegistroDetalle[]>([]);
@@ -778,7 +785,8 @@ export default function RecordsPage() {
                   </div>
                   <div className="flex justify-end gap-2">
                     <button type="button" onClick={() => setShowQuick(false)}
-                      className="text-[12px] font-semibold px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)' }}>
+                      className="text-[12px] font-semibold px-3 py-2 rounded-lg"
+                      style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(21,21,27,0.5)' }}>
                       Cancelar
                     </button>
                     <button type="button" onClick={crearRapido} disabled={creatingQuick}
@@ -850,7 +858,7 @@ export default function RecordsPage() {
                     className="text-[12px] font-bold px-3 py-1.5 rounded-lg border transition-all"
                     style={active
                       ? { background: 'rgba(225,20,40,0.14)', borderColor: 'rgba(225,20,40,0.45)', color: '#FF6470' }
-                      : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)' }}
+                      : { background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.04)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D1D5DB', color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(21,21,27,0.50)' }}
                   >
                     {parte}
                   </button>
@@ -946,7 +954,7 @@ export default function RecordsPage() {
               Ingresa el <strong className="text-white/70">precio del servicio</strong>. Con esto se genera la factura
               a nombre de <strong className="text-white/70">{priceTarget.nombre_cliente}</strong>.
             </p>
-            <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="p-3 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
               <p className="text-[13px] font-bold text-white/85">{priceTarget.marca_moto} {priceTarget.modelo_moto}</p>
               <p className="text-[11px] text-white/40 mt-0.5">
                 <span className="plate-tag">{priceTarget.placa}</span> · {priceTarget.tipo_servicio}
