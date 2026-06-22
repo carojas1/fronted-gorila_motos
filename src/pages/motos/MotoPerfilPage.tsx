@@ -18,6 +18,7 @@ import { fmtMoney, fmtDate, toIsoStr, ESTADO_REGISTRO } from '../../lib/utils';
 import type { Moto, Usuario, DiagnosticoMoto, RegistroDetalle } from '../../types';
 import { EstadoMotoLive } from '../../components/mantenimiento/EstadoMantenimiento';
 import { imagenMoto } from '../../lib/fotos';
+import { useTheme } from '../../lib/theme';
 
 /* ── Constantes ── */
 const CC_RANGES = [
@@ -53,12 +54,14 @@ const ESTADO_CFG = {
 /* ── Sub-componente: card de un diagnóstico ── */
 function DiagCard({ d, usuarios }: { d: DiagnosticoMoto; usuarios: Usuario[] }) {
   const [open, setOpen] = useState(false);
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   const mec  = usuarios.find(u => u.id_usuario === d.id_mecanico);
   const worst = (d.detalles ?? []).reduce((a, b) => Math.max(a, b.estado), 1) as 1 | 2 | 3;
   const ec   = ESTADO_CFG[worst];
 
   return (
-    <div style={{ border: `1px solid ${ec.border}`, borderRadius: 12, overflow: 'hidden', background: '#0E0E14' }}>
+    <div style={{ border: `1px solid ${ec.border}`, borderRadius: 12, overflow: 'hidden', background: isDark ? '#0E0E14' : '#FFFFFF' }}>
       {/* Header colapsable */}
       <div
         style={{ padding: '13px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}
@@ -72,32 +75,32 @@ function DiagCard({ d, usuarios }: { d: DiagnosticoMoto; usuarios: Usuario[] }) 
             }}>
               {ec.label}
             </span>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 11, color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.42)', display: 'flex', alignItems: 'center', gap: 4 }}>
               <Clock size={10} />
               {d.fecha
                 ? new Date(d.fecha).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
                 : '—'
               }
             </span>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 11, color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.42)', display: 'flex', alignItems: 'center', gap: 4 }}>
               <Gauge size={10} /> {d.kilometraje_ingreso?.toLocaleString() ?? '—'} km
             </span>
           </div>
           {d.observaciones_generales && (
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: '5px 0 0', lineHeight: 1.55 }}>
+            <p style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(21,21,27,0.6)', margin: '5px 0 0', lineHeight: 1.55 }}>
               {d.observaciones_generales}
             </p>
           )}
-          <p style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.22)', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <p style={{ fontSize: 10.5, color: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(21,21,27,0.42)', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>
             <User size={9} /> {mec?.nombre_completo ?? `Mecánico #${d.id_mecanico}`}
           </p>
         </div>
-        {open ? <ChevronUp size={13} color="rgba(255,255,255,0.3)" /> : <ChevronDown size={13} color="rgba(255,255,255,0.3)" />}
+        {open ? <ChevronUp size={13} color={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.42)'} /> : <ChevronDown size={13} color={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.42)'} />}
       </div>
 
       {/* Detalles expandidos */}
       {open && (d.detalles ?? []).length > 0 && (
-        <div className="gm-respgrid" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '12px 18px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: 8 }}>
+        <div className="gm-respgrid" style={{ borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : '#E4E7EC'}`, padding: '12px 18px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: 8 }}>
           {(d.detalles ?? []).map(det => {
             const pc   = ESTADO_CFG[det.estado as 1 | 2 | 3];
             const Icon = PARTES_ICON[det.parte] ?? Cog;
@@ -105,8 +108,8 @@ function DiagCard({ d, usuarios }: { d: DiagnosticoMoto; usuarios: Usuario[] }) 
             return (
               <div key={det.parte} style={{ background: pc.bg, border: `1px solid ${pc.border}`, borderRadius: 9, padding: '9px 12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                  <Icon size={13} color="rgba(255,255,255,0.4)" />
-                  <span style={{ fontSize: 11.5, fontWeight: 700, color: '#EBEBEB' }}>{lbl}</span>
+                  <Icon size={13} color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.6)'} />
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: isDark ? '#EBEBEB' : '#15151B' }}>{lbl}</span>
                   {det.estado === 1
                     ? <CheckCircle  size={11} color="#10B981" style={{ marginLeft: 'auto' }} />
                     : det.estado === 2
@@ -116,7 +119,7 @@ function DiagCard({ d, usuarios }: { d: DiagnosticoMoto; usuarios: Usuario[] }) 
                 </div>
                 <span style={{ fontSize: 10, fontWeight: 700, color: pc.color }}>{pc.label}</span>
                 {det.observacion && (
-                  <p style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.4)', margin: '5px 0 0', lineHeight: 1.4 }}>
+                  <p style={{ fontSize: 10.5, color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.6)', margin: '5px 0 0', lineHeight: 1.4 }}>
                     {det.observacion}
                   </p>
                 )}
@@ -133,6 +136,8 @@ function DiagCard({ d, usuarios }: { d: DiagnosticoMoto; usuarios: Usuario[] }) 
 export default function MotoPerfilPage() {
   const { id }                     = useParams<{ id: string }>();
   const navigate                   = useNavigate();
+  const [theme]                    = useTheme();
+  const isDark                     = theme === 'dark';
   const { isAdmin, isMecanico, isCliente, user: me } = useAuth();
   const canManage                  = isAdmin || isMecanico;
 
@@ -209,7 +214,7 @@ export default function MotoPerfilPage() {
   if (error || !moto) {
     return (
       <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
-        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 15 }}>{error || 'Moto no encontrada'}</p>
+        <p style={{ color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.6)', fontSize: 15 }}>{error || 'Moto no encontrada'}</p>
         <button onClick={() => navigate('/motos')} style={{ marginTop: 18, fontSize: 13, color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>
           Volver a motos
         </button>
@@ -223,7 +228,7 @@ export default function MotoPerfilPage() {
   const antiguedad = anioActual - moto.anio;
 
   const s: React.CSSProperties = {
-    background: '#111117', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 24px',
+    background: isDark ? '#111117' : '#FFFFFF', border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : '#E4E7EC'}`, borderRadius: 16, padding: '20px 24px',
   };
 
   return (
@@ -233,9 +238,9 @@ export default function MotoPerfilPage() {
       {/* ── Back ── */}
       <button
         onClick={() => navigate('/motos')}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 700, color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 22, padding: 0 }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#EBEBEB')}
-        onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.6)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 22, padding: 0 }}
+        onMouseEnter={e => (e.currentTarget.style.color = isDark ? '#EBEBEB' : '#15151B')}
+        onMouseLeave={e => (e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.6)')}
       >
         <ArrowLeft size={14} /> Volver a motos
       </button>
@@ -250,7 +255,7 @@ export default function MotoPerfilPage() {
               alt={`${moto.marca} ${moto.modelo}`}
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, #111117 100%)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to bottom, transparent 50%, ${isDark ? '#111117' : '#FFFFFF'} 100%)` }} />
           </div>
         ) : (
           <div style={{ width: '100%', height: 120, background: `linear-gradient(135deg, ${tc}18, ${tc}08)`, borderBottom: `1px solid ${tc}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

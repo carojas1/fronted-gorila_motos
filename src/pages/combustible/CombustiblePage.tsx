@@ -18,6 +18,7 @@ import {
 import { motosApi, combustibleApi, usuariosApi } from '../../lib/api';
 import { usePolling } from '../../hooks/usePolling';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../lib/theme';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg, fmtDate, fmtMoney } from '../../lib/utils';
 import type { Moto, CargaCombustible, Usuario } from '../../types';
@@ -60,6 +61,8 @@ export default function CombustiblePage() {
   const { user, isAdmin, isMecanico } = useAuth();
   const canManage = isAdmin || isMecanico;
   const toast = useToast();
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   const [motos,    setMotos]    = useState<Moto[]>([]);
   const [logs,     setLogs]     = useState<CargaCombustible[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -489,12 +492,12 @@ export default function CombustiblePage() {
                     <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="fecha" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.08)' }} />
-                <YAxis tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} tickLine={false} axisLine={false} width={42} />
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.05)' : '#E4E7EC'} vertical={false} />
+                <XAxis dataKey="fecha" tick={{ fill: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.42)', fontSize: 10 }} tickLine={false} axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.08)' : '#E4E7EC' }} />
+                <YAxis tick={{ fill: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.42)', fontSize: 10 }} tickLine={false} axisLine={false} width={42} />
                 <Tooltip
-                  contentStyle={{ background: '#16161E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12 }}
-                  labelStyle={{ color: 'rgba(255,255,255,0.6)' }}
+                  contentStyle={{ background: isDark ? '#16161E' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC', borderRadius: 10, fontSize: 12 }}
+                  labelStyle={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(21,21,27,0.6)' }}
                   itemStyle={{ color: '#F59E0B' }}
                   formatter={(v: number) => [`${v} km/gal`, 'Rendimiento']}
                 />
@@ -529,12 +532,12 @@ export default function CombustiblePage() {
                       <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis dataKey="fecha" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} tickLine={false} axisLine={{ stroke: 'rgba(255,255,255,0.08)' }} />
-                  <YAxis tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} tickLine={false} axisLine={false} width={42} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.05)' : '#E4E7EC'} vertical={false} />
+                  <XAxis dataKey="fecha" tick={{ fill: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.42)', fontSize: 10 }} tickLine={false} axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.08)' : '#E4E7EC' }} />
+                  <YAxis tick={{ fill: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.42)', fontSize: 10 }} tickLine={false} axisLine={false} width={42} />
                   <Tooltip
-                    contentStyle={{ background: '#16161E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12 }}
-                    labelStyle={{ color: 'rgba(255,255,255,0.6)' }}
+                    contentStyle={{ background: isDark ? '#16161E' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC', borderRadius: 10, fontSize: 12 }}
+                    labelStyle={{ color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(21,21,27,0.6)' }}
                     itemStyle={{ color: '#10B981' }}
                     formatter={(v: number) => [fmtMoney(v), 'Gasto']}
                   />
@@ -561,10 +564,10 @@ export default function CombustiblePage() {
                     {tipoBreakdown.map((t) => <Cell key={t.tipo} fill={t.color} stroke="transparent" />)}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: '#16161E', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12 }}
+                    contentStyle={{ background: isDark ? '#16161E' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC', borderRadius: 10, fontSize: 12 }}
                     formatter={(v: number, _n, p) => [fmtMoney(v), (p?.payload as { label?: string })?.label ?? '']}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: 11, color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(21,21,27,0.6)' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -647,14 +650,14 @@ export default function CombustiblePage() {
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+          style={{ background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }}
           onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}
         >
           <div className="w-full max-w-lg rounded-3xl p-6"
                style={{
-                 background: 'linear-gradient(150deg, #1E1E28 0%, #161620 100%)',
-                 border: '1px solid rgba(255,255,255,0.08)',
-                 boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+                 background: isDark ? 'linear-gradient(150deg, #1E1E28 0%, #161620 100%)' : '#FFFFFF',
+                 border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E4E7EC',
+                 boxShadow: isDark ? '0 24px 60px rgba(0,0,0,0.6)' : '0 24px 60px rgba(0,0,0,0.12)',
                }}>
             <div className="flex items-center justify-between mb-5">
               <div>
@@ -696,7 +699,9 @@ export default function CombustiblePage() {
                       className="py-2 px-1 rounded-xl text-[11px] font-bold transition-all text-center leading-tight"
                       style={form.tipo_combustible === c.tipo
                         ? { background: `${c.color}25`, color: c.color, border: `1px solid ${c.color}60` }
-                        : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.07)' }
+                        : isDark
+                          ? { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.07)' }
+                          : { background: 'rgba(0,0,0,0.03)', color: 'rgba(21,21,27,0.6)', border: '1px solid #E4E7EC' }
                       }
                     >
                       {c.label.split(' ')[0]}<br/>

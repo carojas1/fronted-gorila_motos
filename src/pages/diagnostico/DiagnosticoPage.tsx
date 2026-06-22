@@ -15,6 +15,7 @@ import { usePolling } from '../../hooks/usePolling';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg } from '../../lib/utils';
+import { useTheme } from '../../lib/theme';
 import type { Moto, Usuario, DiagnosticoMoto, DetalleDiagnostico } from '../../types';
 
 /* ─── Partes a evaluar ─── */
@@ -43,6 +44,8 @@ const EstadoIcon = ({ estado }: { estado: 1 | 2 | 3 }) => {
 
 /* ─── Card de historial de diagnóstico ─── */
 function DiagnosticoCard({ d, motos, usuarios }: { d: DiagnosticoMoto; motos: Moto[]; usuarios: Usuario[] }) {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   const [open, setOpen] = useState(false);
   const moto = motos.find(m => m.id_moto === d.id_moto);
   const mec  = usuarios.find(u => u.id_usuario === d.id_mecanico);
@@ -51,7 +54,7 @@ function DiagnosticoCard({ d, motos, usuarios }: { d: DiagnosticoMoto; motos: Mo
   const ec = ESTADO_CONFIG[worst];
 
   return (
-    <div style={{ background: '#111117', border: `1px solid ${ec.border}`, borderRadius: 14, overflow: 'hidden' }}>
+    <div style={{ background: isDark ? '#111117' : '#FFFFFF', border: `1px solid ${ec.border}`, borderRadius: 14, overflow: 'hidden' }}>
       <div
         style={{ padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}
         onClick={() => setOpen(o => !o)}
@@ -60,22 +63,22 @@ function DiagnosticoCard({ d, motos, usuarios }: { d: DiagnosticoMoto; motos: Mo
           <Bike size={18} color={ec.color} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 14, margin: 0 }}>
+          <p style={{ color: isDark ? '#EBEBEB' : '#15151B', fontWeight: 700, fontSize: 14, margin: 0 }}>
             {moto ? `${moto.marca} ${moto.modelo}` : `Moto #${d.id_moto}`}
-            <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, fontWeight: 500, marginLeft: 8 }}>
+            <span style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.42)', fontSize: 12, fontWeight: 500, marginLeft: 8 }}>
               {moto?.placa}
             </span>
           </p>
           <div style={{ display: 'flex', gap: 14, marginTop: 3, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+            <span style={{ fontSize: 11, color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.42)' }}>
               <Clock size={10} style={{ marginRight: 3, verticalAlign: 'middle' }} />
               {d.fecha ? new Date(d.fecha).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
             </span>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+            <span style={{ fontSize: 11, color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.42)' }}>
               <Gauge size={10} style={{ marginRight: 3, verticalAlign: 'middle' }} />
               {d.kilometraje_ingreso?.toLocaleString()} km
             </span>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+            <span style={{ fontSize: 11, color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.42)' }}>
               <User size={10} style={{ marginRight: 3, verticalAlign: 'middle' }} />
               {mec?.nombre_completo ?? `Mec. #${d.id_mecanico}`}
             </span>
@@ -84,13 +87,13 @@ function DiagnosticoCard({ d, motos, usuarios }: { d: DiagnosticoMoto; motos: Mo
         <span style={{ fontSize: 10, fontWeight: 700, color: ec.color, background: ec.bg, border: `1px solid ${ec.border}`, borderRadius: 99, padding: '3px 10px', whiteSpace: 'nowrap' }}>
           {ec.label}
         </span>
-        {open ? <ChevronUp size={14} color="rgba(255,255,255,0.3)" /> : <ChevronDown size={14} color="rgba(255,255,255,0.3)" />}
+        {open ? <ChevronUp size={14} color={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.42)'} /> : <ChevronDown size={14} color={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.42)'} />}
       </div>
 
       {open && (
-        <div style={{ padding: '0 18px 16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ padding: '0 18px 16px', borderTop: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #E4E7EC' }}>
           {d.observaciones_generales && (
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: '12px 0', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(21,21,27,0.6)', margin: '12px 0', lineHeight: 1.6 }}>
               {d.observaciones_generales}
             </p>
           )}
@@ -100,15 +103,15 @@ function DiagnosticoCard({ d, motos, usuarios }: { d: DiagnosticoMoto; motos: Mo
               const part = PARTES.find(p => p.key === det.parte);
               return (
                 <div key={det.parte} style={{ background: pc.bg, border: `1px solid ${pc.border}`, borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  {(() => { const Icon = part?.Icon ?? Cog; return <Icon size={15} color="rgba(255,255,255,0.45)" style={{ flexShrink: 0, marginTop: 1 }} />; })()}
+                  {(() => { const Icon = part?.Icon ?? Cog; return <Icon size={15} color={isDark ? 'rgba(255,255,255,0.45)' : 'rgba(21,21,27,0.6)'} style={{ flexShrink: 0, marginTop: 1 }} />; })()}
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#EBEBEB' }}>{part?.label ?? det.parte}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#EBEBEB' : '#15151B' }}>{part?.label ?? det.parte}</span>
                       <EstadoIcon estado={det.estado as 1 | 2 | 3} />
                     </div>
                     <span style={{ fontSize: 10, color: pc.color, fontWeight: 700 }}>{pc.label}</span>
                     {det.observacion && (
-                      <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', margin: '4px 0 0', lineHeight: 1.4 }}>{det.observacion}</p>
+                      <p style={{ fontSize: 11, color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(21,21,27,0.6)', margin: '4px 0 0', lineHeight: 1.4 }}>{det.observacion}</p>
                     )}
                   </div>
                 </div>
@@ -123,6 +126,8 @@ function DiagnosticoCard({ d, motos, usuarios }: { d: DiagnosticoMoto; motos: Mo
 
 /* ══════════════════════════════════════════════════════════════ */
 export default function DiagnosticoPage() {
+  const [theme]     = useTheme();
+  const isDark      = theme === 'dark';
   const { user }    = useAuth();
   const toast       = useToast();
   const [params]    = useSearchParams();
@@ -236,12 +241,12 @@ export default function DiagnosticoPage() {
   };
 
   const card: React.CSSProperties = {
-    background: '#111117', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 22px',
+    background: isDark ? '#111117' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #E4E7EC', borderRadius: 16, padding: '20px 22px',
   };
 
   const lbl: React.CSSProperties = {
     fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.28)', marginBottom: 6, display: 'block',
+    color: isDark ? 'rgba(255,255,255,0.28)' : 'rgba(21,21,27,0.42)', marginBottom: 6, display: 'block',
   };
 
   return (
@@ -254,10 +259,10 @@ export default function DiagnosticoPage() {
             <ClipboardList size={20} color="#3B82F6" />
           </div>
           <div>
-            <h1 style={{ color: '#EBEBEB', fontWeight: 800, fontSize: 22, margin: 0, letterSpacing: '-0.03em' }}>
+            <h1 style={{ color: isDark ? '#EBEBEB' : '#15151B', fontWeight: 800, fontSize: 22, margin: 0, letterSpacing: '-0.03em' }}>
               Diagnóstico de Moto
             </h1>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12.5, margin: 0 }}>
+            <p style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.6)', fontSize: 12.5, margin: 0 }}>
               Registro clínico al ingreso — historial de cada vehículo
             </p>
           </div>
@@ -276,8 +281,8 @@ export default function DiagnosticoPage() {
                 {critico ? <XCircle size={18} color={acento} /> : (resultado.regulares.length > 0 ? <AlertTriangle size={18} color={acento} /> : <CheckCircle size={18} color={acento} />)}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: '#EBEBEB', fontWeight: 800, fontSize: 15, margin: '0 0 2px' }}>
-                  Diagnóstico guardado — {resultado.motoLabel} <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{resultado.placa}</span>
+                <p style={{ color: isDark ? '#EBEBEB' : '#15151B', fontWeight: 800, fontSize: 15, margin: '0 0 2px' }}>
+                  Diagnóstico guardado — {resultado.motoLabel} <span style={{ color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.42)', fontWeight: 600 }}>{resultado.placa}</span>
                 </p>
                 <p style={{ color: acento, fontWeight: 700, fontSize: 12.5, margin: '0 0 10px' }}>
                   {critico
@@ -320,7 +325,7 @@ export default function DiagnosticoPage() {
 
       {/* ── Formulario nuevo diagnóstico ── */}
       <div style={{ ...card, marginBottom: 24 }}>
-        <p style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 15, margin: '0 0 18px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <p style={{ color: isDark ? '#EBEBEB' : '#15151B', fontWeight: 700, fontSize: 15, margin: '0 0 18px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <ClipboardList size={15} color="#3B82F6" /> Nuevo diagnóstico
         </p>
 
@@ -329,36 +334,36 @@ export default function DiagnosticoPage() {
           <div style={{ marginBottom: 16 }}>
             <label style={lbl}>Buscar moto (placa, marca o modelo)</label>
             <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.35)' }} />
               <input
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
                 placeholder="Ej. ABC-1234, Honda, CB300R…"
-                style={{ width: '100%', paddingLeft: 36, paddingRight: 12, height: 42, borderRadius: 10, background: '#1A1A22', border: '1px solid rgba(255,255,255,0.1)', color: '#EBEBEB', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', paddingLeft: 36, paddingRight: 12, height: 42, borderRadius: 10, background: isDark ? '#1A1A22' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #D1D5DB', color: isDark ? '#EBEBEB' : '#15151B', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
             {busqueda.length >= 2 && (
-              <div style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ marginTop: 8, borderRadius: 10, overflow: 'hidden', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E4E7EC', background: isDark ? undefined : '#FFFFFF' }}>
                 {motosFiltradas.length === 0 ? (
-                  <div style={{ padding: '12px 14px', color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>Sin resultados</div>
+                  <div style={{ padding: '12px 14px', color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.42)', fontSize: 13 }}>Sin resultados</div>
                 ) : motosFiltradas.map(m => {
                   const owner = usuarios.find(u => u.id_usuario === m.id_usuario);
                   return (
                     <div key={m.id_moto} onClick={() => { setMotoSel(m); setKmIngreso(String(m.kilometraje)); setBusqueda(''); }}
-                      style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#16161E' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#1E1E2A')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '#16161E')}
+                      style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'center', borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #E4E7EC', background: isDark ? '#16161E' : '#FFFFFF' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = isDark ? '#1E1E2A' : '#F0F1F3')}
+                      onMouseLeave={e => (e.currentTarget.style.background = isDark ? '#16161E' : '#FFFFFF')}
                     >
                       {m.ruta_imagen_motos && m.ruta_imagen_motos !== 'Desconocido' ? (
                         <img src={m.ruta_imagen_motos} alt={m.placa} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                       ) : (
-                        <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Bike size={16} color="rgba(255,255,255,0.3)" />
+                        <div style={{ width: 36, height: 36, borderRadius: 8, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Bike size={16} color={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.3)'} />
                         </div>
                       )}
                       <div style={{ flex: 1 }}>
-                        <p style={{ color: '#EBEBEB', fontSize: 13, fontWeight: 700, margin: 0 }}>{m.marca} {m.modelo}</p>
-                        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, margin: 0 }}>
+                        <p style={{ color: isDark ? '#EBEBEB' : '#15151B', fontSize: 13, fontWeight: 700, margin: 0 }}>{m.marca} {m.modelo}</p>
+                        <p style={{ color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.5)', fontSize: 11, margin: 0 }}>
                           {m.placa} · {m.cilindraje}cc · {m.kilometraje.toLocaleString()} km
                           {owner ? ` · ${owner.nombre_completo}` : ''}
                         </p>
@@ -380,13 +385,13 @@ export default function DiagnosticoPage() {
               </div>
             )}
             <div style={{ flex: 1 }}>
-              <p style={{ color: '#EBEBEB', fontSize: 14, fontWeight: 800, margin: 0 }}>{motoSel.marca} {motoSel.modelo}</p>
-              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, margin: 0 }}>
+              <p style={{ color: isDark ? '#EBEBEB' : '#15151B', fontSize: 14, fontWeight: 800, margin: 0 }}>{motoSel.marca} {motoSel.modelo}</p>
+              <p style={{ color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(21,21,27,0.5)', fontSize: 12, margin: 0 }}>
                 {motoSel.placa} · {motoSel.cilindraje}cc · {motoSel.tipo_moto}
               </p>
             </div>
             <button onClick={() => setMotoSel(null)}
-              style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer' }}>
+              style={{ fontSize: 11, color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.42)', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC', borderRadius: 8, padding: '5px 10px', cursor: 'pointer' }}>
               Cambiar
             </button>
           </div>
@@ -397,11 +402,11 @@ export default function DiagnosticoPage() {
           <div>
             <label style={lbl}>Kilometraje de ingreso *</label>
             <div style={{ position: 'relative' }}>
-              <Gauge size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)' }} />
+              <Gauge size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.35)' }} />
               <input
                 type="number" min="0" value={kmIngreso} onChange={e => setKmIngreso(e.target.value)}
                 placeholder="Ej. 12500"
-                style={{ width: '100%', paddingLeft: 32, height: 42, borderRadius: 10, background: '#1A1A22', border: '1px solid rgba(255,255,255,0.1)', color: '#EBEBEB', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', paddingLeft: 32, height: 42, borderRadius: 10, background: isDark ? '#1A1A22' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #D1D5DB', color: isDark ? '#EBEBEB' : '#15151B', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
           </div>
@@ -410,7 +415,7 @@ export default function DiagnosticoPage() {
             <input
               value={obsGen} onChange={e => setObsGen(e.target.value)}
               placeholder="Descripción del problema o notas del cliente…"
-              style={{ width: '100%', height: 42, borderRadius: 10, padding: '0 12px', background: '#1A1A22', border: '1px solid rgba(255,255,255,0.1)', color: '#EBEBEB', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', height: 42, borderRadius: 10, padding: '0 12px', background: isDark ? '#1A1A22' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #D1D5DB', color: isDark ? '#EBEBEB' : '#15151B', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
         </div>
@@ -423,10 +428,10 @@ export default function DiagnosticoPage() {
               const det = detalles[parte.key];
               const ec  = ESTADO_CONFIG[det.estado];
               return (
-                <div key={parte.key} style={{ background: '#16161E', borderRadius: 12, border: `1px solid ${ec.border}`, padding: '12px 14px' }}>
+                <div key={parte.key} style={{ background: isDark ? '#16161E' : '#F8F9FB', borderRadius: 12, border: `1px solid ${ec.border}`, padding: '12px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                    <parte.Icon size={16} color="rgba(255,255,255,0.5)" style={{ flexShrink: 0 }} />
-                    <span style={{ color: '#EBEBEB', fontSize: 13, fontWeight: 700, flex: 1, minWidth: 120 }}>{parte.label}</span>
+                    <parte.Icon size={16} color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(21,21,27,0.45)'} style={{ flexShrink: 0 }} />
+                    <span style={{ color: isDark ? '#EBEBEB' : '#15151B', fontSize: 13, fontWeight: 700, flex: 1, minWidth: 120 }}>{parte.label}</span>
                     {/* Botones de estado */}
                     <div style={{ display: 'flex', gap: 6 }}>
                       {([1, 2, 3] as const).map(est => {
@@ -434,7 +439,7 @@ export default function DiagnosticoPage() {
                         const active = det.estado === est;
                         return (
                           <button key={est} onClick={() => setEstado(parte.key, est)}
-                            style={{ fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 8, border: `1px solid ${active ? ecc.color : 'rgba(255,255,255,0.1)'}`, background: active ? ecc.bg : 'rgba(255,255,255,0.03)', color: active ? ecc.color : 'rgba(255,255,255,0.4)', cursor: 'pointer', transition: 'all 150ms' }}>
+                            style={{ fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 8, border: `1px solid ${active ? ecc.color : (isDark ? 'rgba(255,255,255,0.1)' : '#E4E7EC')}`, background: active ? ecc.bg : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'), color: active ? ecc.color : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.5)'), cursor: 'pointer', transition: 'all 150ms' }}>
                             {ecc.label}
                           </button>
                         );
@@ -444,7 +449,7 @@ export default function DiagnosticoPage() {
                     <input
                       value={det.obs} onChange={e => setObs(parte.key, e.target.value)}
                       placeholder="Nota (opcional)"
-                      style={{ flex: 2, minWidth: 160, height: 34, borderRadius: 8, padding: '0 10px', background: '#1A1A22', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', fontSize: 12, outline: 'none' }}
+                      style={{ flex: 2, minWidth: 160, height: 34, borderRadius: 8, padding: '0 10px', background: isDark ? '#1A1A22' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #D1D5DB', color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(21,21,27,0.7)', fontSize: 12, outline: 'none' }}
                     />
                   </div>
                 </div>
@@ -463,9 +468,9 @@ export default function DiagnosticoPage() {
 
       {/* ── Historial de diagnósticos ── */}
       <div style={card}>
-        <p style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 15, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <ClipboardList size={15} color="rgba(255,255,255,0.4)" /> Historial de diagnósticos
-          <span style={{ marginLeft: 4, fontSize: 11, color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.06)', borderRadius: 99, padding: '2px 8px', fontWeight: 600 }}>
+        <p style={{ color: isDark ? '#EBEBEB' : '#15151B', fontWeight: 700, fontSize: 15, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ClipboardList size={15} color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.35)'} /> Historial de diagnósticos
+          <span style={{ marginLeft: 4, fontSize: 11, color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.42)', background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderRadius: 99, padding: '2px 8px', fontWeight: 600 }}>
             {historial.length}
           </span>
         </p>
@@ -474,7 +479,7 @@ export default function DiagnosticoPage() {
             <div style={{ width: 28, height: 28, borderRadius: '50%', border: '3px solid rgba(59,130,246,0.2)', borderTopColor: '#3B82F6', animation: 'spin .8s linear infinite' }} />
           </div>
         ) : historial.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '32px 16px', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+          <div style={{ textAlign: 'center', padding: '32px 16px', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.42)', fontSize: 13 }}>
             No hay diagnósticos registrados aún.
           </div>
         ) : (

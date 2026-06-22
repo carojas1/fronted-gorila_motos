@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import gsap from 'gsap';
 import { productosApi, categoriasApi, usuariosApi, motosApi, facturasApi, detallesFacturaApi } from '../../lib/api';
+import { useTheme } from '../../lib/theme';
 import { useToast } from '../../components/ui/Toast';
 import { fmtMoney, getErrorMsg, nextProductCode } from '../../lib/utils';
 import type { Producto, Categoria, Usuario, Moto } from '../../types';
@@ -47,6 +48,8 @@ function SkeletonRow() {
 export default function InventoryPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   const toast   = useToast();
+  const [theme] = useTheme();
+  const isDark  = theme === 'dark';
 
   const [productos,    setProductos]    = useState<Producto[]>([]);
   const [categorias,   setCategorias]   = useState<Categoria[]>([]);
@@ -401,7 +404,7 @@ export default function InventoryPage() {
               title={`Filtrar: ${label}`}
               className="card-enter gm-card-d rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-pointer"
               style={{
-                borderColor: isActive ? borderActive : (warn ? borderActive : 'rgba(255,255,255,0.05)'),
+                borderColor: isActive ? borderActive : (warn ? borderActive : (isDark ? 'rgba(255,255,255,0.05)' : '#E4E7EC')),
                 boxShadow: isActive ? `0 0 0 2px ${borderActive}, 0 0 30px ${borderActive}40` : 'none',
               }}
             >
@@ -602,7 +605,7 @@ export default function InventoryPage() {
               <div className="flex justify-end gap-2">
                 {editingCat && (
                   <button onClick={() => { setEditingCat(null); setNewCatName(''); setNewCatDesc(''); }}
-                    className="text-[12px] font-semibold px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)' }}>
+                    className="text-[12px] font-semibold px-3 py-2 rounded-lg" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(21,21,27,0.6)' }}>
                     Cancelar edición
                   </button>
                 )}
@@ -623,7 +626,7 @@ export default function InventoryPage() {
             ) : categorias.map(c => {
               const count = productos.filter(p => p.id_categoria === c.id_categoria).length;
               return (
-                <div key={c.id_categoria} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div key={c.id_categoria} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-bold text-white/85 truncate">{c.nombre}</p>
                     <p className="text-[11px] text-white/35 truncate">{c.descripcion || 'Sin descripción'} · {count} producto{count !== 1 ? 's' : ''}</p>
@@ -657,7 +660,7 @@ export default function InventoryPage() {
             <p className="text-[12px] text-white/45 leading-relaxed">
               Venta a consumidor final — <strong className="text-white/70">solo descuenta el stock</strong>, sin crear orden de servicio.
             </p>
-            <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="p-3 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
               <p className="text-[14px] font-bold text-white/90">{sellTarget.nombre}</p>
               <p className="text-[11px] text-white/40 mt-0.5">
                 Stock actual: <strong style={{ color: '#10B981' }}>{sellTarget.stock} u.</strong> · PVP {fmtMoney(sellTarget.pvp)}
@@ -743,11 +746,11 @@ export default function InventoryPage() {
 
             {/* ── Columna izquierda: producto + instrucción ── */}
             <div className="col-span-2 space-y-4">
-              <div className="p-4 rounded-xl h-full" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="p-4 rounded-xl h-full" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
                 <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Producto</p>
                 <p className="text-[15px] font-black text-white/90 leading-tight">{vnTarget.nombre}</p>
                 <p className="text-[11px] text-white/40 mt-1">Código: {vnTarget.codigo_personal}</p>
-                <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="mt-3 pt-3" style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
                   <p className="text-[11px] text-white/35">Stock disponible</p>
                   <p className="text-[22px] font-black" style={{ color: '#10B981' }}>{vnTarget.stock} u.</p>
                 </div>
@@ -780,7 +783,7 @@ export default function InventoryPage() {
               </div>
 
               {/* Lista inline de todos los clientes */}
-              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="rounded-xl overflow-hidden" style={{ border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E4E7EC' }}>
                 <div className="overflow-y-auto dark-scroll" style={{ maxHeight: 290 }}>
                   {(() => {
                     const q = vnQuery.toLowerCase();
@@ -803,7 +806,7 @@ export default function InventoryPage() {
                         type="button"
                         onClick={() => seleccionarCliente(u)}
                         className="w-full text-left px-4 py-3 transition-colors hover:bg-white/5 flex items-center gap-3"
-                        style={{ borderBottom: i < lista.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+                        style={{ borderBottom: i < lista.length - 1 ? (isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid #E4E7EC') : 'none' }}
                       >
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-black text-white shrink-0"
                              style={{ background: 'rgba(225,20,40,0.18)', border: '1px solid rgba(225,20,40,0.3)' }}>
@@ -842,7 +845,7 @@ export default function InventoryPage() {
                   </div>
                 </div>
               </div>
-              <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="p-4 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
                 <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Producto</p>
                 <p className="text-[13px] font-bold text-white/85">{vnTarget.nombre}</p>
                 <p className="text-[11px] text-white/40 mt-1">PVP: {fmtMoney(vnTarget.pvp)} · Stock: {vnTarget.stock} u.</p>

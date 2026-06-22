@@ -191,14 +191,14 @@ export default function AppLayout() {
               transition={{ type: 'spring', stiffness: 340, damping: 34 }}
               className="fixed inset-y-0 left-0 w-72 z-[70] md:hidden flex flex-col"
               style={{
-                background: 'linear-gradient(180deg,#15151C 0%,#111115 100%)',
-                borderRight: '1px solid rgba(255,255,255,0.08)',
-                boxShadow: '10px 0 50px rgba(0,0,0,0.65)',
+                background: isDark ? 'linear-gradient(180deg,#15151C 0%,#111115 100%)' : '#FFFFFF',
+                borderRight: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E4E7EC',
+                boxShadow: isDark ? '10px 0 50px rgba(0,0,0,0.65)' : '10px 0 50px rgba(0,0,0,0.12)',
               }}
             >
               {/* Drawer header */}
               <div className="flex items-center justify-between px-4 py-3.5 border-b shrink-0"
-                   style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+                   style={{ borderColor: isDark ? 'rgba(255,255,255,0.07)' : '#E4E7EC' }}>
                 <Link to="/dashboard" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
                   <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0"
                        style={{ boxShadow: '0 0 0 1.5px rgba(225,20,40,0.4)' }}>
@@ -212,17 +212,17 @@ export default function AppLayout() {
                 <button
                   onClick={() => setMobileOpen(false)}
                   className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E4E7EC' }}
                   aria-label="Cerrar menú"
                 >
-                  <X size={15} style={{ color: 'rgba(255,255,255,0.5)' }} />
+                  <X size={15} style={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(21,21,27,0.6)' }} />
                 </button>
               </div>
 
               {/* User info strip */}
               <div className="px-3 pt-3 shrink-0">
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                     style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                     style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[12px] font-black shrink-0"
                        style={{ background: `${roleColor}22`, color: roleColor, border: `1.5px solid ${roleColor}35` }}>
                     {initials(user?.nombre_completo ?? 'U')}
@@ -249,10 +249,10 @@ export default function AppLayout() {
                         className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13.5px] font-semibold transition-all relative"
                         style={active ? {
                           background: 'rgba(225,20,40,0.12)',
-                          color: '#fff',
+                          color: isDark ? '#fff' : '#E11428',
                           border: '1px solid rgba(225,20,40,0.22)',
                         } : {
-                          color: 'rgba(255,255,255,0.45)',
+                          color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(21,21,27,0.6)',
                           border: '1px solid transparent',
                         }}
                       >
@@ -270,7 +270,7 @@ export default function AppLayout() {
               </nav>
 
               {/* Logout */}
-              <div className="px-3 pb-5 border-t pt-3 shrink-0" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+              <div className="px-3 pb-5 border-t pt-3 shrink-0" style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#E4E7EC' }}>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-bold transition-all"
@@ -394,9 +394,9 @@ export default function AppLayout() {
                 <div
                   className="absolute right-0 top-full mt-2 w-48 rounded-xl overflow-hidden z-[60] py-1"
                   style={{
-                    background: 'linear-gradient(150deg, #1E1E28 0%, #16161E 100%)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
+                    background: isDark ? 'linear-gradient(150deg, #1E1E28 0%, #16161E 100%)' : '#FFFFFF',
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E4E7EC',
+                    boxShadow: isDark ? '0 16px 48px rgba(0,0,0,0.6)' : '0 16px 48px rgba(0,0,0,0.12)',
                   }}
                 >
                   {NAV_MORE.map(({ label, to }) => {
@@ -407,8 +407,8 @@ export default function AppLayout() {
                         to={to}
                         onClick={() => setMoreOpen(false)}
                         className="block px-4 py-2.5 text-[12px] font-bold tracking-[0.08em] uppercase transition-colors"
-                        style={{ color: active ? '#FF6470' : 'rgba(255,255,255,0.55)', background: active ? 'rgba(225,20,40,0.1)' : 'transparent' }}
-                        onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                        style={{ color: active ? '#FF6470' : (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(21,21,27,0.6)'), background: active ? 'rgba(225,20,40,0.1)' : 'transparent' }}
+                        onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'; }}
                         onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                       >
                         {label}
@@ -479,13 +479,13 @@ export default function AppLayout() {
                 <div
                   className="absolute right-0 top-full mt-2 w-60 rounded-2xl overflow-hidden z-50"
                   style={{
-                    background: 'linear-gradient(150deg, #1E1E28 0%, #16161E 100%)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    boxShadow: '0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)',
+                    background: isDark ? 'linear-gradient(150deg, #1E1E28 0%, #16161E 100%)' : '#FFFFFF',
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E4E7EC',
+                    boxShadow: isDark ? '0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)' : '0 24px 60px rgba(0,0,0,0.12)',
                   }}
                 >
                   {/* Header usuario */}
-                  <div className="p-4 border-b" style={{ borderColor:'rgba(255,255,255,0.06)' }}>
+                  <div className="p-4 border-b" style={{ borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#E4E7EC' }}>
                     <div className="flex items-center gap-3">
                       <div
                         className="w-9 h-9 rounded-xl flex items-center justify-center text-[13px] font-black"
@@ -517,7 +517,7 @@ export default function AppLayout() {
                     <button
                       onClick={() => { setPwOpen(true); setOpen(false); }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-bold transition-all text-white/70"
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; }}
                     >
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500/10 border border-blue-500/20">

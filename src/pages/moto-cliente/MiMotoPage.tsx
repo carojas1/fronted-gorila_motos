@@ -18,6 +18,7 @@ import { usePolling } from '../../hooks/usePolling';
 import { comprimirImagen, imagenMoto } from '../../lib/fotos';
 import { esNativo, tomarFotoNativa } from '../../lib/camara';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../lib/theme';
 import { useToast } from '../../components/ui/Toast';
 import { getErrorMsg, extractPhone, extractCedula } from '../../lib/utils';
 import Input from '../../components/ui/Input';
@@ -57,6 +58,8 @@ type PerfilForm = z.infer<typeof perfilSchema>;
 export default function MiMotoPage() {
   const { user }   = useAuth();
   const toast      = useToast();
+  const [theme]    = useTheme();
+  const isDark     = theme === 'dark';
 
   const [motos,        setMotos]       = useState<Moto[]>([]);
   const [loadingMotos, setLoadingMotos] = useState(true);
@@ -72,6 +75,12 @@ export default function MiMotoPage() {
 
   const [editingPerfil, setEditingPerfil] = useState(false);
   const [savingPerfil,  setSavingPerfil]  = useState(false);
+  /* Override local de los datos personales recién guardados.
+     El AuthContext no expone setUser, así que tras guardar el perfil el
+     `user.descripcion` en memoria queda viejo y `perfilOk` seguiría en false,
+     trabando el registro de la moto. Con este override la UI refleja al
+     instante la cédula/teléfono recién guardados sin recargar la página. */
+  const [perfilLocal, setPerfilLocal] = useState<{ cedula: string; telefono: string } | null>(null);
 
   /* Actualización de km */
   const [kmMoto,       setKmMoto]       = useState<Record<number, string>>({});
@@ -80,8 +89,8 @@ export default function MiMotoPage() {
   /* Mantenimientos por moto (desde el backend) para los badges */
   const [serviciosMap, setServiciosMap] = useState<Record<number, Record<string, number>>>({});
 
-  const cedula   = extractCedula(user?.descripcion ?? '');
-  const telefono = extractPhone(user?.descripcion  ?? '');
+  const cedula   = perfilLocal?.cedula   ?? extractCedula(user?.descripcion ?? '');
+  const telefono = perfilLocal?.telefono ?? extractPhone(user?.descripcion  ?? '');
   const perfilOk = !!cedula && !!telefono;
 
   /* ── Moto form ── */
@@ -213,15 +222,6 @@ export default function MiMotoPage() {
   /* ── Guardar moto ── */
   const onSaveMoto = async (data: MotoForm) => {
     if (!user?.id_usuario) return;
-    /* Exigir datos personales (cédula y teléfono) antes de registrar la moto.
-       En vez de bloquear en silencio, avisamos y abrimos el editor de datos. */
-    if (!perfilOk) {
-      toast.error('Primero completa tus datos: cédula y teléfono.', 'Datos requeridos');
-      setEditingPerfil(true);
-      setAddingMoto(false);
-      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { /* noop */ }
-      return;
-    }
     setSavingMoto(true);
     try {
       /* 1. Obtener la foto como dataURL comprimido.
@@ -270,6 +270,9 @@ export default function MiMotoPage() {
       });
       toast.success('Datos personales actualizados.', 'Perfil');
       setEditingPerfil(false);
+      // Reflejar los datos al instante en la UI (perfilOk → true sin recargar),
+      // para que el cliente pueda registrar su moto sin trabarse.
+      setPerfilLocal({ cedula: data.cedula, telefono: data.telefono });
       // Actualizar user en localStorage
       const storedUser = JSON.parse(localStorage.getItem('gm_user') ?? '{}');
       storedUser.descripcion = `CEDULA: ${data.cedula} | TELEFONO: ${data.telefono}`;
@@ -283,15 +286,15 @@ export default function MiMotoPage() {
 
   /* ── Helpers de estilo ── */
   const card: React.CSSProperties = {
-    background: '#111117',
-    border: '1px solid rgba(255,255,255,0.07)',
+    background: isDark ? '#111117' : '#FFFFFF',
+    border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : '#E4E7EC'}`,
     borderRadius: 16,
     padding: '20px 22px',
   };
 
   const label: React.CSSProperties = {
     fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
-    textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)',
+    textTransform: 'uppercase', color: isDark ? 'rgba(255,255,255,0.28)' : 'rgba(21,21,27,0.42)',
     marginBottom: 6, display: 'block',
   };
 
@@ -310,10 +313,10 @@ export default function MiMotoPage() {
             <Bike size={20} color="#E11428" />
           </div>
           <div>
-            <h1 style={{ color: '#EBEBEB', fontWeight: 800, fontSize: 22, margin: 0, letterSpacing: '-0.03em' }}>
+            <h1 style={{ color: isDark ? '#EBEBEB' : '#15151B', fontWeight: 800, fontSize: 22, margin: 0, letterSpacing: '-0.03em' }}>
               Mi Moto
             </h1>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12.5, margin: 0 }}>
+            <p style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.6)', fontSize: 12.5, margin: 0 }}>
               Gestiona tu motocicleta y datos de perfil
             </p>
           </div>
@@ -325,7 +328,7 @@ export default function MiMotoPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editingPerfil ? 18 : 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <User size={16} color={perfilOk ? '#10B981' : '#F59E0B'} />
-            <span style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 14 }}>Datos personales</span>
+            <span style={{ color: isDark ? '#EBEBEB' : '#15151B', fontWeight: 700, fontSize: 14 }}>Datos personales</span>
             {perfilOk
               ? <span style={{ fontSize: 10, color: '#10B981', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 99, padding: '2px 8px', fontWeight: 700 }}>Completo</span>
               : <span style={{ fontSize: 10, color: '#F59E0B', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 99, padding: '2px 8px', fontWeight: 700 }}>Incompleto</span>}
@@ -335,8 +338,8 @@ export default function MiMotoPage() {
               onClick={() => setEditingPerfil(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)',
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                fontSize: 12, fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(21,21,27,0.6)',
+                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E4E7EC'}`,
                 borderRadius: 8, padding: '5px 12px', cursor: 'pointer',
               }}
             >

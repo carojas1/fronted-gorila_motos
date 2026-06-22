@@ -12,6 +12,7 @@ import {
   Lock, Zap, Star, Activity, Trash2,
 } from "lucide-react";
 import { usuariosApi, rolesApi, authApi, motosApi } from "../../lib/api";
+import { useTheme } from "../../lib/theme";
 import { useToast } from "../../components/ui/Toast";
 import { useAuth } from "../../contexts/AuthContext";
 import { initials, extractCedula, getErrorMsg, parsePermisos, setPermisos } from "../../lib/utils";
@@ -103,6 +104,8 @@ function UserCard({ u, roleName, onAssign, onDelete, onView, motosCount = 0 }: {
   u: Usuario; roleName: string; onAssign: (u: Usuario) => void;
   onDelete?: (u: Usuario) => void; onView?: (u: Usuario) => void; motosCount?: number;
 }) {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   const isProtected = u.correo === 'gorilamotos2026@gmail.com';
   const tab    = TABS.find(t => t.key === roleName);
   const color  = tab?.color ?? "#8B8FA8";
@@ -114,17 +117,19 @@ function UserCard({ u, roleName, onAssign, onDelete, onView, motosCount = 0 }: {
       <div
         className="group relative rounded-2xl overflow-hidden flex flex-col h-full cursor-default"
         style={{
-          background: "linear-gradient(160deg, #18181F 0%, #131318 100%)",
-          border: "1px solid rgba(255,255,255,0.07)",
+          background: isDark ? "linear-gradient(160deg, #18181F 0%, #131318 100%)" : "#FFFFFF",
+          border: isDark ? "1px solid rgba(255,255,255,0.07)" : "1px solid #E4E7EC",
           transition: "border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease",
         }}
         onMouseEnter={e => {
           (e.currentTarget as HTMLElement).style.borderColor = `${color}35`;
-          (e.currentTarget as HTMLElement).style.boxShadow  = `0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px ${color}18`;
+          (e.currentTarget as HTMLElement).style.boxShadow  = isDark
+            ? `0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px ${color}18`
+            : `0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px ${color}18`;
           (e.currentTarget as HTMLElement).style.transform  = "translateY(-3px)";
         }}
         onMouseLeave={e => {
-          (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)";
+          (e.currentTarget as HTMLElement).style.borderColor = isDark ? "rgba(255,255,255,0.07)" : "#E4E7EC";
           (e.currentTarget as HTMLElement).style.boxShadow  = "";
           (e.currentTarget as HTMLElement).style.transform  = "";
         }}
@@ -200,9 +205,9 @@ function UserCard({ u, roleName, onAssign, onDelete, onView, motosCount = 0 }: {
             <button
               onClick={() => onAssign(u)}
               className="flex items-center gap-1.5 text-[11px] font-bold transition-colors duration-150"
-              style={{ color: "rgba(255,255,255,0.25)" }}
+              style={{ color: isDark ? "rgba(255,255,255,0.25)" : "rgba(21,21,27,0.42)" }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = color}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.25)"}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = isDark ? "rgba(255,255,255,0.25)" : "rgba(21,21,27,0.42)"}
             >
               <Lock size={9} /> Cambiar rol
             </button>
@@ -248,9 +253,11 @@ function UserCard({ u, roleName, onAssign, onDelete, onView, motosCount = 0 }: {
 
 /* ── Skeleton card ── */
 function SkeletonCard() {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   return (
     <div className="rounded-2xl p-5 space-y-3 overflow-hidden"
-         style={{ background: "linear-gradient(160deg,#18181F,#131318)", border: "1px solid rgba(255,255,255,0.06)" }}>
+         style={{ background: isDark ? "linear-gradient(160deg,#18181F,#131318)" : "#FFFFFF", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid #E4E7EC" }}>
       <div className="flex gap-3">
         <div className="skeleton-d w-11 h-11 rounded-2xl shrink-0" />
         <div className="flex-1 space-y-1.5">
@@ -269,6 +276,8 @@ function SkeletonCard() {
    PÁGINA PRINCIPAL
    ══════════════════════════════════════════════ */
 export default function ProfilesPage() {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   const toast = useToast();
   const { user: me, isAdmin } = useAuth();
 
@@ -463,7 +472,7 @@ export default function ProfilesPage() {
         className="grid grid-cols-2 sm:grid-cols-4 gap-3"
       >
         {[
-          { label: "Total usuarios",    value: usuarios.length,      color: "#fff",     icon: Users,  bg: "rgba(255,255,255,0.04)" },
+          { label: "Total usuarios",    value: usuarios.length,      color: isDark ? "#fff" : "#15151B",     icon: Users,  bg: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)" },
           { label: "Administradores",   value: countFor("ADMIN"),    color: "#E11428",  icon: Crown,  bg: "rgba(225,20,40,0.06)"   },
           { label: "Mecánicos",         value: countFor("MECANICO"), color: "#3B82F6",  icon: Wrench, bg: "rgba(59,130,246,0.06)"  },
           { label: "Clientes",          value: countFor("CLIENTE"),  color: "#10B981",  icon: User,   bg: "rgba(16,185,129,0.06)"  },
@@ -498,7 +507,7 @@ export default function ProfilesPage() {
               className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 border overflow-hidden"
               style={isActive
                 ? { background: bg, borderColor: `${color}40`, color, boxShadow: `0 0 20px ${color}18` }
-                : { background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.38)" }
+                : { background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)", borderColor: isDark ? "rgba(255,255,255,0.07)" : "#E4E7EC", color: isDark ? "rgba(255,255,255,0.38)" : "rgba(21,21,27,0.6)" }
               }
             >
               <Icon size={13} />
@@ -507,7 +516,7 @@ export default function ProfilesPage() {
                 className="min-w-[20px] h-5 rounded-full flex items-center justify-center text-[10px] font-black px-1.5"
                 style={isActive
                   ? { background: `${color}25`, color }
-                  : { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.38)" }
+                  : { background: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.03)", color: isDark ? "rgba(255,255,255,0.38)" : "rgba(21,21,27,0.6)" }
                 }
               >
                 {count}
@@ -572,7 +581,7 @@ export default function ProfilesPage() {
           className="py-24 text-center flex flex-col items-center gap-4"
         >
           <div className="w-20 h-20 rounded-3xl flex items-center justify-center"
-               style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+               style={{ background: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.03)", border: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid #E4E7EC" }}>
             <Users size={30} className="text-white/12" />
           </div>
           <div>
@@ -620,7 +629,7 @@ export default function ProfilesPage() {
         <div className="space-y-5">
           {roleModal && (
             <div className="flex items-center gap-3 p-3.5 rounded-xl"
-                 style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                 style={{ background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid #E4E7EC" }}>
               <Avatar name={roleModal.user.nombre_completo} size="sm" />
               <div>
                 <p className="text-[13px] font-black text-white/90">{roleModal.user.nombre_completo}</p>

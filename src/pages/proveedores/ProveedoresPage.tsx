@@ -8,6 +8,7 @@ import { Truck, Package, AlertTriangle, Phone, Mail, CheckCircle2, X, Edit2, Sav
 import { productosApi, proveedorContactosApi } from '../../lib/api';
 import { fmtMoney, getErrorMsg } from '../../lib/utils';
 import { useToast } from '../../components/ui/Toast';
+import { useTheme } from '../../lib/theme';
 import type { Producto } from '../../types';
 
 interface Contacto {
@@ -38,6 +39,8 @@ interface ProveedorCardProps {
 }
 
 function ProveedorCard({ codigo, productos, contacto, onEdit }: ProveedorCardProps) {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   const tieneAlerta = productos.some(p => p.stock <= 5);
   const sinStock    = productos.filter(p => p.stock === 0).length;
   const bajo        = productos.filter(p => p.stock > 0 && p.stock <= 5).length;
@@ -48,7 +51,7 @@ function ProveedorCard({ codigo, productos, contacto, onEdit }: ProveedorCardPro
   return (
     <div
       className="gm-card-d rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-1"
-      style={{ borderColor: tieneAlerta ? `${cardColor}35` : 'rgba(255,255,255,0.05)' }}
+      style={{ borderColor: tieneAlerta ? `${cardColor}35` : (isDark ? 'rgba(255,255,255,0.05)' : '#E4E7EC') }}
     >
       {/* Header */}
       <div className="px-5 pt-5 pb-4 border-b border-white/[0.05]">
@@ -113,7 +116,7 @@ function ProveedorCard({ codigo, productos, contacto, onEdit }: ProveedorCardPro
       {/* Alerta principal + WhatsApp */}
       {tieneAlerta && (
         <div className="px-4 py-3"
-             style={{ background: `${cardColor}08`, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+             style={{ background: `${cardColor}08`, borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : '#E4E7EC'}` }}>
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-2 flex-1 min-w-0">
               <AlertTriangle size={12} style={{ color: cardColor, marginTop: 2, flexShrink: 0 }} />
@@ -135,7 +138,7 @@ function ProveedorCard({ codigo, productos, contacto, onEdit }: ProveedorCardPro
                 return (
                   <span
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold shrink-0"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}
+                    style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E4E7EC'}`, color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.6)' }}
                     title="Número no válido para WhatsApp (se requiere celular de Ecuador)"
                   >
                     <MessageCircle size={11} /> {contacto.telefono}
@@ -202,6 +205,8 @@ function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose, onDel
   onClose:   () => void;
   onDelete?: () => void;
 }) {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   const [codigoState, setCodigoState] = useState(codigo);
   const [nombre,   setNombre]   = useState(contacto?.nombre   ?? '');
   const [telefono, setTelefono] = useState(contacto?.telefono ?? '');
@@ -219,9 +224,9 @@ function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose, onDel
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-         style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
+         style={{ background: isDark ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.35)', backdropFilter: 'blur(6px)' }}>
       <div className="w-full max-w-md rounded-2xl p-6 space-y-4"
-           style={{ background: '#131318', border: '1px solid rgba(255,255,255,0.1)' }}>
+           style={{ background: isDark ? '#131318' : '#FFFFFF', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E4E7EC'}` }}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-base font-black text-white">{isNew ? 'Nuevo proveedor' : 'Datos de contacto'}</h3>

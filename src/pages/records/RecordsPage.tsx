@@ -71,6 +71,8 @@ function SearchDropdown<T>({
   getLabel: (item: T) => string;
   getSubLabel?: (item: T) => string;
 }) {
+  const [theme] = useTheme();
+  const isDark  = theme === 'dark';
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
 
@@ -832,7 +834,7 @@ export default function RecordsPage() {
                       className="text-[11.5px] font-bold px-3 py-1.5 rounded-lg border transition-all"
                       style={active
                         ? { background: 'rgba(245,158,11,0.2)', borderColor: 'rgba(245,158,11,0.5)', color: '#FBBF24' }
-                        : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(245,158,11,0.25)', color: 'rgba(251,191,36,0.75)' }}>
+                        : { background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderColor: 'rgba(245,158,11,0.25)', color: 'rgba(251,191,36,0.75)' }}>
                       {r.label} · {r.estado === 'VENCIDO' ? 'vencido' : `${r.porcentajeDesgaste}%`}
                     </button>
                   );

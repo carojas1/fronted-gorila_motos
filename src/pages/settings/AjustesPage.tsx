@@ -35,15 +35,17 @@ function useNotifPref() {
 
 /* ── Toggle visual ── */
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   return (
     <button
       onClick={onToggle}
       className="relative shrink-0 transition-all duration-300"
       style={{
         width: 46, height: 26,
-        background: on ? '#E11428' : 'rgba(255,255,255,0.12)',
+        background: on ? '#E11428' : (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'),
         borderRadius: 99,
-        border: on ? '1px solid rgba(225,20,40,0.6)' : '1px solid rgba(255,255,255,0.15)',
+        border: on ? '1px solid rgba(225,20,40,0.6)' : (isDark ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)'),
         boxShadow: on ? '0 0 16px rgba(225,20,40,0.4)' : 'none',
       }}
       aria-checked={on}
@@ -64,13 +66,15 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 
 /* ── Sección con título ── */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   return (
     <div className="space-y-2">
       <p className="text-[10px] font-black uppercase tracking-[0.22em] px-1"
-         style={{ color: 'rgba(255,255,255,0.28)' }}>
+         style={{ color: isDark ? 'rgba(255,255,255,0.28)' : 'rgba(21,21,27,0.42)' }}>
         {title}
       </p>
-      <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="rounded-2xl overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.035)' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #E4E7EC' }}>
         {children}
       </div>
     </div>
@@ -84,10 +88,12 @@ function Row({
   icon: React.ReactNode; label: string; sub?: string;
   right?: React.ReactNode; onClick?: () => void; color?: string; last?: boolean;
 }) {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   return (
     <button
       className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all duration-150"
-      style={{ borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.04)' }}
+      style={{ borderBottom: last ? 'none' : (isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid #E4E7EC') }}
       onClick={onClick}
       disabled={!onClick}
     >
@@ -96,10 +102,10 @@ function Row({
         <span style={{ color }}>{icon}</span>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[14px] font-bold" style={{ color: 'rgba(255,255,255,0.88)' }}>{label}</p>
-        {sub && <p className="text-[11.5px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.38)' }}>{sub}</p>}
+        <p className="text-[14px] font-bold" style={{ color: isDark ? 'rgba(255,255,255,0.88)' : '#15151B' }}>{label}</p>
+        {sub && <p className="text-[11.5px] mt-0.5 truncate" style={{ color: isDark ? 'rgba(255,255,255,0.38)' : 'rgba(21,21,27,0.6)' }}>{sub}</p>}
       </div>
-      {right ?? (onClick ? <ChevronRight size={15} style={{ color: 'rgba(255,255,255,0.2)', flexShrink: 0 }} /> : null)}
+      {right ?? (onClick ? <ChevronRight size={15} style={{ color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(21,21,27,0.42)', flexShrink: 0 }} /> : null)}
     </button>
   );
 }
@@ -107,6 +113,7 @@ function Row({
 export default function AjustesPage() {
   const { user, logout } = useAuth();
   const [theme, toggleTheme] = useTheme();
+  const isDark = theme === 'dark';
   const [notif, toggleNotif] = useNotifPref();
   const toast   = useToast();
   const navigate = useNavigate();
@@ -186,7 +193,7 @@ export default function AjustesPage() {
       {/* ─── Header ─── */}
       <div className="pt-2">
         <p className="text-[10px] tracking-[0.3em] uppercase font-semibold mb-1"
-           style={{ color: 'rgba(255,255,255,0.25)' }}>
+           style={{ color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(21,21,27,0.42)' }}>
           Configuración
         </p>
         <h1 className="text-[1.7rem] font-black text-white">Ajustes</h1>
@@ -194,20 +201,20 @@ export default function AjustesPage() {
 
       {/* ─── Perfil ─── */}
       <div className="rounded-2xl p-5 flex items-center gap-4"
-           style={{ background: 'linear-gradient(135deg,#17171E,#131318)', border: '1px solid rgba(255,255,255,0.07)' }}>
+           style={{ background: isDark ? 'linear-gradient(135deg,#17171E,#131318)' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #E4E7EC' }}>
         <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg shrink-0"
              style={{ background: 'rgba(225,20,40,0.15)', border: '1.5px solid rgba(225,20,40,0.3)', color: '#E11428' }}>
           {(user?.nombre_completo ?? 'U').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[15px] font-black text-white truncate">{user?.nombre_completo}</p>
-          <p className="text-[12px] truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{user?.correo}</p>
-          {tel && <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{tel}</p>}
+          <p className="text-[15px] font-black truncate" style={{ color: isDark ? '#FFFFFF' : '#15151B' }}>{user?.nombre_completo}</p>
+          <p className="text-[12px] truncate" style={{ color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.6)' }}>{user?.correo}</p>
+          {tel && <p className="text-[11px] mt-0.5" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.42)' }}>{tel}</p>}
         </div>
         <button
           onClick={() => setEditOpen(true)}
           className="shrink-0 px-3 py-1.5 rounded-xl text-[12px] font-bold transition-all"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
+          style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC', color: isDark ? 'rgba(255,255,255,0.7)' : '#15151B' }}
         >
           Editar
         </button>

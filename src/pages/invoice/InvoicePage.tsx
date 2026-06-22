@@ -9,6 +9,8 @@ import { Printer, ArrowLeft, AlertCircle, CheckCircle, Clock, Package, FileText 
 import { registrosApi, usuariosApi } from '../../lib/api';
 import { fmtDate, fmtMoney, extractCedula, extractPhone } from '../../lib/utils';
 import { WORKSHOP_CONTACT } from '../../lib/constants';
+import { useTheme } from '../../lib/theme';
+import { useAuth } from '../../contexts/AuthContext';
 import type { RegistroDetalle, Usuario } from '../../types';
 
 const ESTADO_LABEL: Record<number, { label: string; color: string }> = {
@@ -26,6 +28,9 @@ function genNumero(id: number): string {
 export default function InvoicePage() {
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [theme]  = useTheme();
+  const isDark   = theme === 'dark';
+  const { user } = useAuth();
 
   const [reg,     setReg]     = useState<RegistroDetalle | null>(null);
   const [cliente, setCliente] = useState<Usuario | null>(null);
@@ -96,8 +101,27 @@ export default function InvoicePage() {
   const estInfo  = ESTADO_LABEL[reg.estado] ?? ESTADO_LABEL[0];
   const mecanico = reg.nombre_encargado ?? 'Técnico Gorila Motos';
 
+  /* Quién despachó / cobró el pedido: el encargado del registro;
+     si no existe, el usuario que emite el comprobante; en último caso, el cliente. */
+  const despachadoPor = reg.nombre_encargado
+    ?? user?.nombre_completo
+    ?? reg.nombre_cliente
+    ?? 'Gorila Motos';
+  /* Desde qué cuenta se realizó el comprobante (usuario autenticado). */
+  const cuentaEmisora = user?.correo
+    ?? (user?.nombre_usuario ? `@${user.nombre_usuario}` : null)
+    ?? WORKSHOP_CONTACT.email;
+  const placa = reg.placa?.trim() || '—';
+
+  /* ── Paleta de pantalla (chrome) según tema ── */
+  const sc = {
+    pageBg:      isDark ? 'transparent'              : '#F4F5F7',
+    btnBackTxt:  isDark ? 'rgba(255,255,255,0.5)'    : '#15151B',
+    btnBackBord: isDark ? 'rgba(255,255,255,0.10)'   : '#E4E7EC',
+  };
+
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8" style={{ background: sc.pageBg }}>
 
       {/* ── Barra de acciones (solo pantalla) ── */}
       <div className="no-print flex items-center justify-between flex-wrap gap-3">
@@ -195,9 +219,9 @@ export default function InvoicePage() {
                 ['C.I.',     cedula   ?? 'S/D'],
                 ['Teléfono', telefono ?? 'S/D'],
               ] as [string,string][]).map(([k,v]) => (
-                <div key={k} className="flex gap-2">
-                  <span className="text-[11px] text-gray-400 font-semibold min-w-[72px]">{k}:</span>
-                  <span className="text-[12px] text-gray-800 font-bold">{v}</span>
+                <div key={k} className="flex gap-2 items-baseline">
+                  <span className="text-[12px] text-gray-400 font-semibold min-w-[78px]">{k}:</span>
+                  <span className={`font-bold text-gray-900 ${k==='Nombre' ? 'text-[16px]' : 'text-[14px]'}`}>{v}</span>
                 </div>
               ))}
             </div>
@@ -208,9 +232,20 @@ export default function InvoicePage() {
             <h2 className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-3">
               Datos del Vehículo
             </h2>
-            <div className="grid grid-cols-2 gap-2">
+
+            {/* Placa destacada */}
+            <div className="mb-3 p-3 rounded-xl flex items-center justify-between"
+                 style={{ background: '#0C0C10', border: '2px solid #E11428' }}>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                Placa
+              </span>
+              <span className="font-mono font-black text-white" style={{ fontSize: 24, letterSpacing: '0.18em' }}>
+                {placa}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
               {([
-                ['Placa',  reg.placa || '—'],
                 ['Marca',  reg.marca_moto || '—'],
                 ['Modelo', reg.modelo_moto || '—'],
                 ['Km',     reg.kilometraje ? `${reg.kilometraje.toLocaleString('es-EC')} km` : '—'],
@@ -218,7 +253,7 @@ export default function InvoicePage() {
                 <div key={k} className="p-2.5 rounded-xl text-center"
                      style={{ background: '#F3F4F6', border: '1px solid #E5E7EB' }}>
                   <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">{k}</p>
-                  <p className={`font-black text-gray-800 mt-0.5 ${k==='Placa' ? 'font-mono tracking-widest text-sm' : 'text-[13px]'}`}>
+                  <p className="font-black text-gray-900 mt-0.5 text-[15px]">
                     {v}
                   </p>
                 </div>
@@ -283,6 +318,12 @@ export default function InvoicePage() {
               <div>
                 <p className="text-sm font-black text-gray-800">{mecanico}</p>
                 <p className="text-xs text-gray-500">{WORKSHOP_CONTACT.nombre} · Técnico certificado</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Despachado por: <span className="font-semibold text-gray-600">{despachadoPor}</span>
+                </p>
+                <p className="text-xs text-gray-400">
+                  Cuenta: <span className="font-mono text-gray-600">{cuentaEmisora}</span>
+                </p>
               </div>
             </div>
             <div className="mt-3 p-2.5 rounded-lg"

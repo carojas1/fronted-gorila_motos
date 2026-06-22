@@ -3,7 +3,7 @@
    KPIs reales · Recharts · Multi-rol
    ───────────────────────────────────────────── */
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Wrench, Package, Bike, Users, ArrowRight,
@@ -12,9 +12,10 @@ import {
 } from 'lucide-react';
 import {
   AreaChart, Area, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../lib/theme';
 import { motosApi, registrosApi, productosApi, usuariosApi, combustibleApi } from '../../lib/api';
 import { fmtDate, fmtMoney } from '../../lib/utils';
 import { usePolling } from '../../hooks/usePolling';
@@ -26,9 +27,11 @@ import TermsModal, { acceptTerms } from '../../components/ui/TermsModal';
 
 /* ── Barras CSS (reemplaza Recharts BarChart: evita label-clip y funciona en light mode) ── */
 function ServiceBar({ data }: { data: { name: string; value: number }[] }) {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   if (!data.length) return (
     <div className="flex items-center justify-center h-32">
-      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>Sin datos de servicios</p>
+      <p className="text-xs" style={{ color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(21,21,27,0.42)' }}>Sin datos de servicios</p>
     </div>
   );
   const max = Math.max(...data.map(d => d.value), 1);
@@ -38,12 +41,12 @@ function ServiceBar({ data }: { data: { name: string; value: number }[] }) {
         <div key={item.name} className="flex items-center gap-3">
           <div className="shrink-0 text-right" style={{ width: 130 }}>
             <span className="text-[11.5px] font-semibold block truncate"
-                  style={{ color: 'rgba(255,255,255,0.55)' }} title={item.name}>
+                  style={{ color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(21,21,27,0.6)' }} title={item.name}>
               {item.name}
             </span>
           </div>
           <div className="flex-1 h-7 rounded-lg overflow-hidden relative"
-               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.04)' }}>
+               style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid #E4E7EC' }}>
             <div className="h-full rounded-lg flex items-center px-2.5 transition-all duration-700"
                  style={{
                    width: `${Math.max((item.value / max) * 100, 8)}%`,
@@ -63,18 +66,104 @@ function ServiceBar({ data }: { data: { name: string; value: number }[] }) {
   );
 }
 
-/* ── Tooltip dark para recharts ── */
+/* ── Tooltip para recharts (theme-aware) ── */
 function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl px-3 py-2 text-xs"
-         style={{ background:'rgba(20,20,30,0.97)', border:'1px solid rgba(255,255,255,0.1)', boxShadow:'0 12px 32px rgba(0,0,0,0.5)' }}>
+         style={{
+           background: isDark ? 'rgba(20,20,30,0.97)' : '#FFFFFF',
+           border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC',
+           boxShadow: isDark ? '0 12px 32px rgba(0,0,0,0.5)' : '0 12px 32px rgba(0,0,0,0.12)',
+         }}>
       {label && <p className="text-white/40 font-bold mb-1">{label}</p>}
       {payload.map(p => (
         <p key={p.name} className="font-bold" style={{ color: p.color }}>
           {p.name}: {typeof p.value === 'number' && p.value > 100 ? fmtMoney(p.value) : p.value}
         </p>
       ))}
+    </div>
+  );
+}
+
+/* ── Hook: mide el ancho explícito de un contenedor (px) ──
+   En el APK (Android WebView) ResponsiveContainer recibe ancho 0 y el chart
+   no se ve / lanza "width(-1)…". Medimos con ResizeObserver + useLayoutEffect
+   (mismo patrón que ContabilidadPage) y renderizamos solo cuando cw>0.        */
+function useChartWidth() {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [cw, setCw] = useState(0);
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth || el.offsetWidth || el.getBoundingClientRect().width;
+      if (w > 0) setCw(Math.floor(w));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    /* Fallback: si el layout del WebView no dispara ResizeObserver de inmediato */
+    const t = setTimeout(measure, 120);
+    return () => { ro.disconnect(); clearTimeout(t); };
+  }, []);
+  return { wrapRef, cw };
+}
+
+/* ── AreaChart: actividad últimos 7 días (ancho explícito) ── */
+function ActivityAreaChart({ data, isAdmin, isDark }: {
+  data: { day: string; ordenes: number; ingresos: number }[];
+  isAdmin: boolean; isDark: boolean;
+}) {
+  const { wrapRef, cw } = useChartWidth();
+  const tickColor = isDark ? 'rgba(255,255,255,0.28)' : 'rgba(21,21,27,0.45)';
+  const gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+  const H = 208;
+  return (
+    <div ref={wrapRef} className="recharts-custom" style={{ width: '100%', height: H }}>
+      {cw > 0 && (
+        <AreaChart width={cw} height={H} data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="gradOrdenes" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor="#E11428" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#E11428" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="gradIngresos" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor="#10B981" stopOpacity={0.25} />
+              <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+          <XAxis dataKey="day" tick={{ fill: tickColor, fontSize: 11 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fill: tickColor, fontSize: 11 }} axisLine={false} tickLine={false} />
+          <Tooltip content={<DarkTooltip />} />
+          <Area type="monotone" dataKey="ordenes" name="Órdenes" stroke="#E11428" strokeWidth={2} fill="url(#gradOrdenes)" dot={false} />
+          {isAdmin && <Area type="monotone" dataKey="ingresos" name="Ingresos $" stroke="#10B981" strokeWidth={2} fill="url(#gradIngresos)" dot={false} />}
+        </AreaChart>
+      )}
+    </div>
+  );
+}
+
+/* ── Donut estados (ancho explícito) ── */
+function EstadosPieChart({ data, isDark }: {
+  data: { name: string; value: number; color: string }[]; isDark: boolean;
+}) {
+  const { wrapRef, cw } = useChartWidth();
+  const stroke = isDark ? 'rgba(0,0,0,0.5)' : '#FFFFFF';
+  const H = 144;
+  return (
+    <div ref={wrapRef} className="recharts-custom w-36 h-36 shrink-0" style={{ height: H }}>
+      {cw > 0 && (
+        <PieChart width={cw} height={H}>
+          <Pie data={data} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" strokeWidth={2} stroke={stroke}>
+            {data.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+          </Pie>
+          <Tooltip content={<DarkTooltip />} />
+        </PieChart>
+      )}
     </div>
   );
 }

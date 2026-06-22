@@ -27,6 +27,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
+import { useTheme } from '../../lib/theme';
 
 /* ═══ PUNTOS (misma lógica que PuntosPage) ═══ */
 const POINTS_TABLE = [
@@ -140,6 +141,8 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
   onBack: ()=>void;
   onUnlock: (e:React.MouseEvent)=>void;
 }) {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   const [tab, setTab]               = useState<DetailTab>('servicios');
   const [expandedFac, setExpandedFac] = useState<number | null>(null);
   const [facDetalles, setFacDetalles] = useState<Record<number, DetalleFactura[]>>({});

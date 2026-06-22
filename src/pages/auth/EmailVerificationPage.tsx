@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../../lib/theme';
 import { Mail, RefreshCw, CheckCircle2, ArrowRight, Clock } from 'lucide-react';
 import { authApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
@@ -43,6 +44,8 @@ function GorilaLogo({ size = 52 }: { size?: number }) {
 export default function EmailVerificationPage() {
   const navigate  = useNavigate();
   const toast     = useToast();
+  const [theme]   = useTheme();
+  const isDark    = theme === 'dark';
 
   const [checking,  setChecking]  = useState(false);
   const [resending, setResending] = useState(false);
@@ -165,11 +168,11 @@ export default function EmailVerificationPage() {
 
         {/* Card */}
         <div style={{
-          background: 'linear-gradient(160deg, #141419 0%, #0F0F14 100%)',
-          border: '1px solid rgba(255,255,255,0.07)',
+          background: isDark ? 'linear-gradient(160deg, #141419 0%, #0F0F14 100%)' : '#FFFFFF',
+          border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #E4E7EC',
           borderRadius: 22,
           padding: '36px 32px',
-          boxShadow: '0 28px 70px rgba(0,0,0,0.6)',
+          boxShadow: isDark ? '0 28px 70px rgba(0,0,0,0.6)' : '0 28px 70px rgba(0,0,0,0.10)',
           textAlign: 'center',
         }}>
 

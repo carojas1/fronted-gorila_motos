@@ -3,17 +3,18 @@
    Estilo premium tipo app nativa. Usa los datos reales del taller.
    La versión web (DashboardPage) queda intacta.
    ───────────────────────────────────────────── */
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Wrench, Package, Bike, Users, Activity, Bell, Star, Zap,
   AlertTriangle, ChevronRight, TrendingUp, DollarSign,
 } from 'lucide-react';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, Tooltip } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 import { motosApi, registrosApi, productosApi, usuariosApi } from '../../lib/api';
 import { fmtMoney, fmtDate, toIsoStr } from '../../lib/utils';
 import { usePolling } from '../../hooks/usePolling';
+import { useTheme } from '../../lib/theme';
 import type { RegistroDetalle, Moto, Producto } from '../../types';
 
 const ESTADO_COLORS: Record<number, string> = {
@@ -33,6 +34,62 @@ function Kpi({ icon: Icon, value, label, color, to }: {
       <p className="m-kpi-val">{value}</p>
       <p className="m-kpi-lbl">{label}</p>
     </Link>
+  );
+}
+
+/* ─── Gráfica de actividad (7 días) ───
+   Usa ancho explícito medido con ResizeObserver para garantizar
+   visibilidad en Android WebView (Capacitor APK) donde
+   ResponsiveContainer a veces recibe ancho 0 (error "width(-1) of chart"). */
+function ActivityChart({ areaData }: {
+  areaData: { day: string; ordenes: number; ingresos: number }[];
+}) {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
+
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [cw, setCw] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth || el.offsetWidth || el.getBoundingClientRect().width;
+      if (w > 0) setCw(Math.floor(w));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    /* Fallback: si el layout del WebView no dispara ResizeObserver de inmediato */
+    const t = setTimeout(measure, 120);
+    return () => { ro.disconnect(); clearTimeout(t); };
+  }, []);
+
+  return (
+    <div ref={wrapRef} style={{ width: '100%', height: 150, marginTop: 6 }}>
+      {cw > 0 ? (
+        <AreaChart width={cw} height={150} data={areaData} margin={{ top: 5, right: 4, left: 4, bottom: 0 }}>
+          <defs>
+            <linearGradient id="mGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#E11428" stopOpacity={0.35} />
+              <stop offset="100%" stopColor="#E11428" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <XAxis dataKey="day" tick={{ fill: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.42)', fontSize: 10 }} axisLine={false} tickLine={false} />
+          <Tooltip
+            contentStyle={{
+              background: isDark ? 'rgba(20,20,30,0.97)' : '#FFFFFF',
+              border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC',
+              borderRadius: 12,
+              fontSize: 12,
+              boxShadow: isDark ? undefined : '0 8px 24px rgba(0,0,0,0.12)',
+            }}
+            labelStyle={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(21,21,27,0.6)' }}
+          />
+          <Area type="monotone" dataKey="ordenes" name="Órdenes" stroke="#FF3B47" strokeWidth={2.5} fill="url(#mGrad)" dot={false} />
+        </AreaChart>
+      ) : null}
+    </div>
   );
 }
 
@@ -197,24 +254,7 @@ export default function MobileDashboard() {
           </div>
           <Link to="/registros" className="m-card-link">Ver todo</Link>
         </div>
-        <div style={{ height: 150, marginTop: 6 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={areaData} margin={{ top: 5, right: 4, left: 4, bottom: 0 }}>
-              <defs>
-                <linearGradient id="mGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#E11428" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#E11428" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="day" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip
-                contentStyle={{ background: 'rgba(20,20,30,0.97)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 }}
-                labelStyle={{ color: 'rgba(255,255,255,0.5)' }}
-              />
-              <Area type="monotone" dataKey="ordenes" name="Órdenes" stroke="#FF3B47" strokeWidth={2.5} fill="url(#mGrad)" dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+        <ActivityChart areaData={areaData} />
       </div>
 
       {/* Actividad reciente */}
