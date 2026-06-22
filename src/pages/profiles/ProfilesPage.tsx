@@ -357,13 +357,19 @@ export default function ProfilesPage() {
     const currentPerms = parsePermisos(u.descripcion);
     setSelectedModulos(currentPerms ?? MECANICO_MODULES.map(m => m.key));
     const currentRolNombre = getRolName((u.roles ?? []) as unknown[]);
-    const currentRol = roles.find(r => r.nombre === currentRolNombre);
+    const currentRol = roles.find(r => r.nombre?.toUpperCase() === currentRolNombre?.toUpperCase());
     setSelectedRol(currentRol?.id_rol ?? 0);
     setRoleModal({ user: u });
   };
 
   const assignRole = async () => {
     if (!roleModal || !selectedRol || !me) return;
+    /* El admin no puede cambiar su PROPIO rol (el backend lo rechaza con 400 para
+       evitar que se quede sin acceso). Avisamos con un mensaje claro. */
+    if (roleModal.user.id_usuario === me.id_usuario) {
+      toast.error('No puedes cambiar tu propio rol. Pídele a otro administrador que lo haga.', 'Acción no permitida');
+      return;
+    }
     setSaving(true);
     try {
       /* cambiarCategoria reemplaza el rol actual — evita duplicados */

@@ -16,11 +16,13 @@ interface Tab {
 }
 
 export default function MobileTabBar({ onMore }: { onMore: () => void }) {
-  const { isAdmin, isMecanico, isCliente } = useAuth();
+  const { isAdmin, isMecanico } = useAuth();
   const loc = useLocation();
   const nav = useNavigate();
 
-  const esClientePuro = isCliente && !isAdmin && !isMecanico;
+  /* Cualquiera que NO sea admin ni mecánico ve la vista de cliente.
+     Esto incluye usuarios SIN ningún rol asignado (no deben ver módulos internos). */
+  const esClientePuro = !isAdmin && !isMecanico;
 
   const tabs: Tab[] = esClientePuro
     ? [

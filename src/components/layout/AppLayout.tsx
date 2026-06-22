@@ -24,7 +24,7 @@ import { useTheme } from '../../lib/theme';
 import { Sun, Moon } from 'lucide-react';
 
 export default function AppLayout() {
-  const { user, isAdmin, isMecanico, isCliente, logout } = useAuth();
+  const { user, isAdmin, isMecanico, logout } = useAuth();
   const location  = useLocation();
   const navigate  = useNavigate();
   const toast      = useToast();
@@ -84,6 +84,10 @@ export default function AppLayout() {
   const puede = (mod: string) =>
     isAdmin || !isMecanico || !mecPermisos || mecPermisos.includes(mod);
 
+  /* Vista de cliente: cualquiera que NO sea admin ni mecánico (incluye usuarios
+     SIN rol asignado). Garantiza que nunca vean módulos internos del taller. */
+  const verCliente = !isAdmin && !isMecanico;
+
   /* Navegación principal — limpia. Diagnóstico y Metodología viven DENTRO de Motos.
      Combustible y Alertas van en el menú "Más" para no saturar la barra. */
   const NAV = [
@@ -94,9 +98,9 @@ export default function AppLayout() {
     ...(puede('proveedores') && (isAdmin || isMecanico) ? [{ label: 'Proveedores', to: '/proveedores' }] : []),
     ...(puede('clientes')    && (isAdmin || isMecanico) ? [{ label: 'Clientes',    to: '/clientes'    }] : []),
     ...(isAdmin                                         ? [{ label: 'Pagos',       to: '/pagos'       }] : []),
-    ...(isCliente                                       ? [{ label: 'Mi Moto',     to: '/mi-moto'     }] : []),
-    ...(isCliente                                       ? [{ label: 'Mi Portal',   to: '/portal'      }] : []),
-    ...(isCliente                                       ? [{ label: 'Puntos',      to: '/puntos'      }] : []),
+    ...(verCliente                                      ? [{ label: 'Mi Moto',     to: '/mi-moto'     }] : []),
+    ...(verCliente                                      ? [{ label: 'Mi Portal',   to: '/portal'      }] : []),
+    ...(verCliente                                      ? [{ label: 'Puntos',      to: '/puntos'      }] : []),
   ];
 
   /* Menú "Más" — secundarios, no saturan la barra principal */
@@ -105,6 +109,7 @@ export default function AppLayout() {
     ...(puede('metodologia') && (isAdmin || isMecanico) ? [{ label: 'Metodología',  to: '/metodologia'   }] : []),
     ...(puede('puntos')      && (isAdmin || isMecanico) ? [{ label: 'Puntos',       to: '/puntos'        }] : []),
     { label: 'Combustible', to: '/combustible' },
+    ...(verCliente                                      ? [{ label: 'Alertas',       to: '/alertas'       }] : []),
     ...(isAdmin                                         ? [{ label: 'Contabilidad', to: '/contabilidad'  }] : []),
     ...(isAdmin                                         ? [{ label: 'Perfiles',     to: '/perfiles'      }] : []),
   ];
