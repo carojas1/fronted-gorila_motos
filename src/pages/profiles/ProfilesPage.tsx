@@ -646,9 +646,9 @@ export default function ProfilesPage() {
               </p>
               <div className="space-y-2">
                 {[
-                  { id: roles.find(r => r.nombre === "ADMIN")?.id_rol,    label: "ADMIN",    color: "#E11428", desc: "Control total del sistema" },
-                  { id: roles.find(r => r.nombre === "MECANICO")?.id_rol, label: "MECÁNICO", color: "#3B82F6", desc: "Taller y registros" },
-                  { id: roles.find(r => r.nombre === "CLIENTE")?.id_rol,  label: "CLIENTE",  color: "#10B981", desc: "Solo su información" },
+                  { id: roles.find(r => r.nombre?.toUpperCase() === "ADMIN")?.id_rol,    label: "ADMIN",    color: "#E11428", desc: "Control total del sistema" },
+                  { id: roles.find(r => r.nombre?.toUpperCase() === "MECANICO")?.id_rol, label: "MECÁNICO", color: "#3B82F6", desc: "Taller y registros" },
+                  { id: roles.find(r => r.nombre?.toUpperCase() === "CLIENTE")?.id_rol,  label: "CLIENTE",  color: "#10B981", desc: "Solo su información" },
                 ].filter(r => r.id != null).map(r => (
                   <label
                     key={r.id}

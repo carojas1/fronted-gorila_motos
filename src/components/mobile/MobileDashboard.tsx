@@ -149,8 +149,8 @@ export default function MobileDashboard() {
     );
   }
 
-  /* ════════ Vista CLIENTE ════════ */
-  if (isCliente && !isAdmin && !isMecanico) {
+  /* ════════ Vista CLIENTE (cualquier usuario que NO sea admin ni mecánico) ════════ */
+  if (!isAdmin && !isMecanico) {
     const myMotos  = motos.filter(m => m.id_usuario === user?.id_usuario);
     const myPlacas = new Set(myMotos.map(m => m.placa));
     const myRegs   = registros.filter(r => myPlacas.has(r.placa));

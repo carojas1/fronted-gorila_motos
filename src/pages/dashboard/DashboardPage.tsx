@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import {
   AreaChart, Area, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, CartesianGrid,
+  XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../lib/theme';
@@ -405,8 +405,8 @@ function WebDashboard() {
     setTimeout(() => w.print(), 400);
   };
 
-  /* ── Vista cliente — solo si NO es admin ni mecánico ── */
-  if (isCliente && !isAdmin && !isMecanico) {
+  /* ── Vista cliente — cualquier usuario que NO sea admin ni mecánico ── */
+  if (!isAdmin && !isMecanico) {
     const myMotos   = motos.filter(m => m.id_usuario === user?.id_usuario);
     const myPlacas  = new Set(myMotos.map(m => m.placa));
     const myRegs    = registros.filter(r => myPlacas.has(r.placa));
