@@ -230,6 +230,12 @@ export default function MotoPerfilPage() {
   const s: React.CSSProperties = {
     background: isDark ? '#111117' : '#FFFFFF', border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : '#E4E7EC'}`, borderRadius: 16, padding: '20px 24px',
   };
+  // Color helpers para modo claro/oscuro en las tarjetas (fuera del hero)
+  const ct  = isDark ? '#EBEBEB' : '#15151B';          // texto principal
+  const cs  = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.5)';  // texto secundario
+  const cm  = isDark ? 'rgba(255,255,255,0.28)' : 'rgba(21,21,27,0.4)';  // texto muted
+  const cbg = isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC';             // fondo tarjeta mini
+  const cbd = isDark ? 'rgba(255,255,255,0.06)' : '#E4E7EC';             // borde tarjeta mini
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
@@ -332,18 +338,18 @@ export default function MotoPerfilPage() {
 
       {/* ── Propietario ── */}
       <div style={{ ...s, marginBottom: 16 }}>
-        <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 12px' }}>
+        <p style={{ color: cm, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 12px' }}>
           Propietario
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <User size={18} color="rgba(255,255,255,0.4)" />
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: cbg, border: `1px solid ${cbd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <User size={18} color={cs} />
           </div>
           <div>
-            <p style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 14, margin: 0 }}>
+            <p style={{ color: ct, fontWeight: 700, fontSize: 14, margin: 0 }}>
               {owner?.nombre_completo ?? '—'}
             </p>
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '2px 0 0' }}>
+            <p style={{ color: cs, fontSize: 12, margin: '2px 0 0' }}>
               {owner?.correo ?? '—'}
             </p>
           </div>
@@ -357,8 +363,8 @@ export default function MotoPerfilPage() {
             <Activity size={17} color="#10B981" />
           </div>
           <div>
-            <p style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 15, margin: 0 }}>Estado de mantenimiento</p>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, margin: '2px 0 0' }}>
+            <p style={{ color: ct, fontWeight: 700, fontSize: 15, margin: 0 }}>Estado de mantenimiento</p>
+            <p style={{ color: cs, fontSize: 11, margin: '2px 0 0' }}>
               Calculado con {moto.kilometraje.toLocaleString('es-EC')} km actuales
             </p>
           </div>
@@ -373,8 +379,8 @@ export default function MotoPerfilPage() {
             <Activity size={17} color="#10B981" />
           </div>
           <div>
-            <p style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 15, margin: 0 }}>Historial de servicios</p>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, margin: '2px 0 0' }}>
+            <p style={{ color: ct, fontWeight: 700, fontSize: 15, margin: 0 }}>Historial de servicios</p>
+            <p style={{ color: cs, fontSize: 11, margin: '2px 0 0' }}>
               {servicios.length} servicio{servicios.length !== 1 ? 's' : ''} · en tiempo real
             </p>
           </div>
@@ -386,14 +392,14 @@ export default function MotoPerfilPage() {
           const completos= servicios.filter(r => r.estado >= 2).length;
           const ultimo   = servicios[0];
           const stat = (label: string, val: string, color: string) => (
-            <div style={{ flex: 1, minWidth: 96, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '12px 14px' }}>
-              <p style={{ margin: 0, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', fontWeight: 700 }}>{label}</p>
+            <div style={{ flex: 1, minWidth: 96, background: cbg, border: `1px solid ${cbd}`, borderRadius: 12, padding: '12px 14px' }}>
+              <p style={{ margin: 0, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: cs, fontWeight: 700 }}>{label}</p>
               <p style={{ margin: '5px 0 0', fontSize: 19, fontWeight: 900, color }}>{val}</p>
             </div>
           );
           return (
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-              {stat('Servicios', String(servicios.length), '#fff')}
+              {stat('Servicios', String(servicios.length), ct)}
               {stat('Completados', String(completos), '#10B981')}
               {stat('Invertido', fmtMoney(total), '#E11428')}
               {stat('Último', ultimo ? fmtDate(ultimo.fecha) : '—', '#3B82F6')}
@@ -403,7 +409,7 @@ export default function MotoPerfilPage() {
 
         {/* Línea de tiempo */}
         {servicios.length === 0 ? (
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
+          <p style={{ color: cs, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
             Aún no hay servicios registrados para esta moto
           </p>
         ) : (
@@ -440,10 +446,10 @@ export default function MotoPerfilPage() {
               <ClipboardList size={17} color="#3B82F6" />
             </div>
             <div>
-              <p style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 15, margin: 0 }}>
+              <p style={{ color: ct, fontWeight: 700, fontSize: 15, margin: 0 }}>
                 Historial de diagnósticos
               </p>
-              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, margin: '2px 0 0' }}>
+              <p style={{ color: cs, fontSize: 11, margin: '2px 0 0' }}>
                 {loadDx ? '…' : `${historial.length} registro${historial.length !== 1 ? 's' : ''}`}
               </p>
             </div>
@@ -466,11 +472,11 @@ export default function MotoPerfilPage() {
           </div>
         ) : historial.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 20px' }}>
-            <ClipboardList size={32} color="rgba(255,255,255,0.1)" style={{ marginBottom: 12 }} />
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14, fontWeight: 600, margin: '0 0 6px' }}>
+            <ClipboardList size={32} color={cs} style={{ marginBottom: 12 }} />
+            <p style={{ color: cs, fontSize: 14, fontWeight: 600, margin: '0 0 6px' }}>
               Sin diagnósticos registrados
             </p>
-            <p style={{ color: 'rgba(255,255,255,0.22)', fontSize: 12, margin: '0 0 18px' }}>
+            <p style={{ color: cm, fontSize: 12, margin: '0 0 18px' }}>
               {canManage
                 ? 'Crea el primer diagnóstico para esta moto.'
                 : 'El taller aún no ha registrado un diagnóstico para tu moto.'

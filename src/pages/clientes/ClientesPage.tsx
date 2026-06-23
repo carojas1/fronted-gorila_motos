@@ -826,18 +826,48 @@ export default function ClientesPage() {
   const [ofertaMensaje, setOfertaMensaje] = useState('');
   const [ofertaRoles,   setOfertaRoles]   = useState<number[]>([2]);
   const [ofertaLoading, setOfertaLoading] = useState(false);
+  // Filtro por cilindraje: null = todos; si hay rango solo se envía a dueños con moto en ese rango
+  const [ccFiltro, setCcFiltro] = useState<{ min: number; max: number; label: string } | null>(null);
+
+  const CC_RANGOS = [
+    { min:   0, max: 125, label: 'Urbana (≤125 cc)'           },
+    { min: 126, max: 200, label: 'Semideportiva (126–200 cc)' },
+    { min: 201, max: 400, label: 'Deportiva (201–400 cc)'     },
+    { min: 401, max: 650, label: 'Alto rend. (401–650 cc)'    },
+    { min: 651, max: 9999,label: 'Supersport (651+ cc)'       },
+  ];
+
+  /** Correos de clientes cuya(s) moto(s) entran en el rango de cilindraje seleccionado */
+  const correosFiltradosPorCC = (() => {
+    if (!ccFiltro) return null; // sin filtro → enviar por rol
+    const { min, max } = ccFiltro;
+    const duenosIds = new Set(
+      motos.filter(m => m.cilindraje >= min && m.cilindraje <= max).map(m => m.id_usuario)
+    );
+    return clientes
+      .filter(c => duenosIds.has(c.id_usuario) && c.correo && !c.correo.endsWith('@gmotors.local'))
+      .map(c => c.correo!);
+  })();
 
   const enviarOferta = async () => {
     if (!ofertaAsunto.trim() || !ofertaMensaje.trim()) { toast.error('Completa asunto y mensaje'); return; }
     setOfertaLoading(true);
     try {
-      const r = await ofertaApi.enviar(ofertaAsunto.trim(), ofertaMensaje.trim(), ofertaRoles);
-      const d = r.data as { enviados: number; total: number };
+      let d: { enviados: number; total: number };
+      if (correosFiltradosPorCC) {
+        if (!correosFiltradosPorCC.length) { toast.error('No hay clientes con ese rango de cilindraje'); setOfertaLoading(false); return; }
+        const r = await ofertaApi.enviarAEmails(ofertaAsunto.trim(), ofertaMensaje.trim(), correosFiltradosPorCC);
+        d = r.data as typeof d;
+      } else {
+        const r = await ofertaApi.enviar(ofertaAsunto.trim(), ofertaMensaje.trim(), ofertaRoles);
+        d = r.data as typeof d;
+      }
       toast.success(`${d.enviados} de ${d.total} correos enviados correctamente`);
       setOfertaOpen(false);
       setOfertaAsunto('');
       setOfertaMensaje('');
       setOfertaRoles([2]);
+      setCcFiltro(null);
     } catch {
       toast.error('Error al enviar la campaña');
     } finally { setOfertaLoading(false); }
@@ -1127,7 +1157,7 @@ export default function ClientesPage() {
       {/* ── Modal: Enviar oferta por email ── */}
       <Modal
         open={ofertaOpen}
-        onClose={() => { setOfertaOpen(false); setOfertaAsunto(''); setOfertaMensaje(''); setOfertaRoles([2]); }}
+        onClose={() => { setOfertaOpen(false); setOfertaAsunto(''); setOfertaMensaje(''); setOfertaRoles([2]); setCcFiltro(null); }}
         title="Enviar oferta a clientes"
         size="md"
         footer={
@@ -1148,9 +1178,10 @@ export default function ClientesPage() {
             <Mail size={18} className="text-gm-red shrink-0" />
             <div>
               <p className="text-[12px] font-black text-white/80">
-                Se enviará a {clientes.filter(c =>
-                  !c.correo?.endsWith('@gmotors.local') && ofertaRoles.includes(2)
-                ).length} clientes con correo real
+                {correosFiltradosPorCC
+                  ? `${correosFiltradosPorCC.length} clientes con moto en rango ${ccFiltro?.label}`
+                  : `${clientes.filter(c => !c.correo?.endsWith('@gmotors.local') && ofertaRoles.includes(2)).length} clientes con correo real`
+                }
               </p>
               <p className="text-[11px] text-white/35 mt-0.5">
                 Los correos @gmotors.local (seed) se omiten automáticamente
@@ -1170,9 +1201,7 @@ export default function ClientesPage() {
                 return (
                   <button
                     key={id}
-                    onClick={() => setOfertaRoles(prev =>
-                      active ? prev.filter(r => r !== id) : [...prev, id]
-                    )}
+                    onClick={() => { setOfertaRoles(prev => active ? prev.filter(r => r !== id) : [...prev, id]); setCcFiltro(null); }}
                     className="px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all"
                     style={{
                       background: active ? `${color}18` : 'rgba(255,255,255,0.04)',
@@ -1181,6 +1210,42 @@ export default function ClientesPage() {
                     }}
                   >
                     {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Filtro por cilindraje */}
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-white/35 mb-2">Filtrar por cilindraje <span className="normal-case font-medium opacity-60">(opcional)</span></p>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setCcFiltro(null)}
+                className="px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all"
+                style={{
+                  background: !ccFiltro ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.04)',
+                  color:      !ccFiltro ? '#F59E0B' : 'rgba(255,255,255,0.35)',
+                  border:     `1px solid ${!ccFiltro ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                }}
+              >
+                Todos
+              </button>
+              {CC_RANGOS.map(r => {
+                const active = ccFiltro?.min === r.min;
+                const count = motos.filter(m => m.cilindraje >= r.min && m.cilindraje <= r.max).length;
+                return (
+                  <button
+                    key={r.min}
+                    onClick={() => setCcFiltro(active ? null : r)}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all"
+                    style={{
+                      background: active ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.04)',
+                      color:      active ? '#F59E0B' : 'rgba(255,255,255,0.35)',
+                      border:     `1px solid ${active ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                    }}
+                  >
+                    {r.label} <span style={{ opacity: 0.6 }}>({count})</span>
                   </button>
                 );
               })}

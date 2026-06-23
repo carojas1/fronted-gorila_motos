@@ -19,6 +19,7 @@ import {
   fmtDate, fmtMoney, getErrorMsg, ESTADO_REGISTRO, extractPhone, extractCedula, toIsoStr,
 } from '../../lib/utils';
 import { calcularEstadoLocal } from '../../lib/mantenimiento';
+import { WORKSHOP_CONTACT } from '../../lib/constants';
 import { usePolling } from '../../hooks/usePolling';
 import type { RegistroDetalle, Usuario, Moto, Tipo, Producto } from '../../types';
 import Badge from '../../components/ui/Badge';
@@ -410,60 +411,210 @@ export default function RecordsPage() {
     finally { setCreatingOrder(false); }
   };
 
-  /* ─── Imprimir orden (diseño profesional, imprime colores) ─── */
-  const printOrder = (r: RegistroDetalle) => {
-    const w = window.open('', '_blank', 'width=860,height=720');
+  /* ─── Nota de venta profesional ─── */
+  const printOrder = async (r: RegistroDetalle) => {
+    const w = window.open('', '_blank', 'width=900,height=760');
     if (!w) { toast.error('Activa las ventanas emergentes para imprimir'); return; }
+
+    // Datos del cliente
+    const cli  = usuarios.find(u => u.nombre_completo === r.nombre_cliente);
+    const mec  = usuarios.find(u => u.nombre_completo === r.nombre_encargado);
+    const ciCli = cli ? extractCedula(cli.descripcion) : null;
+    const telCli = cli ? extractPhone(cli.descripcion) : null;
+
+    // Cargar detalles para desglose mano/repuesto
+    let detalles: Array<{descripcion:string|null;subtotal:number;idProducto?:number|null;cantidad?:number}> = [];
+    try { const res = await registrosApi.detalles(r.id_factura); detalles = (res.data as typeof detalles) ?? []; } catch { /* sin desglose */ }
+
+    let manoRows = '', repRows = '', manoTotal = 0, repTotal = 0;
+    for (const d of detalles) {
+      const sub = Number(d.subtotal ?? 0);
+      const desc = (d.descripcion ?? '').replace(/^\[MANO\]\s*/i,'').replace(/^\[REP\|?[^\]]*\]\s*/i,'');
+      const cant = Number(d.cantidad ?? 1);
+      const isRep = d.idProducto != null || /^\[REP/i.test(d.descripcion ?? '');
+      if (isRep) {
+        repTotal += sub;
+        repRows += `<tr><td>${desc}</td><td class="num">${cant}</td><td class="num">${fmtMoney(sub/cant)}</td><td class="num"><b>${fmtMoney(sub)}</b></td></tr>`;
+      } else {
+        manoTotal += sub;
+        manoRows += `<tr><td>${desc}</td><td class="num">${cant}</td><td class="num">${fmtMoney(sub/cant)}</td><td class="num"><b>${fmtMoney(sub)}</b></td></tr>`;
+      }
+    }
+
+    const logoUrl = `${window.location.origin}/brand/gorila-logo.png`;
     const estLabel = ESTADO_REGISTRO[r.estado]?.label ?? '—';
+    const hasDesglose = manoRows || repRows;
+
     w.document.write(`<!DOCTYPE html><html lang="es"><head>
       <meta charset="UTF-8">
-      <title>Gorila Motos — Orden #${r.id_registro}</title>
+      <title>Gorila Motos — Nota de Venta #${r.id_registro}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
       <style>
         *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-        body{font-family:'Segoe UI',Arial,sans-serif;padding:32px;color:#0F172A;background:#fff}
-        .head{background:linear-gradient(135deg,#0C0C10,#1A1A22);border-radius:16px;padding:24px 28px;color:#fff;display:flex;justify-content:space-between;align-items:center}
-        .brand{font-size:26px;font-weight:900;letter-spacing:-.5px}
-        .brand span{color:#E11428}
-        .tag{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-top:4px}
-        .badge{background:rgba(225,20,40,.16);border:1px solid rgba(225,20,40,.4);border-radius:10px;padding:8px 16px;text-align:right}
-        .badge p{margin:0;color:#E11428;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
-        .badge span{color:#fff;font-size:18px;font-weight:900}
-        .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0}
-        .field{background:#F8FAFC;border:1px solid #EEF1F5;border-radius:10px;padding:13px 16px}
-        .field label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#94A3B8;display:block;margin-bottom:5px;font-weight:700}
-        .field span{font-size:15px;font-weight:800;color:#0F172A}
+        body{font-family:'Inter',sans-serif;background:#fff;color:#0F172A;max-width:800px;margin:0 auto;padding:28px 32px}
+        /* ── HEADER ── */
+        .header{background:linear-gradient(135deg,#0C0C10 0%,#1A1A22 100%);border-radius:18px;padding:22px 28px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+        .logo-wrap{display:flex;align-items:center;gap:16px}
+        .logo-wrap img{width:70px;height:70px;object-fit:contain;filter:brightness(1.15) drop-shadow(0 0 12px rgba(225,20,40,0.5))}
+        .brand-text{}
+        .brand-name{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:#fff;line-height:1}
+        .brand-name em{color:#E11428;font-style:normal}
+        .brand-sub{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-top:5px}
+        .nota-badge{text-align:right}
+        .nota-badge .nota-label{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:#F59E0B;letter-spacing:.08em;text-transform:uppercase}
+        .nota-badge .nota-num{font-size:26px;font-weight:900;color:#fff;line-height:1.1}
+        .nota-badge .nota-date{font-size:10px;color:rgba(255,255,255,.4);margin-top:4px}
+        /* ── ESTADO ── */
+        .estado-bar{display:flex;align-items:center;justify-content:space-between;background:#F8FAFC;border:1px solid #EEF1F5;border-radius:10px;padding:10px 18px;margin:16px 0}
+        .estado-chip{font-size:11px;font-weight:800;padding:4px 12px;border-radius:99px;background:rgba(16,185,129,.12);color:#059669;border:1px solid rgba(16,185,129,.2)}
+        /* ── GRID INFO ── */
+        .section-title{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#94A3B8;margin:18px 0 8px}
+        .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+        .info-field{background:#F8FAFC;border:1px solid #EEF1F5;border-radius:10px;padding:11px 14px}
+        .info-field label{font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:#94A3B8;display:block;margin-bottom:4px;font-weight:700}
+        .info-field span{font-size:14px;font-weight:800;color:#0F172A}
         .full{grid-column:1/-1}
-        .plate{font-family:'Courier New',monospace;font-size:18px;font-weight:900;letter-spacing:2px;background:#0C0C10;color:#fff;padding:5px 12px;border-radius:6px;display:inline-block}
-        .chip{display:inline-block;font-size:11px;font-weight:800;padding:4px 12px;border-radius:99px;background:rgba(16,185,129,.12);color:#059669;border:1px solid rgba(16,185,129,.3)}
-        .total{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#E11428,#B91C1C);border-radius:14px;padding:18px 24px;color:#fff;margin-top:6px}
-        .total .lbl{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.85}
-        .total .val{font-size:32px;font-weight:900;letter-spacing:-1px}
-        .foot{margin-top:28px;text-align:center;font-size:11px;color:#CBD5E1;border-top:1px solid #EEF1F5;padding-top:14px}
-        @media print{body{padding:14px}}
+        .plate{font-family:'Courier New',monospace;font-size:15px;font-weight:900;letter-spacing:2.5px;background:#0C0C10;color:#fff;padding:3px 10px;border-radius:5px;display:inline-block}
+        /* ── TABLA SERVICIOS ── */
+        .sec-header{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px 8px 0 0;margin-top:14px}
+        .sec-header.mo{background:linear-gradient(90deg,rgba(59,130,246,.15),rgba(59,130,246,.04))}
+        .sec-header.rep{background:linear-gradient(90deg,rgba(245,158,11,.15),rgba(245,158,11,.04))}
+        .sec-icon{width:8px;height:20px;border-radius:3px}
+        .sec-icon.mo{background:#3B82F6}
+        .sec-icon.rep{background:#F59E0B}
+        .sec-label{font-size:10px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+        .sec-label.mo{color:#3B82F6}
+        .sec-label.rep{color:#F59E0B}
+        .sec-sub{font-size:11px;font-weight:700;margin-left:auto}
+        .sec-sub.mo{color:#3B82F6}
+        .sec-sub.rep{color:#F59E0B}
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        thead th{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#94A3B8;padding:6px 10px;text-align:left;border-bottom:1px solid #EEF1F5}
+        thead th.num{text-align:right}
+        tbody tr td{padding:7px 10px;border-bottom:1px dashed #F1F5F9;color:#0F172A}
+        tbody tr:last-child td{border-bottom:none}
+        .num{text-align:right}
+        tbody tr.mo-row td:first-child{border-left:3px solid #3B82F6;padding-left:9px}
+        tbody tr.rep-row td:first-child{border-left:3px solid #F59E0B;padding-left:9px}
+        /* ── TOTALES ── */
+        .totals-wrap{margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px}
+        .total-box{border-radius:12px;padding:14px 16px}
+        .total-box.mo{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2)}
+        .total-box.rep{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2)}
+        .total-box.grand{background:linear-gradient(135deg,#E11428,#B91C1C);border:none}
+        .total-box .tlabel{font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;opacity:.65;color:#0F172A}
+        .total-box.grand .tlabel{color:#fff}
+        .total-box .tval{font-size:20px;font-weight:900;margin-top:4px}
+        .total-box.mo .tval{color:#3B82F6}
+        .total-box.rep .tval{color:#F59E0B}
+        .total-box.grand .tval{color:#fff;font-size:26px}
+        /* ── MECÁNICO ── */
+        .mec-bar{display:flex;align-items:center;gap:12px;background:#F8FAFC;border:1px solid #EEF1F5;border-radius:10px;padding:11px 16px;margin-top:14px}
+        .mec-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#E11428,#B91C1C);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:900;flex-shrink:0}
+        .mec-info{}
+        .mec-role{font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#94A3B8}
+        .mec-name{font-size:14px;font-weight:800;color:#0F172A}
+        .mec-email{font-size:11px;color:#64748B;margin-top:1px}
+        /* ── THANKS ── */
+        .thanks{margin-top:22px;text-align:center;padding:18px 20px;background:linear-gradient(135deg,#0C0C10,#1A1A22);border-radius:12px}
+        .thanks-main{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:#F59E0B;letter-spacing:.04em}
+        .thanks-sub{font-size:11px;color:rgba(255,255,255,.4);margin-top:4px}
+        /* ── FOOTER ── */
+        .foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid #EEF1F5;font-size:10px;color:#CBD5E1}
+        @media print{body{padding:12px}@page{margin:.5cm;size:A4}}
       </style></head><body>
-      <div class="head">
-        <div><div class="brand">Gorila <span>Motos</span></div><div class="tag">Orden de servicio · Cuenca, Ecuador</div></div>
-        <div class="badge"><p>Orden</p><span>#${r.id_registro}</span></div>
+
+      <!-- HEADER -->
+      <div class="header">
+        <div class="logo-wrap">
+          <img src="${logoUrl}" alt="Gorila Motos">
+          <div class="brand-text">
+            <div class="brand-name">Gorila <em>Motos</em></div>
+            <div class="brand-sub">Cuenca · Ecuador · Est. 2022</div>
+          </div>
+        </div>
+        <div class="nota-badge">
+          <div class="nota-label">Nota de Venta</div>
+          <div class="nota-num">#${r.id_registro}</div>
+          <div class="nota-date">${fmtDate(r.fecha)}</div>
+        </div>
       </div>
-      <div class="grid">
-        <div class="field"><label>Cliente</label><span>${r.nombre_cliente ?? '—'}</span></div>
-        <div class="field"><label>Placa</label><span class="plate">${r.placa ?? '—'}</span></div>
-        <div class="field"><label>Vehículo</label><span>${r.marca_moto ?? ''} ${r.modelo_moto ?? ''}</span></div>
-        <div class="field"><label>Tipo de servicio</label><span>${r.tipo_servicio ?? '—'}</span></div>
-        <div class="field"><label>Fecha de ingreso</label><span>${fmtDate(r.fecha)}</span></div>
-        ${r.kilometraje ? `<div class="field"><label>Kilometraje al ingreso</label><span>${r.kilometraje.toLocaleString('es-EC')} km</span></div>` : `<div class="field"><label>Estado</label><span class="chip">${estLabel}</span></div>`}
-        ${r.kilometraje ? `<div class="field"><label>Estado</label><span class="chip">${estLabel}</span></div>` : ''}
-        ${r.descripcion ? `<div class="field full"><label>Observaciones</label><span style="font-weight:500;font-size:13px;line-height:1.5">${r.descripcion}</span></div>` : ''}
+
+      <!-- ESTADO + PLACA -->
+      <div class="estado-bar">
+        <span style="font-size:12px;font-weight:700;color:#64748B">${r.tipo_servicio ?? 'Servicio de taller'}</span>
+        <span class="plate">${r.placa ?? '—'}</span>
+        <span class="estado-chip">${estLabel}</span>
       </div>
-      <div class="total">
-        <span class="lbl">Total del servicio</span>
-        <span class="val">${fmtMoney(r.costo_total ?? 0)}</span>
+
+      <!-- DATOS CLIENTE -->
+      <div class="section-title">Información del cliente</div>
+      <div class="info-grid">
+        <div class="info-field"><label>Cliente</label><span style="font-size:15px">${r.nombre_cliente ?? '—'}</span></div>
+        <div class="info-field"><label>Vehículo</label><span>${r.marca_moto ?? ''} ${r.modelo_moto ?? ''}</span></div>
+        ${ciCli ? `<div class="info-field"><label>Cédula / RUC</label><span>${ciCli}</span></div>` : ''}
+        ${telCli ? `<div class="info-field"><label>Teléfono</label><span>${telCli}</span></div>` : ''}
+        ${r.kilometraje ? `<div class="info-field"><label>Kilometraje</label><span>${r.kilometraje.toLocaleString('es-EC')} km</span></div>` : ''}
+        ${r.descripcion ? `<div class="info-field full"><label>Fallas reportadas</label><span style="font-weight:500;font-size:12px;line-height:1.5">${r.descripcion}</span></div>` : ''}
       </div>
-      <div class="foot">Gorila Motos · Servicio de calidad con garantía · Gracias por su preferencia</div>
+
+      <!-- DETALLE DE SERVICIOS -->
+      ${hasDesglose ? `
+      <div class="section-title">Detalle del servicio</div>
+      ${manoRows ? `
+      <div class="sec-header mo">
+        <div class="sec-icon mo"></div>
+        <span class="sec-label mo">Mano de obra</span>
+        <span class="sec-sub mo">${fmtMoney(manoTotal)}</span>
+      </div>
+      <table><thead><tr><th>Descripción</th><th class="num">Cant.</th><th class="num">P. Unit.</th><th class="num">Subtotal</th></tr></thead>
+      <tbody>${manoRows.replace(/<tr>/g,'<tr class="mo-row">')}</tbody></table>` : ''}
+      ${repRows ? `
+      <div class="sec-header rep">
+        <div class="sec-icon rep"></div>
+        <span class="sec-label rep">Repuestos</span>
+        <span class="sec-sub rep">${fmtMoney(repTotal)}</span>
+      </div>
+      <table><thead><tr><th>Descripción</th><th class="num">Cant.</th><th class="num">P. Unit.</th><th class="num">Subtotal</th></tr></thead>
+      <tbody>${repRows.replace(/<tr>/g,'<tr class="rep-row">')}</tbody></table>` : ''}
+      <div class="totals-wrap">
+        ${manoRows ? `<div class="total-box mo"><div class="tlabel">Mano de obra</div><div class="tval">${fmtMoney(manoTotal)}</div></div>` : '<div></div>'}
+        ${repRows  ? `<div class="total-box rep"><div class="tlabel">Repuestos</div><div class="tval">${fmtMoney(repTotal)}</div></div>` : '<div></div>'}
+        <div class="total-box grand"><div class="tlabel">Total del servicio</div><div class="tval">${fmtMoney(r.costo_total ?? 0)}</div></div>
+      </div>
+      ` : `
+      <div style="margin-top:16px;background:linear-gradient(135deg,#E11428,#B91C1C);border-radius:14px;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;color:#fff">
+        <span style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.85">Total del servicio</span>
+        <span style="font-size:32px;font-weight:900;letter-spacing:-1px">${fmtMoney(r.costo_total ?? 0)}</span>
+      </div>`}
+
+      <!-- MECÁNICO -->
+      ${r.nombre_encargado ? `
+      <div class="mec-bar">
+        <div class="mec-avatar">${(r.nombre_encargado ?? 'M').charAt(0).toUpperCase()}</div>
+        <div class="mec-info">
+          <div class="mec-role">Técnico responsable</div>
+          <div class="mec-name">${r.nombre_encargado}</div>
+          ${mec?.correo ? `<div class="mec-email">${mec.correo}</div>` : ''}
+        </div>
+      </div>` : ''}
+
+      <!-- GRACIAS -->
+      <div class="thanks">
+        <div class="thanks-main">Gracias por su confianza, estimado/a ${r.nombre_cliente?.split(' ')[0] ?? 'cliente'}.</div>
+        <div class="thanks-sub">Gorila Motos · ${WORKSHOP_CONTACT.direccion} · ${WORKSHOP_CONTACT.telefono} · ${WORKSHOP_CONTACT.horario}</div>
+      </div>
+
+      <div class="foot">
+        <span>Gorila Motos S.A.S. · ${WORKSHOP_CONTACT.web}</span>
+        <span>${WORKSHOP_CONTACT.email}</span>
+        <span>© ${new Date().getFullYear()}</span>
+      </div>
     </body></html>`);
     w.document.close();
     w.focus();
-    setTimeout(() => { w.print(); }, 400);
+    setTimeout(() => w.print(), 600);
   };
 
   /* ─── Historial cliente ─── */

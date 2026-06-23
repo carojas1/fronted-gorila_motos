@@ -280,6 +280,9 @@ export const ofertaApi = {
    *  roles: 2=CLIENTE, 3=MECANICO, 1=ADMIN — se pueden combinar. */
   enviar: (asunto: string, mensaje: string, roles: number[] = [2]) =>
     api.post('/ofertas/enviar', { asunto, mensaje, roles }),
+  /** Envía a una lista explícita de correos (p.ej. filtrados por cilindraje). */
+  enviarAEmails: (asunto: string, mensaje: string, correos: string[]) =>
+    api.post('/ofertas/enviar-emails', { asunto, mensaje, correos }),
 };
 
 /* ── Upload con retry: despierta backend si está dormido y reintenta ─────────
