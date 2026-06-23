@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft, AlertCircle, CheckCircle, Clock, Package, FileText } from 'lucide-react';
-import { registrosApi, usuariosApi } from '../../lib/api';
+import { registrosApi, usuariosApi, productosApi } from '../../lib/api';
 import { fmtDate, fmtMoney, extractCedula, extractPhone } from '../../lib/utils';
 import { WORKSHOP_CONTACT } from '../../lib/constants';
 import { useTheme } from '../../lib/theme';
@@ -14,7 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   detalleKind, cleanDescripcion, detalleCategoria, categoriaLabel, splitTotales,
 } from '../../lib/detalles';
-import type { RegistroDetalle, Usuario } from '../../types';
+import type { RegistroDetalle, Usuario, Producto } from '../../types';
 
 interface DetalleFila {
   idDetalleFactura?: number;
@@ -44,23 +44,26 @@ export default function InvoicePage() {
   const isDark   = theme === 'dark';
   const { user } = useAuth();
 
-  const [reg,     setReg]     = useState<RegistroDetalle | null>(null);
-  const [cliente, setCliente] = useState<Usuario | null>(null);
-  const [detalles, setDetalles] = useState<DetalleFila[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
+  const [reg,       setReg]       = useState<RegistroDetalle | null>(null);
+  const [cliente,   setCliente]   = useState<Usuario | null>(null);
+  const [detalles,  setDetalles]  = useState<DetalleFila[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     async function load() {
       try {
-        const [rr, ur] = await Promise.allSettled([
+        const [rr, ur, pr] = await Promise.allSettled([
           registrosApi.list(),
           usuariosApi.list(),
+          productosApi.list(),
         ]);
 
         const registros: RegistroDetalle[] = rr.status === 'fulfilled' ? rr.value.data : [];
         const usuarios:  Usuario[]         = ur.status === 'fulfilled' ? ur.value.data : [];
+        if (pr.status === 'fulfilled') setProductos(pr.value.data as Producto[]);
 
         const found = registros.find(r => r.id_registro === Number(id));
         if (!found) { setError('Registro no encontrado'); setLoading(false); return; }
@@ -131,6 +134,9 @@ export default function InvoicePage() {
     ?? (user?.nombre_usuario ? `@${user.nombre_usuario}` : null)
     ?? WORKSHOP_CONTACT.email;
   const placa = reg.placa?.trim() || '—';
+
+  const productoById = (id?: number | null) =>
+    id ? productos.find(p => p.id_producto === id) : undefined;
 
   /* Separar los detalles en mano de obra y repuestos para la factura */
   const manoItems = detalles.filter(d => detalleKind(d) === 'mano');
@@ -258,15 +264,26 @@ export default function InvoicePage() {
               Datos del Vehículo
             </h2>
 
-            {/* Placa destacada */}
-            <div className="mb-3 p-3 rounded-xl flex items-center justify-between"
-                 style={{ background: '#0C0C10', border: '2px solid #E11428' }}>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                Placa
-              </span>
-              <span className="font-mono font-black text-white" style={{ fontSize: 24, letterSpacing: '0.18em' }}>
-                {placa}
-              </span>
+            {/* Placa + foto moto */}
+            <div className="mb-3 flex gap-3">
+              <div className="flex-1 p-3 rounded-xl flex items-center justify-between"
+                   style={{ background: '#0C0C10', border: '2px solid #E11428' }}>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  Placa
+                </span>
+                <span className="font-mono font-black text-white" style={{ fontSize: 22, letterSpacing: '0.18em' }}>
+                  {placa}
+                </span>
+              </div>
+              {reg.ruta_imagen_moto && (
+                <img
+                  src={reg.ruta_imagen_moto}
+                  alt={`${reg.marca_moto} ${reg.modelo_moto}`}
+                  className="rounded-xl object-cover shrink-0"
+                  style={{ width: 64, height: 64, border: '2px solid #E5E7EB' }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-2">
@@ -288,17 +305,25 @@ export default function InvoicePage() {
         </div>
 
         {/* ── Detalle del servicio ── */}
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-4">
-            Detalle del Servicio
-          </h2>
+        <div className="border-b border-gray-200">
+          <div className="px-6 pt-5 pb-2 flex items-center gap-2">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
+              Detalle del Servicio
+            </h2>
+            {hayDetalles && (
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: '#F3F4F6', color: '#6B7280' }}>
+                {detalles.length} ítem{detalles.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
           <table className="w-full" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#0C0C10' }}>
-                {['Cant.', 'Código', 'Descripción del servicio', 'Precio unitario', 'Total'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left"
-                      style={{ color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: 800,
-                               textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                {['', 'Cant.', 'Descripción del servicio / repuesto', 'P. Unit.', 'Total'].map((h, idx) => (
+                  <th key={idx} className={`px-3 py-2.5 ${idx >= 3 ? 'text-right' : 'text-left'}`}
+                      style={{ color: 'rgba(255,255,255,0.75)', fontSize: 9, fontWeight: 800,
+                               textTransform: 'uppercase', letterSpacing: '0.1em', width: idx === 0 ? 4 : undefined }}>
                     {h}
                   </th>
                 ))}
@@ -307,58 +332,97 @@ export default function InvoicePage() {
             <tbody>
               {!hayDetalles && (
                 <tr style={{ borderBottom: '1px solid #F0F1F3' }}>
-                  <td className="px-4 py-3.5 text-sm text-gray-600">1</td>
-                  <td className="px-4 py-3.5 text-xs font-mono text-gray-400">SRV-{String(reg.id_registro).padStart(4,'0')}</td>
-                  <td className="px-4 py-3.5">
+                  <td style={{ width: 4, background: '#0C0C10', padding: 0 }} />
+                  <td className="px-3 py-3.5 text-sm text-gray-600">1</td>
+                  <td className="px-3 py-3.5">
                     <p className="text-sm font-bold text-gray-800">{reg.tipo_servicio || 'Servicio de mantenimiento'}</p>
                     {reg.descripcion && (
                       <p className="text-xs text-gray-500 mt-0.5 font-normal leading-relaxed">{reg.descripcion}</p>
                     )}
                   </td>
-                  <td className="px-4 py-3.5 text-sm text-gray-600 text-right">{fmtMoney(reg.costo_total)}</td>
-                  <td className="px-4 py-3.5 text-sm font-black text-gray-900 text-right">{fmtMoney(reg.costo_total)}</td>
+                  <td className="px-3 py-3.5 text-sm text-gray-600 text-right">{fmtMoney(reg.costo_total)}</td>
+                  <td className="px-3 py-3.5 text-sm font-black text-gray-900 text-right">{fmtMoney(reg.costo_total)}</td>
                 </tr>
               )}
 
               {/* ── Mano de obra ── */}
               {manoItems.length > 0 && (
-                <tr style={{ background: '#EFF4FF' }}>
-                  <td colSpan={5} className="px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: '#1D4ED8' }}>
-                    Mano de obra
+                <tr>
+                  <td colSpan={5} style={{ padding: 0 }}>
+                    <div className="flex items-center gap-3 px-4 py-2"
+                         style={{ background: 'linear-gradient(90deg,#EFF6FF,#F8FAFF)', borderLeft: '3px solid #3B82F6' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                      </svg>
+                      <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#1D4ED8' }}>
+                        Mano de obra — {manoItems.length} ítem{manoItems.length !== 1 ? 's' : ''}
+                      </span>
+                      <span className="ml-auto text-[11px] font-bold" style={{ color: '#1D4ED8' }}>{fmtMoney(totalMano)}</span>
+                    </div>
                   </td>
                 </tr>
               )}
               {manoItems.map((d, i) => (
-                <tr key={`m${i}`} style={{ borderBottom: '1px solid #F0F1F3' }}>
-                  <td className="px-4 py-3 text-sm text-gray-600">{d.cantidad ?? 1}</td>
-                  <td className="px-4 py-3 text-xs font-mono text-gray-400">MO-{String(i + 1).padStart(2, '0')}</td>
-                  <td className="px-4 py-3"><p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Mano de obra'}</p></td>
-                  <td className="px-4 py-3 text-sm text-gray-600 text-right">{fmtMoney(Number(d.precioUnitario ?? 0))}</td>
-                  <td className="px-4 py-3 text-sm font-black text-gray-900 text-right">{fmtMoney(Number(d.subtotal ?? 0))}</td>
+                <tr key={`m${i}`} style={{ borderBottom: '1px solid #F0F1F3', background: i % 2 === 0 ? '#FAFBFF' : '#FFFFFF' }}>
+                  <td style={{ width: 4, background: '#3B82F6', padding: 0 }} />
+                  <td className="px-3 py-3 text-sm text-gray-500 font-mono text-center">{d.cantidad ?? 1}</td>
+                  <td className="px-3 py-3">
+                    <p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Mano de obra'}</p>
+                    <p className="text-[10px] text-blue-400 mt-0.5 font-semibold">MO-{String(i + 1).padStart(2, '0')}</p>
+                  </td>
+                  <td className="px-3 py-3 text-sm text-gray-500 text-right">{fmtMoney(Number(d.precioUnitario ?? 0))}</td>
+                  <td className="px-3 py-3 text-sm font-black text-gray-800 text-right">{fmtMoney(Number(d.subtotal ?? 0))}</td>
                 </tr>
               ))}
 
               {/* ── Repuestos ── */}
               {repItems.length > 0 && (
-                <tr style={{ background: '#FFF7ED' }}>
-                  <td colSpan={5} className="px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: '#C2410C' }}>
-                    Repuestos
+                <tr>
+                  <td colSpan={5} style={{ padding: 0 }}>
+                    <div className="flex items-center gap-3 px-4 py-2"
+                         style={{ background: 'linear-gradient(90deg,#FFFBEB,#FFFDF7)', borderLeft: '3px solid #F59E0B' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                      </svg>
+                      <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#D97706' }}>
+                        Repuestos — {repItems.length} ítem{repItems.length !== 1 ? 's' : ''}
+                      </span>
+                      <span className="ml-auto text-[11px] font-bold" style={{ color: '#D97706' }}>{fmtMoney(totalRep)}</span>
+                    </div>
                   </td>
                 </tr>
               )}
               {repItems.map((d, i) => {
+                const prod = productoById(d.idProducto);
                 const cat = d.idProducto != null ? 'inventario' : (detalleCategoria(d.descripcion) ?? '');
                 const catLbl = d.idProducto != null ? 'Inventario' : categoriaLabel(cat);
                 return (
-                  <tr key={`r${i}`} style={{ borderBottom: '1px solid #F0F1F3' }}>
-                    <td className="px-4 py-3 text-sm text-gray-600">{d.cantidad ?? 1}</td>
-                    <td className="px-4 py-3 text-xs font-mono text-gray-400">RP-{String(i + 1).padStart(2, '0')}</td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Repuesto'}</p>
-                      {catLbl && <p className="text-[10px] text-gray-400 mt-0.5">{catLbl}</p>}
+                  <tr key={`r${i}`} style={{ borderBottom: '1px solid #F0F1F3', background: i % 2 === 0 ? '#FFFDF7' : '#FFFFFF' }}>
+                    <td style={{ width: 4, background: '#F59E0B', padding: 0 }} />
+                    <td className="px-3 py-3 text-sm text-gray-500 font-mono text-center">{d.cantidad ?? 1}</td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-3">
+                        {prod?.ruta_imagenproductos ? (
+                          <img src={prod.ruta_imagenproductos} alt={prod.nombre}
+                            className="rounded-lg object-cover shrink-0"
+                            style={{ width: 40, height: 40, border: '1px solid #E5E7EB' }}
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : null}
+                        <div>
+                          <p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Repuesto'}</p>
+                          {catLbl && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5"
+                              style={{ background: '#FEF3C7', color: '#D97706' }}>
+                              {catLbl}
+                            </span>
+                          )}
+                          <p className="text-[10px] text-amber-400 mt-0.5 font-semibold">RP-{String(i + 1).padStart(2, '0')}</p>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 text-right">{fmtMoney(Number(d.precioUnitario ?? 0))}</td>
-                    <td className="px-4 py-3 text-sm font-black text-gray-900 text-right">{fmtMoney(Number(d.subtotal ?? 0))}</td>
+                    <td className="px-3 py-3 text-sm text-gray-500 text-right">{fmtMoney(Number(d.precioUnitario ?? 0))}</td>
+                    <td className="px-3 py-3 text-sm font-black text-gray-800 text-right">{fmtMoney(Number(d.subtotal ?? 0))}</td>
                   </tr>
                 );
               })}
@@ -401,39 +465,52 @@ export default function InvoicePage() {
 
           {/* Total */}
           <div className="p-6 flex flex-col justify-between">
-            <div className="space-y-2 mb-4">
+            <div className="space-y-1.5 mb-4">
               {hayDetalles && (
                 <>
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#3B82F6' }} /> Mano de obra:</span>
-                    <span className="font-bold">{fmtMoney(totalMano)}</span>
+                  <div className="flex justify-between items-center py-2 px-3 rounded-lg"
+                       style={{ background: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+                    <span className="text-xs text-blue-700 font-semibold flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#3B82F6', flexShrink: 0 }} />
+                      Mano de obra
+                    </span>
+                    <span className="font-black text-blue-800 text-sm">{fmtMoney(totalMano)}</span>
                   </div>
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#F59E0B' }} /> Repuestos:</span>
-                    <span className="font-bold">{fmtMoney(totalRep)}</span>
+                  <div className="flex justify-between items-center py-2 px-3 rounded-lg"
+                       style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                    <span className="text-xs text-amber-700 font-semibold flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#F59E0B', flexShrink: 0 }} />
+                      Repuestos
+                    </span>
+                    <span className="font-black text-amber-800 text-sm">{fmtMoney(totalRep)}</span>
                   </div>
-                  <div className="border-t border-gray-100 my-1" />
+                  <div className="border-t border-dashed border-gray-200 my-2" />
                 </>
               )}
-              <div className="flex justify-between text-xs text-gray-500">
+              <div className="flex justify-between text-xs text-gray-500 px-1">
                 <span>Subtotal:</span>
-                <span className="font-bold">{fmtMoney(subtotalFactura)}</span>
+                <span className="font-bold text-gray-700">{fmtMoney(subtotalFactura)}</span>
               </div>
-              <div className="flex justify-between text-xs text-gray-500">
+              <div className="flex justify-between text-xs text-gray-400 px-1">
                 <span>IVA (no aplica):</span>
                 <span>$0.00</span>
               </div>
-              <div className="border-t border-gray-200 my-1" />
             </div>
-            <div className="p-4 rounded-2xl flex justify-between items-center"
-                 style={{ background: 'linear-gradient(135deg, #E11428, #B91C1C)' }}>
-              <div>
-                <p className="text-white/80 text-xs font-bold uppercase tracking-wider">Total del servicio</p>
-                <p className="text-white/60 text-[10px]">Forma de pago: Efectivo</p>
+            <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(225,20,40,0.25)' }}>
+              <div className="p-4" style={{ background: 'linear-gradient(135deg, #E11428 0%, #B91C1C 60%, #7f1010 100%)' }}>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-white/70 text-[9px] font-black uppercase tracking-[0.2em]">Total a pagar</p>
+                    <p className="text-white font-black leading-none mt-1" style={{ fontSize: 32, letterSpacing: '-1px' }}>
+                      {fmtMoney(subtotalFactura)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white/50 text-[9px] font-bold uppercase">Efectivo</p>
+                    <p className="text-white/30 text-[9px] mt-0.5">Sin IVA</p>
+                  </div>
+                </div>
               </div>
-              <p className="text-white font-black text-2xl" style={{ letterSpacing: '-0.5px' }}>
-                {fmtMoney(subtotalFactura)}
-              </p>
             </div>
           </div>
         </div>
@@ -450,6 +527,25 @@ export default function InvoicePage() {
               <p className="text-[10px] text-gray-400 mt-0.5 text-center">{sub}</p>
             </div>
           ))}
+        </div>
+
+        {/* ── Garantía ── */}
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between"
+             style={{ background: 'linear-gradient(90deg,#F0FDF4,#ECFDF5)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                 style={{ background: '#10B981', boxShadow: '0 0 16px rgba(16,185,129,0.4)' }}>
+              <CheckCircle size={18} className="text-white" />
+            </div>
+            <div>
+              <p className="text-[11px] font-black text-emerald-800 uppercase tracking-wider">Garantía de servicio</p>
+              <p className="text-[10px] text-emerald-600 mt-0.5">30 días en mano de obra · 90 días en repuestos instalados</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Presenta este comprobante</p>
+            <p className="text-[9px] text-emerald-500">para hacer válida tu garantía</p>
+          </div>
         </div>
 
         {/* ── Pie ── */}
@@ -487,8 +583,17 @@ export default function InvoicePage() {
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { background: white !important; }
-          .invoice-print { box-shadow: none !important; border-radius: 0 !important; }
+          body { background: white !important; margin: 0 !important; }
+          .invoice-print {
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+          }
+          @page { margin: 0.5cm; size: A4; }
+        }
+        .invoice-print table td, .invoice-print table th {
+          break-inside: avoid;
         }
       `}</style>
     </div>

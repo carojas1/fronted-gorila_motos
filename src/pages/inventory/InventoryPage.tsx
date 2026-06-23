@@ -4,12 +4,12 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, ShoppingCart, Tags, FolderPlus, Minus, UserCheck, Mail } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, ShoppingCart, Tags, FolderPlus, Minus, UserCheck, Mail, Camera } from 'lucide-react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import gsap from 'gsap';
-import { productosApi, categoriasApi, usuariosApi, motosApi, facturasApi, detallesFacturaApi } from '../../lib/api';
+import { productosApi, categoriasApi, usuariosApi, motosApi, facturasApi, detallesFacturaApi, uploadWithRetry } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
 import { useToast } from '../../components/ui/Toast';
 import { fmtMoney, getErrorMsg, nextProductCode } from '../../lib/utils';
@@ -73,6 +73,11 @@ export default function InventoryPage() {
   const [sellTarget,    setSellTarget]    = useState<Producto | null>(null);
   const [sellQty,       setSellQty]       = useState('1');
   const [selling,       setSelling]       = useState(false);
+
+  /* Fotos de producto */
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoTarget, setPhotoTarget]   = useState<Producto | null>(null);
+  const [photoUploading, setPhotoUploading] = useState<Record<number, boolean>>({});
 
   /* Venta Normal — con cliente registrado, busca por email o placa */
   const [vnTarget,      setVnTarget]      = useState<Producto | null>(null);
@@ -345,6 +350,31 @@ export default function InventoryPage() {
     finally { setVnSending(false); }
   };
 
+  /* ─── Fotos ─── */
+  const handlePhotoClick = (p: Producto) => {
+    setPhotoTarget(p);
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !photoTarget) return;
+    const id = photoTarget.id_producto;
+    setPhotoUploading(prev => ({ ...prev, [id]: true }));
+    try {
+      const url = await uploadWithRetry('/productos/upload', file);
+      await productosApi.update(id, { ruta_imagenproductos: url } as unknown as Record<string, unknown>);
+      toast.success('Foto de producto actualizada');
+      fetchData();
+    } catch (err) {
+      toast.error(getErrorMsg(err));
+    } finally {
+      setPhotoUploading(prev => ({ ...prev, [id]: false }));
+      setPhotoTarget(null);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
+
   const catName = (id: number) =>
     categorias.find((c) => c.id_categoria === id)?.nombre ?? '—';
 
@@ -478,8 +508,25 @@ export default function InventoryPage() {
                   : filtered.map((p) => (
                     <tr key={p.id_producto}>
                       <td>
-                        <p className="font-semibold text-white/85">{p.nombre}</p>
-                        <p className="text-[11px] text-white/30 truncate max-w-[180px] mt-0.5">{p.descripcion}</p>
+                        <div className="flex items-center gap-3">
+                          {p.ruta_imagenproductos ? (
+                            <img
+                              src={p.ruta_imagenproductos}
+                              alt={p.nombre}
+                              className="w-10 h-10 rounded-xl object-cover shrink-0"
+                              style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                              <Package size={16} className="text-white/20" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-semibold text-white/85">{p.nombre}</p>
+                            <p className="text-[11px] text-white/30 truncate max-w-[140px] mt-0.5">{p.descripcion}</p>
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <span className="font-mono text-[11px] text-white/45 bg-white/[0.04] px-2 py-1 rounded-md border border-white/[0.06]">
@@ -516,6 +563,15 @@ export default function InventoryPage() {
                             style={p.stock <= 0 ? { opacity: 0.3, cursor: 'not-allowed' } : { color: '#60A5FA' }}
                           >
                             <UserCheck size={13} />
+                          </button>
+                          <button
+                            onClick={() => handlePhotoClick(p)}
+                            className="icon-btn"
+                            title={p.ruta_imagenproductos ? 'Cambiar foto' : 'Subir foto'}
+                            disabled={!!photoUploading[p.id_producto]}
+                            style={{ color: p.ruta_imagenproductos ? '#10B981' : undefined, opacity: photoUploading[p.id_producto] ? 0.5 : 1 }}
+                          >
+                            <Camera size={13} />
                           </button>
                           <button onClick={() => openEdit(p)} className="icon-btn" title="Editar">
                             <Pencil size={13} />
@@ -717,6 +773,15 @@ export default function InventoryPage() {
           <span className="text-white/30 text-xs mt-1 block">Esta acción no se puede deshacer.</span>
         </p>
       </Modal>
+
+      {/* Input oculto para subir fotos de productos */}
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handlePhotoFile}
+      />
 
       {/* ─── Modal Venta Normal (con cliente registrado) ─── */}
       <Modal

@@ -27,6 +27,7 @@ interface LineItem {
   cantidad:   number;
   precio:     number;
   categoria:  string;          // solo repuesto manual
+  foto?:      string | null;   // foto del producto de inventario
 }
 
 interface DetalleDTO {
@@ -112,6 +113,7 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
       uid: nextUid(), kind: 'repuesto', idProducto: prod.id_producto,
       nombre: prod.nombre || prod.descripcion || 'Repuesto', cantidad: 1,
       precio: Number(prod.pvp ?? 0), categoria: '',
+      foto: prod.ruta_imagenproductos ?? null,
     }]);
     setProdOpen(false); setProdQuery('');
   };
@@ -204,7 +206,17 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
 
         {/* Descripción */}
         {esInv ? (
-          <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: txt }}>{i.nombre}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            {i.foto ? (
+              <img src={i.foto} alt={i.nombre}
+                style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: `1px solid ${border}` }} />
+            ) : (
+              <div style={{ width: 44, height: 44, borderRadius: 8, background: isDark ? 'rgba(255,255,255,0.05)' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Package size={18} color={muted} />
+              </div>
+            )}
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: txt }}>{i.nombre}</p>
+          </div>
         ) : (
           <input
             value={i.nombre}
@@ -312,6 +324,14 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
                     onClick={() => addProducto(p)}
                     style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: 'none', border: 'none', borderBottom: `1px solid ${border}`, cursor: 'pointer' }}
                   >
+                    {p.ruta_imagenproductos ? (
+                      <img src={p.ruta_imagenproductos} alt={p.nombre}
+                        style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: `1px solid ${border}` }} />
+                    ) : (
+                      <div style={{ width: 40, height: 40, borderRadius: 8, background: isDark ? 'rgba(255,255,255,0.05)' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Package size={16} color={muted} />
+                      </div>
+                    )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: txt, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre || p.descripcion}</p>
                       <p style={{ margin: 0, fontSize: 11, color: muted }}>{p.codigo_personal} · Stock {p.stock}</p>
