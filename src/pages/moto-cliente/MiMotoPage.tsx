@@ -493,16 +493,16 @@ export default function MiMotoPage() {
                 </div>
 
                 {/* ── Actualizar kilometraje ── */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 14 }}>
-                  <Gauge size={14} color="rgba(255,255,255,0.4)" />
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>Odómetro actual:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderRadius: 10, border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC', marginBottom: 14 }}>
+                  <Gauge size={14} color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.45)'} />
+                  <span style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(21,21,27,0.6)', flexShrink: 0 }}>Odómetro actual:</span>
                   <input
                     type="number" min="0"
                     value={kmMoto[moto.id_moto] ?? ''}
                     onChange={e => setKmMoto(prev => ({ ...prev, [moto.id_moto]: e.target.value }))}
-                    style={{ flex: 1, height: 34, borderRadius: 8, padding: '0 10px', background: '#1A1A22', border: '1px solid rgba(255,255,255,0.1)', color: '#EBEBEB', fontSize: 13, outline: 'none' }}
+                    style={{ flex: 1, height: 34, borderRadius: 8, padding: '0 10px', background: isDark ? '#1A1A22' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC', color: isDark ? '#EBEBEB' : '#15151B', fontSize: 13, outline: 'none' }}
                   />
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>km</span>
+                  <span style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.45)', flexShrink: 0 }}>km</span>
                   <button
                     onClick={() => actualizarKm(moto)}
                     disabled={savingKm === moto.id_moto}
@@ -643,8 +643,8 @@ export default function MiMotoPage() {
                   {...regMoto('tipo_moto')}
                   style={{
                     width: '100%', height: 42, borderRadius: 10, padding: '0 12px',
-                    background: '#1A1A22', border: `1px solid ${errMoto.tipo_moto ? '#E11428' : 'rgba(255,255,255,0.1)'}`,
-                    color: '#EBEBEB', fontSize: 13, outline: 'none',
+                    background: isDark ? '#1A1A22' : '#FFFFFF', border: `1px solid ${errMoto.tipo_moto ? '#E11428' : (isDark ? 'rgba(255,255,255,0.1)' : '#E4E7EC')}`,
+                    color: isDark ? '#EBEBEB' : '#15151B', fontSize: 13, outline: 'none',
                   }}
                 >
                   <option value="">Selecciona…</option>

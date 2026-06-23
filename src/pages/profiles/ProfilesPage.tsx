@@ -690,12 +690,12 @@ export default function ProfilesPage() {
                 const rolNombre = roles.find(r => r.id_rol === selectedRol)?.nombre?.toUpperCase() ?? "";
                 if (rolNombre === "MECANICO") {
                   return (
-                    <div className="space-y-1 p-3 rounded-xl" style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                      <p className="text-[10px] text-blue-400/70 mb-2">Elige qué puede ver este mecánico:</p>
+                    <div className="space-y-1 p-3 rounded-xl" style={{ background: isDark ? "rgba(0,0,0,0.2)" : "rgba(0,0,0,0.04)", border: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid #E4E7EC" }}>
+                      <p className="text-[10px] mb-2" style={{ color: isDark ? "rgba(96,165,250,0.7)" : "#2563EB" }}>Elige qué puede ver este mecánico:</p>
                       {MECANICO_MODULES.map(m => {
                         const checked = selectedModulos.includes(m.key);
                         return (
-                          <label key={m.key} className="flex items-center gap-2.5 py-1.5 border-b border-white/[0.04] last:border-0 cursor-pointer group">
+                          <label key={m.key} className="flex items-center gap-2.5 py-1.5 last:border-0 cursor-pointer group" style={{ borderBottom: isDark ? "1px solid rgba(255,255,255,0.04)" : "1px solid rgba(0,0,0,0.06)" }}>
                             <input
                               type="checkbox"
                               checked={checked}
@@ -705,10 +705,10 @@ export default function ProfilesPage() {
                               className="accent-blue-500 w-3.5 h-3.5 shrink-0"
                             />
                             <div className="flex-1 min-w-0">
-                              <span className="text-[12px] font-bold" style={{ color: checked ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.3)" }}>
+                              <span className="text-[12px] font-bold" style={{ color: checked ? (isDark ? "rgba(255,255,255,0.85)" : "#15151B") : (isDark ? "rgba(255,255,255,0.3)" : "rgba(21,21,27,0.55)") }}>
                                 {m.label}
                               </span>
-                              <span className="text-[10px] text-white/22 ml-1.5">{m.desc}</span>
+                              <span className="text-[10px] ml-1.5" style={{ color: isDark ? "rgba(255,255,255,0.22)" : "rgba(21,21,27,0.45)" }}>{m.desc}</span>
                             </div>
                           </label>
                         );
@@ -716,9 +716,9 @@ export default function ProfilesPage() {
                       <div className="flex gap-2 pt-2">
                         <button onClick={() => setSelectedModulos(MECANICO_MODULES.map(m => m.key))}
                           className="text-[10px] text-blue-400/70 hover:text-blue-400 transition-colors font-bold">Todos</button>
-                        <span className="text-white/15">·</span>
+                        <span style={{ color: isDark ? "rgba(255,255,255,0.15)" : "rgba(21,21,27,0.2)" }}>·</span>
                         <button onClick={() => setSelectedModulos([])}
-                          className="text-[10px] text-white/25 hover:text-white/50 transition-colors font-bold">Ninguno</button>
+                          className="text-[10px] hover:opacity-80 transition-colors font-bold" style={{ color: isDark ? "rgba(255,255,255,0.25)" : "rgba(21,21,27,0.5)" }}>Ninguno</button>
                       </div>
                     </div>
                   );

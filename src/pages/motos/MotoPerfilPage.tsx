@@ -413,16 +413,16 @@ export default function MotoPerfilPage() {
               const estColor = estColors[r.estado] ?? '#94A3B8';
               const estLabel = ESTADO_REGISTRO[r.estado]?.label ?? '—';
               return (
-                <div key={r.id_registro} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: '#0E0E14', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 11 }}>
+                <div key={r.id_registro} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: isDark ? '#0E0E14' : '#F8F9FB', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC', borderRadius: 11 }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: estColor, flexShrink: 0, boxShadow: `0 0 6px ${estColor}99` }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>{r.tipo_servicio ?? 'Servicio'}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(21,21,27,0.85)' }}>{r.tipo_servicio ?? 'Servicio'}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.45)' }}>
                       {fmtDate(r.fecha)}{r.kilometraje ? ` · ${r.kilometraje.toLocaleString('es-EC')} km` : ''}
                     </p>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,0.8)' }}>{fmtMoney(r.costo_total ?? 0)}</p>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(21,21,27,0.8)' }}>{fmtMoney(r.costo_total ?? 0)}</p>
                     <p style={{ margin: '2px 0 0', fontSize: 10, fontWeight: 700, color: estColor }}>{estLabel}</p>
                   </div>
                 </div>

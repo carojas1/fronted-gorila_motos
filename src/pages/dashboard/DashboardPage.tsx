@@ -588,7 +588,7 @@ function WebDashboard() {
           </Link>
         </div>
         <div className="recharts-custom h-52">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <AreaChart data={areaData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="gradOrdenes" x1="0" y1="0" x2="0" y2="1">
@@ -634,7 +634,7 @@ function WebDashboard() {
           </div>
           <div className="flex items-center gap-4">
             <div className="recharts-custom w-36 h-36 shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" strokeWidth={2} stroke="rgba(0,0,0,0.5)">
                     {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}

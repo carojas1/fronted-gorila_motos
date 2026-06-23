@@ -152,9 +152,12 @@ export default function InvoicePage() {
           <div className="flex items-center justify-between">
             {/* Logo + taller */}
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center"
-                   style={{ background: 'linear-gradient(135deg,#E11428,#7a000e)', border: '2px solid rgba(225,20,40,0.5)', boxShadow: '0 0 20px rgba(225,20,40,0.3)', fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: '-1px' }}>
-                GM
+              <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 relative"
+                   style={{ border: '2px solid rgba(225,20,40,0.5)', boxShadow: '0 0 20px rgba(225,20,40,0.3)', background: 'linear-gradient(135deg,#E11428,#7a000e)' }}>
+                <img src="/brand/gorila-logo.png" alt="Gorila Motos"
+                     className="w-full h-full object-cover relative z-10"
+                     onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <span className="absolute inset-0 flex items-center justify-center text-white font-black text-lg" style={{ letterSpacing: '-1px' }}>GM</span>
               </div>
               <div>
                 <h1 className="text-white font-black text-xl leading-none" style={{ fontFamily: "'Dancing Script', cursive" }}>

@@ -11,6 +11,7 @@ import {
   Info, ChevronDown, ChevronUp, Check, RotateCcw, MessageCircle, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../lib/theme';
 import { mantenimientosApi } from '../../lib/api';
 import { whatsappCitaLink, WORKSHOP_CONTACT } from '../../lib/constants';
 import {
@@ -26,9 +27,9 @@ const ICON_BY_TIPO: Record<string, LucideIcon> = {
   LLANTA_TRASERA: Circle, FRENOS: Disc, REVISION_GENERAL: ClipboardCheck,
 };
 
-function BarraDesgaste({ pct, color }: { pct: number; color: string }) {
+function BarraDesgaste({ pct, color, isDark = true }: { pct: number; color: string; isDark?: boolean }) {
   return (
-    <div style={{ height: 7, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', position: 'relative' }}>
+    <div style={{ height: 7, borderRadius: 99, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(21,21,27,0.08)', overflow: 'hidden', position: 'relative' }}>
       <div style={{
         height: '100%', width: `${Math.min(100, pct)}%`,
         background: `linear-gradient(90deg, ${color}AA, ${color})`,
@@ -41,6 +42,8 @@ function BarraDesgaste({ pct, color }: { pct: number; color: string }) {
 /* ════════ Estado de mantenimiento de UNA moto ════════ */
 export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?: boolean }) {
   const { isAdmin, isMecanico } = useAuth();
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   const canService = isAdmin || isMecanico;       // solo mecánico/admin marca cambios
   const [servicios, setServicios] = useState<Record<string, number>>({});
   const [errorServ, setErrorServ] = useState(false);
@@ -123,7 +126,7 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
             </span>
           )}
         </div>
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{etiquetaCC(moto.cilindraje)}</span>
+        <span style={{ fontSize: 11, color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.5)' }}>{etiquetaCC(moto.cilindraje)}</span>
       </div>
 
       {errorServ && (
@@ -139,14 +142,14 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
           const ec         = ESTADO_COLOR[e.estado];
           const yaCambiado = e.ultimoCambioKm > 0;
           return (
-            <div key={e.tipo} style={{ background: '#0E0E14', border: `1px solid ${ec.border}`, borderRadius: 12, padding: '12px 14px' }}>
+            <div key={e.tipo} style={{ background: isDark ? '#0E0E14' : '#F8F9FB', border: `1px solid ${ec.border}`, borderRadius: 12, padding: '12px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: ec.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Icon size={15} color={ec.color} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ color: '#EBEBEB', fontWeight: 700, fontSize: 13, margin: 0 }}>{e.label}</p>
-                  <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10.5, margin: '1px 0 0' }}>
+                  <p style={{ color: isDark ? '#EBEBEB' : '#15151B', fontWeight: 700, fontSize: 13, margin: 0 }}>{e.label}</p>
+                  <p style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.5)', fontSize: 10.5, margin: '1px 0 0' }}>
                     Cambio cada {e.intervaloKm.toLocaleString('es-EC')} km
                     {yaCambiado && ` · último: ${e.ultimoCambioKm.toLocaleString('es-EC')} km`}
                   </p>
@@ -158,10 +161,10 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
                   </p>
                 </div>
               </div>
-              <BarraDesgaste pct={e.porcentajeDesgaste} color={ec.color} />
+              <BarraDesgaste pct={e.porcentajeDesgaste} color={ec.color} isDark={isDark} />
               {!compact && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 7, gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.3)' }}>
+                  <span style={{ fontSize: 10.5, color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.5)' }}>
                     {e.estado === 'VENCIDO'
                       ? `Excede por ${Math.abs(e.kmRestante).toLocaleString('es-EC')} km`
                       : `Faltan ${e.kmRestante.toLocaleString('es-EC')} km`}
@@ -174,7 +177,7 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
                           <Check size={11} /> registrado
                         </span>
                         <button onClick={() => deshacer(e.tipo)} title="Deshacer"
-                          style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.5)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                           <RotateCcw size={10} /> deshacer
                         </button>
                       </div>
@@ -212,7 +215,7 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
 
       {/* Nota para el mecánico */}
       {canService && (
-        <p style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.3)', margin: '10px 0 0', lineHeight: 1.5 }}>
+        <p style={{ fontSize: 10.5, color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.5)', margin: '10px 0 0', lineHeight: 1.5 }}>
           Al revisar la moto, marca lo que realmente cambiaste a estos {moto.kilometraje.toLocaleString('es-EC')} km.
           Esa pieza se reinicia a 0%; las demás siguen acumulando hasta su próximo cambio.
         </p>
@@ -226,31 +229,31 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
         <Info size={13} /> ¿Cómo calculamos esto?
         {showInfo ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
       </button>
-      {showInfo && <ExplicacionCalculo cc={moto.cilindraje} />}
+      {showInfo && <ExplicacionCalculo cc={moto.cilindraje} isDark={isDark} />}
     </div>
   );
 }
 
 /* ════════ Explicación del cálculo para un cilindraje ════════ */
-function ExplicacionCalculo({ cc }: { cc: number }) {
+function ExplicacionCalculo({ cc, isDark = true }: { cc: number; isDark?: boolean }) {
   const rango  = rangoDeCC(cc);
   const params = parametrosDeCC(cc);
   return (
     <div style={{ marginTop: 12, background: 'rgba(59,130,246,0.04)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 12, padding: '14px 16px' }}>
-      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, margin: '0 0 12px' }}>
+      <p style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(21,21,27,0.65)', lineHeight: 1.7, margin: '0 0 12px' }}>
         Tu moto es de <strong style={{ color: rango.color }}>{cc} cc</strong> → categoría{' '}
         <strong style={{ color: rango.color }}>{rango.label}</strong>. El desgaste se mide desde el último cambio real:
       </p>
-      <div style={{ background: '#0B0B10', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 12px', marginBottom: 12 }}>
+      <div style={{ background: isDark ? '#0B0B10' : '#F2F4F7', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC', borderRadius: 8, padding: '10px 12px', marginBottom: 12 }}>
         <code style={{ fontSize: 11, color: '#10B981', display: 'block', lineHeight: 1.8, fontFamily: 'monospace' }}>
           desgaste % = (km actual − km del último cambio) ÷ intervalo × 100<br />
-          <span style={{ color: 'rgba(255,255,255,0.35)' }}>→ 80% = avisamos · 100% = toca cambiar</span>
+          <span style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.5)' }}>→ 80% = avisamos · 100% = toca cambiar</span>
         </code>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 7 }}>
         {params.map(p => (
-          <div key={p.tipo} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '7px 10px' }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#EBEBEB', margin: 0 }}>{p.label}</p>
+          <div key={p.tipo} style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderRadius: 8, padding: '7px 10px' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: isDark ? '#EBEBEB' : '#15151B', margin: 0 }}>{p.label}</p>
             <p style={{ fontSize: 10, color: rango.color, margin: '1px 0 0', fontWeight: 600 }}>cada {p.intervaloKm.toLocaleString('es-EC')} km</p>
           </div>
         ))}
