@@ -11,7 +11,19 @@ import { fmtDate, fmtMoney, extractCedula, extractPhone } from '../../lib/utils'
 import { WORKSHOP_CONTACT } from '../../lib/constants';
 import { useTheme } from '../../lib/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import {
+  detalleKind, cleanDescripcion, detalleCategoria, categoriaLabel, splitTotales,
+} from '../../lib/detalles';
 import type { RegistroDetalle, Usuario } from '../../types';
+
+interface DetalleFila {
+  idDetalleFactura?: number;
+  descripcion?: string | null;
+  cantidad?: number;
+  precioUnitario?: number;
+  subtotal?: number;
+  idProducto?: number | null;
+}
 
 const ESTADO_LABEL: Record<number, { label: string; color: string }> = {
   0: { label: 'Pendiente',  color: '#F59E0B' },
@@ -34,6 +46,7 @@ export default function InvoicePage() {
 
   const [reg,     setReg]     = useState<RegistroDetalle | null>(null);
   const [cliente, setCliente] = useState<Usuario | null>(null);
+  const [detalles, setDetalles] = useState<DetalleFila[]>([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
 
@@ -65,6 +78,12 @@ export default function InvoicePage() {
         const cli = usuarios.find(u => u.nombre_completo === found.nombre_cliente) ?? null;
         setReg(found);
         setCliente(cli);
+
+        // Cargar los detalles reales de la factura (mano de obra + repuestos)
+        try {
+          const { data } = await registrosApi.detalles(found.id_factura);
+          setDetalles((data as DetalleFila[]) ?? []);
+        } catch { setDetalles([]); }
       } catch {
         setError('Error al cargar el comprobante');
       } finally {
@@ -112,6 +131,14 @@ export default function InvoicePage() {
     ?? (user?.nombre_usuario ? `@${user.nombre_usuario}` : null)
     ?? WORKSHOP_CONTACT.email;
   const placa = reg.placa?.trim() || '—';
+
+  /* Separar los detalles en mano de obra y repuestos para la factura */
+  const manoItems = detalles.filter(d => detalleKind(d) === 'mano');
+  const repItems  = detalles.filter(d => detalleKind(d) === 'repuesto');
+  const { mano: totalMano, repuestos: totalRep, total: totalDetalles } = splitTotales(detalles);
+  /* Si no hay detalles cargados (orden vieja), usar el costo_total como mano de obra */
+  const hayDetalles = detalles.length > 0;
+  const subtotalFactura = hayDetalles ? totalDetalles : (reg.costo_total ?? 0);
 
   /* ── Paleta de pantalla (chrome) según tema ── */
   const sc = {
@@ -278,23 +305,63 @@ export default function InvoicePage() {
               </tr>
             </thead>
             <tbody>
-              <tr style={{ borderBottom: '1px solid #F0F1F3' }}>
-                <td className="px-4 py-3.5 text-sm text-gray-600">1</td>
-                <td className="px-4 py-3.5 text-xs font-mono text-gray-400">SRV-{String(reg.id_registro).padStart(4,'0')}</td>
-                <td className="px-4 py-3.5">
-                  <p className="text-sm font-bold text-gray-800">{reg.tipo_servicio || 'Servicio de mantenimiento'}</p>
-                  {reg.descripcion && (
-                    <p className="text-xs text-gray-500 mt-0.5 font-normal leading-relaxed">{reg.descripcion}</p>
-                  )}
-                </td>
-                <td className="px-4 py-3.5 text-sm text-gray-600 text-right">{fmtMoney(reg.costo_total)}</td>
-                <td className="px-4 py-3.5 text-sm font-black text-gray-900 text-right">{fmtMoney(reg.costo_total)}</td>
-              </tr>
-              {[0,1].map(i => (
-                <tr key={i} style={{ borderBottom: '1px solid #F9FAFB' }}>
-                  <td colSpan={5} className="px-4 py-2.5 text-xs text-gray-200">—</td>
+              {!hayDetalles && (
+                <tr style={{ borderBottom: '1px solid #F0F1F3' }}>
+                  <td className="px-4 py-3.5 text-sm text-gray-600">1</td>
+                  <td className="px-4 py-3.5 text-xs font-mono text-gray-400">SRV-{String(reg.id_registro).padStart(4,'0')}</td>
+                  <td className="px-4 py-3.5">
+                    <p className="text-sm font-bold text-gray-800">{reg.tipo_servicio || 'Servicio de mantenimiento'}</p>
+                    {reg.descripcion && (
+                      <p className="text-xs text-gray-500 mt-0.5 font-normal leading-relaxed">{reg.descripcion}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3.5 text-sm text-gray-600 text-right">{fmtMoney(reg.costo_total)}</td>
+                  <td className="px-4 py-3.5 text-sm font-black text-gray-900 text-right">{fmtMoney(reg.costo_total)}</td>
+                </tr>
+              )}
+
+              {/* ── Mano de obra ── */}
+              {manoItems.length > 0 && (
+                <tr style={{ background: '#EFF4FF' }}>
+                  <td colSpan={5} className="px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: '#1D4ED8' }}>
+                    Mano de obra
+                  </td>
+                </tr>
+              )}
+              {manoItems.map((d, i) => (
+                <tr key={`m${i}`} style={{ borderBottom: '1px solid #F0F1F3' }}>
+                  <td className="px-4 py-3 text-sm text-gray-600">{d.cantidad ?? 1}</td>
+                  <td className="px-4 py-3 text-xs font-mono text-gray-400">MO-{String(i + 1).padStart(2, '0')}</td>
+                  <td className="px-4 py-3"><p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Mano de obra'}</p></td>
+                  <td className="px-4 py-3 text-sm text-gray-600 text-right">{fmtMoney(Number(d.precioUnitario ?? 0))}</td>
+                  <td className="px-4 py-3 text-sm font-black text-gray-900 text-right">{fmtMoney(Number(d.subtotal ?? 0))}</td>
                 </tr>
               ))}
+
+              {/* ── Repuestos ── */}
+              {repItems.length > 0 && (
+                <tr style={{ background: '#FFF7ED' }}>
+                  <td colSpan={5} className="px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: '#C2410C' }}>
+                    Repuestos
+                  </td>
+                </tr>
+              )}
+              {repItems.map((d, i) => {
+                const cat = d.idProducto != null ? 'inventario' : (detalleCategoria(d.descripcion) ?? '');
+                const catLbl = d.idProducto != null ? 'Inventario' : categoriaLabel(cat);
+                return (
+                  <tr key={`r${i}`} style={{ borderBottom: '1px solid #F0F1F3' }}>
+                    <td className="px-4 py-3 text-sm text-gray-600">{d.cantidad ?? 1}</td>
+                    <td className="px-4 py-3 text-xs font-mono text-gray-400">RP-{String(i + 1).padStart(2, '0')}</td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Repuesto'}</p>
+                      {catLbl && <p className="text-[10px] text-gray-400 mt-0.5">{catLbl}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 text-right">{fmtMoney(Number(d.precioUnitario ?? 0))}</td>
+                    <td className="px-4 py-3 text-sm font-black text-gray-900 text-right">{fmtMoney(Number(d.subtotal ?? 0))}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -335,9 +402,22 @@ export default function InvoicePage() {
           {/* Total */}
           <div className="p-6 flex flex-col justify-between">
             <div className="space-y-2 mb-4">
+              {hayDetalles && (
+                <>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#3B82F6' }} /> Mano de obra:</span>
+                    <span className="font-bold">{fmtMoney(totalMano)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#F59E0B' }} /> Repuestos:</span>
+                    <span className="font-bold">{fmtMoney(totalRep)}</span>
+                  </div>
+                  <div className="border-t border-gray-100 my-1" />
+                </>
+              )}
               <div className="flex justify-between text-xs text-gray-500">
                 <span>Subtotal:</span>
-                <span className="font-bold">{fmtMoney(reg.costo_total)}</span>
+                <span className="font-bold">{fmtMoney(subtotalFactura)}</span>
               </div>
               <div className="flex justify-between text-xs text-gray-500">
                 <span>IVA (no aplica):</span>
@@ -352,7 +432,7 @@ export default function InvoicePage() {
                 <p className="text-white/60 text-[10px]">Forma de pago: Efectivo</p>
               </div>
               <p className="text-white font-black text-2xl" style={{ letterSpacing: '-0.5px' }}>
-                {fmtMoney(reg.costo_total)}
+                {fmtMoney(subtotalFactura)}
               </p>
             </div>
           </div>

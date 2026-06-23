@@ -139,6 +139,8 @@ export const registrosApi = {
   update:  (id: number, data: Record<string, unknown>) => api.put(`/registros/${id}/factura`, data),
   estado:  (id: number, estado: number) => api.patch(`/registros/${id}/estado`, { estado }),
   remove:  (id: number)  => api.delete(`/registros/${id}`),
+  /** Detalles de la factura asociada a un registro (mano de obra + repuestos). */
+  detalles: (idFactura: number) => api.get(`/registros/${idFactura}/detalles-factura`),
 };
 
 /* ── Productos ── */
