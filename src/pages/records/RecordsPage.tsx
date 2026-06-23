@@ -16,7 +16,7 @@ import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../lib/theme';
 import {
-  fmtDate, fmtMoney, getErrorMsg, ESTADO_REGISTRO, extractPhone, toIsoStr,
+  fmtDate, fmtMoney, getErrorMsg, ESTADO_REGISTRO, extractPhone, extractCedula, toIsoStr,
 } from '../../lib/utils';
 import { calcularEstadoLocal } from '../../lib/mantenimiento';
 import { usePolling } from '../../hooks/usePolling';
@@ -474,14 +474,33 @@ export default function RecordsPage() {
     setHistoryOpen(true);
   };
 
+  /* ─── Filtro de fecha rápido ─── */
+  const [dateFlt, setDateFlt] = useState<'todo' | 'hoy' | 'semana' | 'mes'>('todo');
+
+  const dateRange = (() => {
+    const hoy = new Date();
+    const hoyStr = hoy.toISOString().slice(0, 10);
+    const mesStr = hoy.toISOString().slice(0, 7);
+    const d = hoy.getDay();
+    const mon = new Date(hoy);
+    mon.setDate(hoy.getDate() - (d === 0 ? 6 : d - 1));
+    return { hoy: hoyStr, mes: mesStr, semana: mon.toISOString().slice(0, 10) };
+  })();
+
   /* ─── Filtro ─── */
   const filtered = registros.filter((r) => {
     const q = search.toLowerCase();
-    return (
-      (r.nombre_cliente ?? '').toLowerCase().includes(q) ||
+    const matchText = (r.nombre_cliente ?? '').toLowerCase().includes(q) ||
       (r.placa ?? '').toLowerCase().includes(q) ||
-      (r.tipo_servicio ?? '').toLowerCase().includes(q)
-    ) && (estadoFlt === -1 || r.estado === estadoFlt);
+      (r.tipo_servicio ?? '').toLowerCase().includes(q);
+    const matchEstado = estadoFlt === -1 || r.estado === estadoFlt;
+    const fecha = toIsoStr(r.fecha);
+    const matchDate =
+      dateFlt === 'todo' ? true :
+      dateFlt === 'hoy' ? fecha === dateRange.hoy :
+      dateFlt === 'semana' ? fecha >= dateRange.semana :
+      dateFlt === 'mes' ? fecha.startsWith(dateRange.mes) : true;
+    return matchText && matchEstado && matchDate;
   });
 
   /* ─── Conteos ─── */
@@ -569,6 +588,31 @@ export default function RecordsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        {/* Filtro rápido de fecha */}
+        <div className="flex rounded-xl overflow-hidden shrink-0"
+             style={{ border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#E4E7EC'}` }}>
+          {([
+            { key: 'hoy',    label: 'Hoy'     },
+            { key: 'semana', label: 'Semana'  },
+            { key: 'mes',    label: 'Mes'     },
+            { key: 'todo',   label: 'Todos'   },
+          ] as const).map(({ key, label }) => (
+            <button key={key} onClick={() => setDateFlt(key)}
+              className="px-3 py-1.5 text-[11px] font-bold transition-all"
+              style={{
+                background: dateFlt === key
+                  ? isDark ? 'rgba(225,20,40,0.2)' : 'rgba(225,20,40,0.12)'
+                  : 'transparent',
+                color: dateFlt === key
+                  ? isDark ? '#FF6470' : '#C8001A'
+                  : isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.4)',
+                borderRight: key !== 'todo'
+                  ? `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}` : undefined,
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="flex gap-2 flex-wrap">
           {ESTADOS.map(({ value, label }) => (
             <button
@@ -626,6 +670,17 @@ export default function RecordsPage() {
                             {r.nombre_cliente}
                             <History size={11} className="text-white/20 group-hover:text-gm-red/60" />
                           </button>
+                          {(() => {
+                            const cli = usuarios.find(u => u.nombre_completo === r.nombre_cliente);
+                            const tel = cli ? extractPhone(cli.descripcion) : null;
+                            return tel ? (
+                              <a href={`tel:${tel}`}
+                                className="flex items-center gap-1 text-[10px] text-emerald-400/70 hover:text-emerald-400 mt-0.5"
+                                onClick={e => e.stopPropagation()}>
+                                <Phone size={9}/> {tel}
+                              </a>
+                            ) : null;
+                          })()}
                         </td>
                         <td><span className="plate-tag">{r.placa}</span></td>
                         <td className="text-white/45 max-w-[140px] truncate">{r.tipo_servicio}</td>
@@ -956,6 +1011,48 @@ export default function RecordsPage() {
         size="xl"
         footer={<Button variant="secondary" onClick={() => setHistoryOpen(false)}>Cerrar</Button>}
       >
+        {/* Tarjeta de datos del cliente */}
+        {(() => {
+          const cli = usuarios.find(u => u.nombre_completo === historyName);
+          if (!cli) return null;
+          const tel = extractPhone(cli.descripcion);
+          const ced = extractCedula(cli.descripcion);
+          const totalGastado = clientHistory.reduce((s, r) => s + (r.costo_total ?? 0), 0);
+          return (
+            <div className="mb-4 p-4 rounded-2xl flex flex-wrap gap-4 items-center"
+              style={{ background: isDark ? 'rgba(225,20,40,0.07)' : 'rgba(225,20,40,0.05)',
+                       border: `1px solid ${isDark ? 'rgba(225,20,40,0.15)' : 'rgba(225,20,40,0.15)'}` }}>
+              <div className="flex items-center justify-center w-12 h-12 rounded-full text-xl font-black text-gm-red"
+                style={{ background: isDark ? 'rgba(225,20,40,0.12)' : 'rgba(225,20,40,0.08)' }}>
+                {historyName.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-base" style={{ color: isDark ? 'rgba(255,255,255,0.9)' : '#15151B' }}>
+                  {historyName}
+                </p>
+                <div className="flex flex-wrap gap-3 mt-1">
+                  {ced && (
+                    <span className="text-[11px]" style={{ color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.45)' }}>
+                      CI: {ced}
+                    </span>
+                  )}
+                  {tel && (
+                    <a href={`tel:${tel}`} className="text-[11px] text-emerald-400 flex items-center gap-1">
+                      <Phone size={10}/> {tel}
+                    </a>
+                  )}
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-[10px] uppercase tracking-wider" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.4)' }}>Total histórico</p>
+                <p className="text-lg font-black text-gm-red">{fmtMoney(totalGastado)}</p>
+                <p className="text-[10px]" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.4)' }}>
+                  {clientHistory.length} servicio(s)
+                </p>
+              </div>
+            </div>
+          );
+        })()}
         <div className="space-y-2">
           {clientHistory.length === 0 ? (
             <p className="text-sm text-white/30 text-center py-8">Sin registros para este cliente</p>

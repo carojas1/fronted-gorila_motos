@@ -15,6 +15,9 @@ import {
   CartesianGrid, ReferenceLine,
 } from 'recharts';
 import { registrosApi, pagosEmpleadoApi, usuariosApi, type PagoEmpleadoAPI } from '../../lib/api';
+import { splitTotales, type DetalleLike } from '../../lib/detalles';
+
+type DetalleFila = DetalleLike;
 import { fmtMoney, fmtDate, getErrorMsg, toIsoStr } from '../../lib/utils';
 import { useToast } from '../../components/ui/Toast';
 import Button from '../../components/ui/Button';
@@ -164,7 +167,8 @@ function BusinessChart({ ingresos, gastos, labels, isDark }: {
 /* ─── Exportar datos filtrados a Excel (.xlsx) ─── */
 function exportarExcel(
   ingresos: RegistroDetalle[], gastos: PagoEmpleadoAPI[],
-  empleados: Usuario[], label: string
+  empleados: Usuario[], label: string,
+  detallesMap?: Map<number, DetalleFila[]>
 ) {
   const hoy    = new Date().toISOString().slice(0, 10);
   const nombreEmp = (id: number) => {
@@ -254,6 +258,27 @@ function exportarExcel(
     XLSX.utils.book_append_sheet(wb, wsPag, 'Pagos empleados');
   }
 
+  /* ── Hoja 5: DESGLOSE MANO DE OBRA vs REPUESTOS ── */
+  if (detallesMap && detallesMap.size > 0) {
+    let totalMano = 0, totalRep = 0;
+    const breakRows = ingresos.map(r => {
+      const { mano, repuestos: rep } = splitTotales(detallesMap.get(r.id_registro) ?? []);
+      totalMano += mano;
+      totalRep  += rep;
+      return [toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio', +mano.toFixed(2), +rep.toFixed(2), +(r.costo_total ?? 0).toFixed(2)];
+    });
+    const wsBreak = XLSX.utils.aoa_to_sheet([
+      ['Fecha', 'Placa', 'Tipo de servicio', 'Mano de obra ($)', 'Repuestos ($)', 'Total ($)'],
+      ...breakRows,
+      [],
+      ['', '', 'TOTALES', +totalMano.toFixed(2), +totalRep.toFixed(2), +(totalMano + totalRep).toFixed(2)],
+      ['', '', `Mano de obra:`, `${totalMano > 0 ? ((totalMano / (totalMano + totalRep)) * 100).toFixed(1) : 0}%`, '', ''],
+      ['', '', `Repuestos:`,    `${totalRep > 0 ? ((totalRep / (totalMano + totalRep)) * 100).toFixed(1) : 0}%`, '', ''],
+    ]);
+    wsBreak['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 28 }, { wch: 18 }, { wch: 14 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, wsBreak, 'M.O. vs Repuestos');
+  }
+
   const filename = `gorila_motos_${label.replace(/[\s/\\:*?"<>|]/g, '-')}_${hoy}.xlsx`;
   XLSX.writeFile(wb, filename);
 }
@@ -278,9 +303,12 @@ export default function ContabilidadPage() {
   const [registros,   setRegistros]   = useState<RegistroDetalle[]>([]);
   const [gastos,      setGastos]      = useState<PagoEmpleadoAPI[]>([]);
   const [empleados,   setEmpleados]   = useState<Usuario[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [modalGasto,  setModalGasto]  = useState(false);
-  const [savingGasto, setSavingGasto] = useState(false);
+  const [loading,       setLoading]       = useState(true);
+  const [exportLoading,  setExportLoading]  = useState(false);
+  const [desglose, setDesglose] = useState<{ mano: number; rep: number } | null>(null);
+  const [desgloseLoading, setDesgloseLoading] = useState(false);
+  const [modalGasto,    setModalGasto]    = useState(false);
+  const [savingGasto,   setSavingGasto]   = useState(false);
 
   const hoy  = new Date();
   const anioActual = hoy.getFullYear();
@@ -486,17 +514,33 @@ export default function ContabilidadPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => exportarExcel(
-                filtrar(registros.filter(r => r.estado === 4)),
-                filtrar(gastos),
-                empleados,
-                filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio)
-              )}
+              disabled={exportLoading}
+              onClick={async () => {
+                const ordered = filtrar(registros.filter(r => r.estado === 4));
+                setExportLoading(true);
+                let detallesMap: Map<number, DetalleFila[]> | undefined;
+                try {
+                  const results = await Promise.allSettled(
+                    ordered.map(r => r.id_factura
+                      ? registrosApi.detalles(r.id_factura).then(res => ({ id: r.id_registro, d: res.data as DetalleFila[] }))
+                      : Promise.resolve({ id: r.id_registro, d: [] as DetalleFila[] })
+                    )
+                  );
+                  detallesMap = new Map(
+                    results.flatMap(res => res.status === 'fulfilled' ? [[res.value.id, res.value.d]] : [])
+                  );
+                } catch { /* skip breakdown on error */ }
+                exportarExcel(ordered, filtrar(gastos), empleados,
+                  filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio), detallesMap);
+                setExportLoading(false);
+              }}
               className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-xl transition-all"
-              style={{ background:'rgba(16,185,129,0.1)', color:'#10B981', border:'1px solid rgba(16,185,129,0.2)' }}
-              title="Exportar a Excel (.xlsx)"
+              style={{ background: exportLoading ? 'rgba(16,185,129,0.04)' : 'rgba(16,185,129,0.1)',
+                       color: exportLoading ? 'rgba(16,185,129,0.4)' : '#10B981',
+                       border:'1px solid rgba(16,185,129,0.2)', cursor: exportLoading ? 'wait' : 'pointer' }}
+              title="Exportar a Excel con desglose mano de obra vs repuestos"
             >
-              <Download size={13}/> Exportar Excel
+              <Download size={13}/> {exportLoading ? 'Cargando...' : 'Exportar Excel'}
             </button>
             <Button icon={<Plus size={14}/>} onClick={() => setModalGasto(true)}>
               Registrar gasto
@@ -616,6 +660,75 @@ export default function ContabilidadPage() {
           ))}
         </div>
       )}
+
+      {/* ─── Desglose Mano de Obra vs Repuestos ─── */}
+      <div className="section-enter rounded-2xl p-5 flex flex-wrap gap-4 items-center"
+           style={{ background: isDark ? 'rgba(255,255,255,0.025)' : '#F8F9FC',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#E4E7EC'}` }}>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] tracking-[0.2em] uppercase font-black mb-1"
+             style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.4)' }}>
+            Desglose del período
+          </p>
+          {desglose ? (
+            <div className="flex flex-wrap gap-6">
+              <div>
+                <p className="text-[10px] text-blue-400/70 uppercase font-bold mb-0.5">Mano de obra</p>
+                <p className="text-xl font-black text-blue-400">{fmtMoney(desglose.mano)}</p>
+                {(desglose.mano + desglose.rep) > 0 &&
+                  <p className="text-[10px]" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.35)' }}>
+                    {((desglose.mano / (desglose.mano + desglose.rep)) * 100).toFixed(1)}% del total
+                  </p>}
+              </div>
+              <div>
+                <p className="text-[10px] text-amber-400/70 uppercase font-bold mb-0.5">Repuestos</p>
+                <p className="text-xl font-black text-amber-400">{fmtMoney(desglose.rep)}</p>
+                {(desglose.mano + desglose.rep) > 0 &&
+                  <p className="text-[10px]" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.35)' }}>
+                    {((desglose.rep / (desglose.mano + desglose.rep)) * 100).toFixed(1)}% del total
+                  </p>}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[11px]" style={{ color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(21,21,27,0.35)' }}>
+              Calcula cuánto viene de mano de obra y cuánto de repuestos.
+            </p>
+          )}
+        </div>
+        <button
+          disabled={desgloseLoading}
+          onClick={async () => {
+            const ordered = filtrar(registros.filter(r => r.estado === 4));
+            setDesgloseLoading(true);
+            try {
+              const results = await Promise.allSettled(
+                ordered.map(r => r.id_factura
+                  ? registrosApi.detalles(r.id_factura).then(res => res.data as DetalleFila[])
+                  : Promise.resolve([] as DetalleFila[])
+                )
+              );
+              let mano = 0, rep = 0;
+              for (const r of results) {
+                if (r.status === 'fulfilled') {
+                  const { mano: m, repuestos: rv } = splitTotales(r.value);
+                  mano += m; rep += rv;
+                }
+              }
+              setDesglose({ mano, rep });
+            } catch { /* ignore */ } finally {
+              setDesgloseLoading(false);
+            }
+          }}
+          className="flex items-center gap-1.5 text-[11px] font-bold px-4 py-2.5 rounded-xl transition-all shrink-0"
+          style={{
+            background: desgloseLoading ? 'rgba(59,130,246,0.04)' : 'rgba(59,130,246,0.1)',
+            color: desgloseLoading ? 'rgba(59,130,246,0.4)' : '#3B82F6',
+            border: '1px solid rgba(59,130,246,0.2)',
+            cursor: desgloseLoading ? 'wait' : 'pointer',
+          }}>
+          <Activity size={13}/> {desgloseLoading ? 'Calculando...' : desglose ? 'Recalcular' : 'Calcular desglose'}
+        </button>
+      </div>
 
       {/* ─── Gráfico de negocio profesional ─── */}
       <div className="section-enter gm-card-d rounded-2xl p-6">
