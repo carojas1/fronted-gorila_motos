@@ -14,7 +14,7 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
   CartesianGrid, ReferenceLine,
 } from 'recharts';
-import { registrosApi, pagosEmpleadoApi, usuariosApi, type PagoEmpleadoAPI } from '../../lib/api';
+import { registrosApi, pagosEmpleadoApi, usuariosApi, productosApi, type PagoEmpleadoAPI } from '../../lib/api';
 import { splitTotales, type DetalleLike } from '../../lib/detalles';
 
 type DetalleFila = DetalleLike;
@@ -22,7 +22,7 @@ import { fmtMoney, fmtDate, getErrorMsg, toIsoStr } from '../../lib/utils';
 import { useToast } from '../../components/ui/Toast';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
-import type { RegistroDetalle, Usuario } from '../../types';
+import type { RegistroDetalle, Usuario, Producto } from '../../types';
 import { usePageEntrance } from '../../hooks/useGsap';
 import { useTheme } from '../../lib/theme';
 
@@ -303,10 +303,26 @@ export default function ContabilidadPage() {
   const [registros,   setRegistros]   = useState<RegistroDetalle[]>([]);
   const [gastos,      setGastos]      = useState<PagoEmpleadoAPI[]>([]);
   const [empleados,   setEmpleados]   = useState<Usuario[]>([]);
+  const [productos,   setProductos]   = useState<Producto[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [exportLoading,  setExportLoading]  = useState(false);
   const [desglose, setDesglose] = useState<{ mano: number; rep: number } | null>(null);
   const [desgloseLoading, setDesgloseLoading] = useState(false);
+
+  interface CierreResult {
+    manoRevenue: number;
+    repRevenue:  number;
+    repCosto:    number;
+    repProfit:   number;
+    repMargen:   number;
+    totalRevenue: number;
+    totalCosto:   number;
+    gananciaReal: number;
+    margenReal:   number;
+    label: string;
+  }
+  const [cierre, setCierre] = useState<CierreResult | null>(null);
+  const [cierreLoading, setCierreLoading] = useState(false);
   const [modalGasto,    setModalGasto]    = useState(false);
   const [savingGasto,   setSavingGasto]   = useState(false);
 
@@ -330,19 +346,24 @@ export default function ContabilidadPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [rRes, gRes, uRes] = await Promise.all([
+      const [rRes, gRes, uRes, pRes] = await Promise.all([
         registrosApi.list(),
         pagosEmpleadoApi.listAll(),
         usuariosApi.list(),
+        productosApi.list(),
       ]);
       setRegistros(Array.isArray(rRes.data) ? rRes.data : []);
       setGastos(Array.isArray(gRes.data) ? gRes.data : []);
       setEmpleados(Array.isArray(uRes.data) ? uRes.data : []);
+      setProductos(Array.isArray(pRes.data) ? pRes.data : []);
     } catch { /* silencioso */ }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  /* Resetear cierre cuando cambia el período */
+  useEffect(() => { setCierre(null); }, [filtroTipo, filtroFecha, filtroMes, filtroAnio]);
 
   /* ── filtrado por periodo ── */
   const filtrar = useCallback(<T extends { fecha: unknown }>(arr: T[]): T[] => {
@@ -490,6 +511,57 @@ export default function ContabilidadPage() {
     },
     { label:'Ticket promedio', value:fmtMoney(ticketPromedio),  sub:`${serviciosPeriodo} servicios facturados`, icon:Target, color:'#8B5CF6', bg:'rgba(139,92,246,0.08)', border:'rgba(139,92,246,0.2)' },
   ];
+
+  /* ── Calcular cierre de caja del período ── */
+  const calcularCierre = async () => {
+    setCierreLoading(true);
+    try {
+      const ordered = filtrar(registros.filter(r => r.estado === 4));
+      const results = await Promise.allSettled(
+        ordered.map(r => registrosApi.detalles(r.id_factura)
+          .then(res => res.data as DetalleFila[])
+        )
+      );
+      const prodMap = new Map<number, Producto>(
+        productos.map(p => [p.id_producto, p])
+      );
+
+      let manoRevenue = 0, repRevenue = 0, repCosto = 0;
+
+      for (const res of results) {
+        if (res.status !== 'fulfilled') continue;
+        for (const d of res.value) {
+          const sub = Number(d.subtotal ?? 0);
+          const cant = Number(d.cantidad ?? 1);
+          const idProd = d.idProducto ?? (d as { id_producto?: number }).id_producto ?? null;
+          const kind = (idProd != null || (d.descripcion ?? '').toUpperCase().startsWith('[REP'))
+            ? 'repuesto' : 'mano';
+          if (kind === 'mano') {
+            manoRevenue += sub;
+          } else {
+            repRevenue += sub;
+            if (idProd != null) {
+              const prod = prodMap.get(Number(idProd));
+              if (prod) repCosto += (prod.costo ?? 0) * cant;
+            }
+          }
+        }
+      }
+
+      const repProfit   = repRevenue - repCosto;
+      const repMargen   = repRevenue > 0 ? (repProfit / repRevenue) * 100 : 0;
+      const totalRevenue = manoRevenue + repRevenue;
+      const totalCosto  = repCosto;
+      const gananciaReal = totalRevenue - totalCosto;
+      const margenReal  = totalRevenue > 0 ? (gananciaReal / totalRevenue) * 100 : 0;
+
+      setCierre({
+        manoRevenue, repRevenue, repCosto, repProfit, repMargen,
+        totalRevenue, totalCosto, gananciaReal, margenReal,
+        label: filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio),
+      });
+    } catch { /* ignorar */ } finally { setCierreLoading(false); }
+  };
 
   const FILTROS: { key: FiltroTipo; label: string }[] = [
     { key:'dia',    label:'Día'    },
@@ -728,6 +800,151 @@ export default function ContabilidadPage() {
           }}>
           <Activity size={13}/> {desgloseLoading ? 'Calculando...' : desglose ? 'Recalcular' : 'Calcular desglose'}
         </button>
+      </div>
+
+      {/* ─── CIERRE DE CAJA con márgenes reales ─── */}
+      <div className="section-enter rounded-2xl overflow-hidden"
+           style={{ border: `1px solid ${isDark ? 'rgba(225,20,40,0.15)' : 'rgba(225,20,40,0.2)'}` }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4"
+             style={{ background: isDark ? 'rgba(225,20,40,0.08)' : 'rgba(225,20,40,0.06)' }}>
+          <div>
+            <p className="text-[10px] tracking-[0.2em] uppercase font-black text-gm-red">Cierre de caja</p>
+            <p className="text-sm font-bold mt-0.5" style={{ color: isDark ? 'rgba(255,255,255,0.75)' : '#15151B' }}>
+              {cierre ? cierre.label : filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio)}
+            </p>
+          </div>
+          <button
+            disabled={cierreLoading}
+            onClick={calcularCierre}
+            className="flex items-center gap-1.5 text-[11px] font-bold px-4 py-2.5 rounded-xl transition-all"
+            style={{
+              background: cierreLoading ? 'rgba(225,20,40,0.04)' : 'rgba(225,20,40,0.12)',
+              color: cierreLoading ? 'rgba(225,20,40,0.4)' : '#E11428',
+              border: '1px solid rgba(225,20,40,0.25)',
+              cursor: cierreLoading ? 'wait' : 'pointer',
+            }}>
+            <Receipt size={13}/> {cierreLoading ? 'Calculando...' : cierre ? 'Recalcular' : 'Calcular cierre'}
+          </button>
+        </div>
+
+        {cierre ? (() => {
+          const moPC  = cierre.totalRevenue > 0 ? (cierre.manoRevenue / cierre.totalRevenue) * 100 : 0;
+          const repPC = cierre.totalRevenue > 0 ? (cierre.repRevenue  / cierre.totalRevenue) * 100 : 0;
+          const moHealth  = moPC  >= 40 ? 'good' : moPC  >= 20 ? 'mid' : 'low';
+          const repHealth = cierre.repMargen >= 30 ? 'good' : cierre.repMargen >= 15 ? 'mid' : 'low';
+          const hColor = (h: 'good'|'mid'|'low') => h === 'good' ? '#10B981' : h === 'mid' ? '#F59E0B' : '#F43F5E';
+          const hLabel = (h: 'good'|'mid'|'low', type: 'mo'|'rep') =>
+            type === 'mo'
+              ? h === 'good' ? '✓ Buena participación' : h === 'mid' ? '⚠ Puede subir' : '✗ Poca mano de obra'
+              : h === 'good' ? '✓ Buen margen' : h === 'mid' ? '⚠ Margen ajustado' : '✗ Revisa tus precios';
+
+          return (
+            <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* MANO DE OBRA */}
+              <div className="rounded-xl p-4" style={{ background: isDark ? 'rgba(59,130,246,0.07)' : 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-blue-400">💪 Mano de obra</p>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${hColor(moHealth)}22`, color: hColor(moHealth) }}>
+                    {hLabel(moHealth, 'mo')}
+                  </span>
+                </div>
+                <p className="text-2xl font-black text-blue-400 tabular-nums">{fmtMoney(cierre.manoRevenue)}</p>
+                <p className="text-[11px] text-blue-300/60 mt-1">100% margen — costo $0.00</p>
+                {/* Barra de participación */}
+                <div className="mt-3">
+                  <div className="flex justify-between text-[10px] mb-1" style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.4)' }}>
+                    <span>% del ingreso total</span>
+                    <span className="font-bold text-blue-400">{moPC.toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(moPC, 100)}%`, background: 'linear-gradient(90deg,#3B82F6,#60A5FA)' }}/>
+                  </div>
+                </div>
+              </div>
+
+              {/* REPUESTOS */}
+              <div className="rounded-xl p-4" style={{ background: isDark ? 'rgba(245,158,11,0.07)' : 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.15)' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-amber-400">🔧 Repuestos</p>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${hColor(repHealth)}22`, color: hColor(repHealth) }}>
+                    {hLabel(repHealth, 'rep')}
+                  </span>
+                </div>
+                <p className="text-2xl font-black text-amber-400 tabular-nums">{fmtMoney(cierre.repRevenue)}</p>
+                <div className="flex gap-4 mt-1">
+                  <p className="text-[11px] text-amber-300/60">Costo: {fmtMoney(cierre.repCosto)}</p>
+                  <p className="text-[11px] text-amber-300/60">Ganancia: {fmtMoney(cierre.repProfit)}</p>
+                </div>
+                {/* Barra de margen */}
+                <div className="mt-3">
+                  <div className="flex justify-between text-[10px] mb-1" style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.4)' }}>
+                    <span>Margen de ganancia</span>
+                    <span className="font-bold" style={{ color: hColor(repHealth) }}>{cierre.repMargen.toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(cierre.repMargen, 100)}%`, background: `linear-gradient(90deg,${hColor(repHealth)},${hColor(repHealth)}88)` }}/>
+                  </div>
+                </div>
+                {/* Split participación */}
+                <div className="mt-2 flex justify-between text-[10px]" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.35)' }}>
+                  <span>% del ingreso total</span>
+                  <span className="font-bold text-amber-400">{repPC.toFixed(1)}%</span>
+                </div>
+              </div>
+
+              {/* RESUMEN TOTAL */}
+              <div className="md:col-span-2 rounded-xl p-4"
+                   style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#F8F9FC', border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : '#E4E7EC'}` }}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold mb-1" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.4)' }}>Ingreso bruto</p>
+                    <p className="text-lg font-black text-emerald-400 tabular-nums">{fmtMoney(cierre.totalRevenue)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold mb-1" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.4)' }}>Costo repuestos</p>
+                    <p className="text-lg font-black text-rose-400 tabular-nums">{fmtMoney(cierre.totalCosto)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold mb-1" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.4)' }}>Ganancia real</p>
+                    <p className="text-lg font-black tabular-nums" style={{ color: cierre.gananciaReal >= 0 ? '#10B981' : '#F43F5E' }}>{fmtMoney(cierre.gananciaReal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold mb-1" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.4)' }}>Margen neto</p>
+                    <p className="text-lg font-black tabular-nums" style={{ color: cierre.margenReal >= 40 ? '#10B981' : cierre.margenReal >= 20 ? '#F59E0B' : '#F43F5E' }}>
+                      {cierre.margenReal.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+                {/* Barra visual mano vs repuesto */}
+                <div className="mt-4">
+                  <p className="text-[10px] mb-2 font-semibold" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.4)' }}>Composición del ingreso</p>
+                  <div className="h-3 rounded-full overflow-hidden flex">
+                    {cierre.manoRevenue > 0 && (
+                      <div style={{ width: `${moPC}%`, background: 'linear-gradient(90deg,#3B82F6,#60A5FA)', flexShrink: 0 }}/>
+                    )}
+                    {cierre.repRevenue > 0 && (
+                      <div style={{ width: `${repPC}%`, background: 'linear-gradient(90deg,#F59E0B,#FCD34D)', flexShrink: 0 }}/>
+                    )}
+                  </div>
+                  <div className="flex gap-4 mt-1.5">
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-400"/><span className="text-[10px]" style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.4)' }}>Mano de obra {moPC.toFixed(0)}%</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-400"/><span className="text-[10px]" style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.4)' }}>Repuestos {repPC.toFixed(0)}%</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })() : (
+          <div className="px-5 py-8 text-center">
+            <p className="text-[11px]" style={{ color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(21,21,27,0.35)' }}>
+              Presiona "Calcular cierre" para ver tus márgenes reales por mano de obra y repuestos.
+            </p>
+            <p className="text-[10px] mt-1" style={{ color: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(21,21,27,0.25)' }}>
+              Usa el margen de repuestos para saber si estás ganando bien o mal con cada producto.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ─── Gráfico de negocio profesional ─── */}
