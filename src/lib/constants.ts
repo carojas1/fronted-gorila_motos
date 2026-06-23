@@ -18,12 +18,12 @@ export const WORKSHOP_CONTACT = {
   telefono:      '+593 98 083 4367',
   /** Solo dígitos, formato internacional (para enlaces wa.me) */
   whatsapp:      '593980834367',
-  /** Número que RECIBE las solicitudes de cita por WhatsApp. */
-  whatsappCitas: '593989443282',
-  /** Número de soporte de la app (mismo que citas). */
-  whatsappSoporte: '593989443282',
+  /** Número que RECIBE las solicitudes de cita por WhatsApp (número principal del taller). */
+  whatsappCitas: '593980834367',
+  /** Número de soporte de la app (mismo que el taller). */
+  whatsappSoporte: '593980834367',
   /** Teléfono de soporte formateado para display */
-  telefonoSoporte: '0989 443 282',
+  telefonoSoporte: '0980 834 367',
   /** Correo general de contacto */
   email:         'info@gorilamoto.com',
   emailFacturacion: 'facturacion@gorilamoto.com',
