@@ -264,9 +264,28 @@ export default function InvoicePage() {
               Datos del Vehículo
             </h2>
 
-            {/* Placa + foto moto */}
-            <div className="mb-3 flex gap-3">
-              <div className="flex-1 p-3 rounded-xl flex items-center justify-between"
+            {/* Hero foto moto */}
+            {reg.ruta_imagen_moto ? (
+              <div className="relative rounded-2xl overflow-hidden mb-3" style={{ height: 110 }}>
+                <img
+                  src={reg.ruta_imagen_moto}
+                  alt={`${reg.marca_moto} ${reg.modelo_moto}`}
+                  className="w-full h-full object-cover"
+                  onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+                />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(12,12,16,0.88) 0%, rgba(12,12,16,0.4) 55%, transparent 100%)' }} />
+                <div className="absolute inset-0 flex flex-col justify-end p-3">
+                  <span className="font-mono font-black text-white" style={{ fontSize: 20, letterSpacing: '0.18em', textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
+                    {placa}
+                  </span>
+                  <span className="text-white/70 text-[11px] font-semibold mt-0.5">
+                    {reg.marca_moto} {reg.modelo_moto}
+                    {reg.kilometraje ? ` · ${reg.kilometraje.toLocaleString('es-EC')} km` : ''}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-3 p-3 rounded-xl flex items-center justify-between"
                    style={{ background: '#0C0C10', border: '2px solid #E11428' }}>
                 <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.55)' }}>
                   Placa
@@ -275,16 +294,7 @@ export default function InvoicePage() {
                   {placa}
                 </span>
               </div>
-              {reg.ruta_imagen_moto && (
-                <img
-                  src={reg.ruta_imagen_moto}
-                  alt={`${reg.marca_moto} ${reg.modelo_moto}`}
-                  className="rounded-xl object-cover shrink-0"
-                  style={{ width: 64, height: 64, border: '2px solid #E5E7EB' }}
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-              )}
-            </div>
+            )}
 
             <div className="grid grid-cols-3 gap-2">
               {([

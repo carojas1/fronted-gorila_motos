@@ -92,6 +92,28 @@ function DiagnosticoCard({ d, motos, usuarios }: { d: DiagnosticoMoto; motos: Mo
 
       {open && (
         <div style={{ padding: '0 18px 16px', borderTop: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #E4E7EC' }}>
+
+          {/* Foto de la moto + datos */}
+          {(moto?.ruta_imagen_motos && moto.ruta_imagen_motos !== 'Desconocido') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '12px 0', padding: '10px 12px', background: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC', borderRadius: 10, border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#E4E7EC'}` }}>
+              <img
+                src={moto.ruta_imagen_motos}
+                alt={`${moto.marca} ${moto.modelo}`}
+                style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', flexShrink: 0, border: `2px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#E4E7EC'}` }}
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+              <div>
+                <p style={{ color: isDark ? '#EBEBEB' : '#15151B', fontWeight: 800, fontSize: 14, margin: 0 }}>{moto.marca} {moto.modelo}</p>
+                <p style={{ color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.5)', fontSize: 11, margin: '2px 0 0' }}>{moto.placa} · {moto.cilindraje} cc · {moto.anio}</p>
+                {d.kilometraje_ingreso && (
+                  <p style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.4)', fontSize: 11, margin: '2px 0 0' }}>
+                    Ingresó con {d.kilometraje_ingreso.toLocaleString('es-EC')} km
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {d.observaciones_generales && (
             <p style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(21,21,27,0.6)', margin: '12px 0', lineHeight: 1.6 }}>
               {d.observaciones_generales}

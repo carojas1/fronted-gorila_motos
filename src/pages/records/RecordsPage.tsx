@@ -189,9 +189,12 @@ export default function RecordsPage() {
   const [historyName,   setHistoryName]   = useState('');
   const [clientHistory, setClientHistory] = useState<RegistroDetalle[]>([]);
 
+  /* ─── Estado de impresión (evita doble clic y muestra feedback) ─── */
+  const [printingId, setPrintingId] = useState<number | null>(null);
+
   /* ─── Carga de datos ─── */
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [rRes, uRes, mRes, tRes, pRes] = await Promise.allSettled([
         registrosApi.list(),
@@ -205,14 +208,14 @@ export default function RecordsPage() {
       if (mRes.status === 'fulfilled') setTodasMotos(mRes.value.data as Moto[]);
       if (tRes.status === 'fulfilled') setTipos(tRes.value.data as Tipo[]);
       if (pRes.status === 'fulfilled') setProductos(pRes.value.data as Producto[]);
-    } catch (err) { toast.error(getErrorMsg(err)); }
-    finally { setLoading(false); }
+    } catch (err) { if (!silent) toast.error(getErrorMsg(err)); }
+    finally { if (!silent) setLoading(false); }
   }, [toast]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchData(false); }, [fetchData]);
 
-  /* Refresco en tiempo real: nuevas órdenes aparecen sin recargar */
-  usePolling(fetchData, { intervalMs: 20_000 });
+  /* Refresco silencioso: actualiza datos sin re-animar la UI */
+  usePolling(() => fetchData(true), { intervalMs: 20_000 });
 
   /* Mantenimientos (nube) de la moto seleccionada → para las recomendaciones por km */
   useEffect(() => {
@@ -413,8 +416,10 @@ export default function RecordsPage() {
 
   /* ─── Nota de venta profesional ─── */
   const printOrder = async (r: RegistroDetalle) => {
+    if (printingId !== null) return;            // evitar doble clic
+    setPrintingId(r.id_registro);
     const w = window.open('', '_blank', 'width=900,height=760');
-    if (!w) { toast.error('Activa las ventanas emergentes para imprimir'); return; }
+    if (!w) { toast.error('Activa las ventanas emergentes para imprimir'); setPrintingId(null); return; }
 
     // Datos del cliente
     const cli  = usuarios.find(u => u.nombre_completo === r.nombre_cliente);
@@ -541,12 +546,23 @@ export default function RecordsPage() {
         </div>
       </div>
 
-      <!-- ESTADO + PLACA -->
+      <!-- FOTO MOTO + PLACA -->
+      ${r.ruta_imagen_moto ? `
+      <div style="position:relative;border-radius:14px;overflow:hidden;height:140px;margin:14px 0;border:1px solid #EEF1F5">
+        <img src="${r.ruta_imagen_moto}" alt="${r.placa}" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.style.display='none'">
+        <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(12,12,16,0.85) 0%,rgba(12,12,16,0.3) 60%,transparent 100%)"></div>
+        <div style="position:absolute;inset:0;padding:16px 20px;display:flex;flex-direction:column;justify-content:flex-end">
+          <span style="font-family:'Courier New',monospace;font-size:20px;font-weight:900;letter-spacing:3px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.5)">${r.placa ?? '—'}</span>
+          <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.75);margin-top:3px">${r.marca_moto ?? ''} ${r.modelo_moto ?? ''} · ${r.tipo_servicio ?? 'Servicio'}</span>
+        </div>
+        <span style="position:absolute;top:14px;right:14px;font-size:10px;font-weight:800;padding:4px 10px;border-radius:99px;background:rgba(12,12,16,0.6);color:rgba(255,255,255,0.75);letter-spacing:.1em;text-transform:uppercase;backdrop-filter:blur(4px)">${estLabel}</span>
+      </div>
+      ` : `
       <div class="estado-bar">
         <span style="font-size:12px;font-weight:700;color:#64748B">${r.tipo_servicio ?? 'Servicio de taller'}</span>
         <span class="plate">${r.placa ?? '—'}</span>
         <span class="estado-chip">${estLabel}</span>
-      </div>
+      </div>`}
 
       <!-- DATOS CLIENTE -->
       <div class="section-title">Información del cliente</div>
@@ -614,7 +630,7 @@ export default function RecordsPage() {
     </body></html>`);
     w.document.close();
     w.focus();
-    setTimeout(() => w.print(), 600);
+    setTimeout(() => { w.print(); setPrintingId(null); }, 600);
   };
 
   /* ─── Historial cliente ─── */
@@ -866,9 +882,13 @@ export default function RecordsPage() {
                               <button
                                 onClick={() => printOrder(r)}
                                 className="icon-btn"
-                                title="Imprimir orden"
+                                title={printingId === r.id_registro ? 'Generando…' : 'Imprimir orden'}
+                                disabled={printingId !== null}
+                                style={{ opacity: printingId === r.id_registro ? 0.5 : undefined }}
                               >
-                                <Printer size={13} />
+                                {printingId === r.id_registro
+                                  ? <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin .7s linear infinite' }} />
+                                  : <Printer size={13} />}
                               </button>
                             )}
                           </div>
@@ -1231,8 +1251,16 @@ export default function RecordsPage() {
                       <Badge variant={variant} dot>{est.label}</Badge>
                     </div>
                   </div>
-                  <button onClick={() => printOrder(r)} className="icon-btn shrink-0" title="Imprimir">
-                    <Printer size={13} />
+                  <button
+                    onClick={() => printOrder(r)}
+                    className="icon-btn shrink-0"
+                    title={printingId === r.id_registro ? 'Generando…' : 'Imprimir'}
+                    disabled={printingId !== null}
+                    style={{ opacity: printingId === r.id_registro ? 0.5 : undefined }}
+                  >
+                    {printingId === r.id_registro
+                      ? <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin .7s linear infinite' }} />
+                      : <Printer size={13} />}
                   </button>
                 </div>
               );
