@@ -21,10 +21,19 @@ export async function tomarFotoNativa(origen: 'camara' | 'galeria' | 'preguntar'
   // Import dinámico: el plugin solo existe en el bundle nativo.
   const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
 
+  // Verificar y solicitar permiso ANTES de abrir cámara para evitar error silencioso
+  const perm = await Camera.checkPermissions();
+  if (perm.camera !== 'granted') {
+    const result = await Camera.requestPermissions({ permissions: ['camera', 'photos'] });
+    if (result.camera !== 'granted') {
+      throw new Error('Permiso de cámara denegado. Ve a Configuración > Gorila Motos > Permisos para activarla.');
+    }
+  }
+
   const source =
     origen === 'camara'  ? CameraSource.Camera  :
     origen === 'galeria' ? CameraSource.Photos   :
-                           CameraSource.Prompt;   // deja elegir al usuario
+                           CameraSource.Prompt;
 
   const foto = await Camera.getPhoto({
     quality:      70,

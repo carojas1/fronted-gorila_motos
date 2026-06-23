@@ -29,8 +29,8 @@ export const WORKSHOP_CONTACT = {
   emailFacturacion: 'facturacion@gorilamoto.com',
   emailPrivacidad:  'info@gorilamoto.com',
   emailLegal:       'info@gorilamoto.com',
-  web:           'www.gorilamoto.com',
-  webUrl:        'https://gorila-motos.vercel.app',
+  web:           'gmotors-frontend.vercel.app',
+  webUrl:        'https://gmotors-frontend.vercel.app',
   horario:       'Lun–Vie 8:00–18:00 · Sáb 9:00–14:00',
 } as const;
 
