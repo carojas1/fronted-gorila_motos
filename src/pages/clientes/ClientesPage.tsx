@@ -892,7 +892,12 @@ export default function ClientesPage() {
       ]);
       if (uRes.status === 'fulfilled') {
         const all = uRes.value.data as Usuario[];
-        setClientes(all.filter(u => getRolName(u.roles as unknown[]) === 'CLIENTE'));
+        /* TODOS son clientes por defecto, EXCEPTO admin/mecánico.
+           Un usuario sin rol asignado (rol vacío) también es cliente. */
+        setClientes(all.filter(u => {
+          const rol = getRolName(u.roles as unknown[]);
+          return rol !== 'ADMIN' && rol !== 'MECANICO';
+        }));
       }
       if (rRes.status === 'fulfilled') {
         setRegs((rRes.value.data as Record<string,unknown>[]).map(normalizeReg));
