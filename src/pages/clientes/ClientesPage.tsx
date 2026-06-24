@@ -14,6 +14,7 @@ import {
   Gauge, Zap, Send,
 } from 'lucide-react';
 import gsap from 'gsap';
+import { safeFromTo } from '../../hooks/useGsap';
 import {
   usuariosApi, registrosApi, motosApi,
   combustibleApi, facturasApi, detallesFacturaApi, authApi, ofertaApi,
@@ -908,9 +909,7 @@ export default function ClientesPage() {
   /* GSAP entrada */
   useEffect(() => {
     if (loading || selected) return;
-    const targets = document.querySelectorAll('.cl-card');
-    if (!targets.length) return;
-    gsap.fromTo('.cl-card',
+    safeFromTo('.cl-card',
       { y:20, opacity:0, scale:0.97 },
       { y:0, opacity:1, scale:1, stagger:0.06, duration:0.45, ease:'power3.out', clearProps:'transform' }
     );

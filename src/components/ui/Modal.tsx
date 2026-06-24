@@ -30,10 +30,10 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
     if (!backdropRef.current || !panelRef.current) return;
     if (open) {
       document.body.style.overflow = 'hidden';
-      gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2 });
+      gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2, overwrite: true });
       gsap.fromTo(panelRef.current,
         { opacity: 0, y: 28, scale: 0.95 },
-        { opacity: 1, y: 0,  scale: 1,    duration: 0.3, ease: 'power3.out' },
+        { opacity: 1, y: 0,  scale: 1,    duration: 0.28, ease: 'power3.out', overwrite: true },
       );
     } else {
       document.body.style.overflow = '';
@@ -41,15 +41,19 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
   }, [open]);
 
   /* Salvaguarda: si el modal se desmonta estando abierto (ej. cambio de ruta),
-     liberar SIEMPRE el scroll del body para que la página no quede congelada. */
+     liberar SIEMPRE el scroll del body y matar tweens para que la página no quede congelada. */
   useEffect(() => {
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+      if (backdropRef.current) gsap.killTweensOf(backdropRef.current);
+      if (panelRef.current)    gsap.killTweensOf(panelRef.current);
+    };
   }, []);
 
   const handleClose = () => {
     if (!backdropRef.current || !panelRef.current) { onClose(); return; }
-    gsap.to(panelRef.current,    { opacity: 0, y: 14, scale: 0.96, duration: 0.18 });
-    gsap.to(backdropRef.current, { opacity: 0, duration: 0.2, onComplete: onClose });
+    gsap.to(panelRef.current,    { opacity: 0, y: 14, scale: 0.96, duration: 0.15, overwrite: true });
+    gsap.to(backdropRef.current, { opacity: 0, duration: 0.18, overwrite: true, onComplete: onClose });
   };
 
   if (!open) return null;

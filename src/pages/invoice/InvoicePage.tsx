@@ -6,8 +6,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft, AlertCircle, CheckCircle, Clock, Package, FileText } from 'lucide-react';
-import { registrosApi, usuariosApi, productosApi } from '../../lib/api';
-import { fmtDate, fmtMoney, extractCedula, extractPhone } from '../../lib/utils';
+import { registrosApi, usuariosApi, productosApi, detallesFacturaApi } from '../../lib/api';
+import { fmtDate, fmtMoney, extractCedula, extractPhone, ordenNumero } from '../../lib/utils';
 import { WORKSHOP_CONTACT, whatsappCitaLink } from '../../lib/constants';
 import { useTheme } from '../../lib/theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -33,9 +33,8 @@ const ESTADO_LABEL: Record<number, { label: string; color: string }> = {
   4: { label: 'Facturado',  color: '#14B8A6' },
 };
 
-function genNumero(id: number): string {
-  return `ORD-${String(id).padStart(6, '0')}`;
-}
+/* Número de orden único: delega en el helper compartido (ordenNumero) */
+const genNumero = ordenNumero;
 
 export default function InvoicePage() {
   const { id }   = useParams<{ id: string }>();
@@ -84,7 +83,7 @@ export default function InvoicePage() {
 
         // Cargar los detalles reales de la factura (mano de obra + repuestos)
         try {
-          const { data } = await registrosApi.detalles(found.id_factura);
+          const { data } = await detallesFacturaApi.byFactura(found.id_factura);
           setDetalles((data as DetalleFila[]) ?? []);
         } catch { setDetalles([]); }
       } catch {
@@ -214,9 +213,9 @@ export default function InvoicePage() {
                   Nota de Servicio
                 </p>
                 <p className="text-white font-black" style={{ fontSize: 22, letterSpacing: '-0.5px', marginTop: 2 }}>
-                  #{reg.id_registro}
+                  {numComp}
                 </p>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{numComp}</p>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{fmtDate(reg.fecha)}</p>
               </div>
             </div>
           </div>

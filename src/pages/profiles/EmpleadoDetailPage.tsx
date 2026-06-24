@@ -455,8 +455,8 @@ export default function EmpleadoDetailPage() {
   useEffect(() => {
     if (loading) return;
     const ctx = gsap.context(() => {
-      gsap.fromTo('.header-enter', { y: -16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, stagger: 0.06, ease: 'power3.out' });
-      gsap.fromTo('.section-enter', { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.08, ease: 'power3.out', delay: 0.2 });
+      gsap.fromTo('.header-enter', { y: -16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, stagger: 0.06, ease: 'power3.out', overwrite: 'auto' });
+      gsap.fromTo('.section-enter', { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.08, ease: 'power3.out', delay: 0.2, overwrite: 'auto' });
     }, pageRef);
     return () => ctx.revert();
   }, [loading]);

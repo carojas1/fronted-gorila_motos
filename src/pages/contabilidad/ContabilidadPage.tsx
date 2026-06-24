@@ -14,8 +14,9 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
   CartesianGrid, ReferenceLine,
 } from 'recharts';
-import { registrosApi, pagosEmpleadoApi, usuariosApi, productosApi, type PagoEmpleadoAPI } from '../../lib/api';
-import { splitTotales, type DetalleLike } from '../../lib/detalles';
+import { registrosApi, pagosEmpleadoApi, usuariosApi, productosApi, detallesFacturaApi, type PagoEmpleadoAPI } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { splitTotales, detalleKind, type DetalleLike } from '../../lib/detalles';
 
 type DetalleFila = DetalleLike;
 import { fmtMoney, fmtDate, getErrorMsg, toIsoStr } from '../../lib/utils';
@@ -168,7 +169,8 @@ function BusinessChart({ ingresos, gastos, labels, isDark }: {
 function exportarExcel(
   ingresos: RegistroDetalle[], gastos: PagoEmpleadoAPI[],
   empleados: Usuario[], label: string,
-  detallesMap?: Map<number, DetalleFila[]>
+  detallesMap?: Map<number, DetalleFila[]>,
+  productos: Producto[] = []
 ) {
   const hoy    = new Date().toISOString().slice(0, 10);
   const nombreEmp = (id: number) => {
@@ -176,12 +178,58 @@ function exportarExcel(
     const u = empleados.find(e => e.id_usuario === id);
     return u ? u.nombre_completo.split(' ').slice(0, 3).join(' ') : `Empleado #${id}`;
   };
+  const costoProducto = (idProd?: number | null) => {
+    if (idProd == null) return null;
+    const p = productos.find(pp => pp.id_producto === idProd);
+    return p ? Number(p.costo ?? 0) : null;
+  };
+  const num = (v: unknown) => { const n = typeof v === 'string' ? parseFloat(v) : Number(v ?? 0); return isNaN(n) ? 0 : n; };
 
   const totalIng = ingresos.reduce((s, r) => s + (r.costo_total ?? 0), 0);
   const gasEmpl  = gastos.filter(g => g.id_empleado > 0).reduce((s, g) => s + Number(g.monto), 0);
   const gasGen   = gastos.filter(g => g.id_empleado === 0).reduce((s, g) => s + Number(g.monto), 0);
   const totalGas = gasEmpl + gasGen;
   const balance  = totalIng - totalGas;
+
+  /* ── Cálculo de GANANCIAS separadas por fuente ──
+     · Mano de obra    → 100% ganancia (no tiene costo de inventario)
+     · Repuesto invent.→ ganancia = pvp_vendido − costo_producto
+     · Pieza extra/manual (sin id_producto) → se vende sin costo conocido → ganancia = precio */
+  let manoRev = 0;            // ingreso mano de obra
+  let repInvRev = 0, repInvCost = 0;   // repuestos de inventario
+  let piezaExtraRev = 0;     // repuestos manuales/externos (piezas extras vendidas en el registro)
+  const gananciaRows: (string | number)[][] = [];
+  if (detallesMap) {
+    for (const r of ingresos) {
+      const items = detallesMap.get(r.id_registro) ?? [];
+      let rMano = 0, rInvRev = 0, rInvCost = 0, rExtra = 0;
+      for (const d of items) {
+        const sub = num(d.subtotal);
+        const idProd = d.idProducto ?? null;
+        if (detalleKind(d) === 'mano') { rMano += sub; continue; }
+        if (idProd != null) {
+          const c = costoProducto(idProd);
+          rInvRev += sub;
+          rInvCost += (c ?? 0) * (d.cantidad ?? 1);
+        } else {
+          rExtra += sub; // pieza extra / manual
+        }
+      }
+      manoRev += rMano; repInvRev += rInvRev; repInvCost += rInvCost; piezaExtraRev += rExtra;
+      if (rMano || rInvRev || rExtra) {
+        gananciaRows.push([
+          toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio',
+          +rMano.toFixed(2),
+          +rInvRev.toFixed(2), +rInvCost.toFixed(2), +(rInvRev - rInvCost).toFixed(2),
+          +rExtra.toFixed(2),
+          +(rMano + (rInvRev - rInvCost) + rExtra).toFixed(2),
+        ]);
+      }
+    }
+  }
+  const repInvProfit  = repInvRev - repInvCost;
+  const gananciaBruta = manoRev + repInvProfit + piezaExtraRev; // ganancia antes de gastos operativos
+  const gananciaNeta  = gananciaBruta - totalGas;
 
   const wb = XLSX.utils.book_new();
 
@@ -191,17 +239,47 @@ function exportarExcel(
     [`Período: ${label}`],
     [`Generado: ${hoy}`],
     [],
-    ['Concepto', 'Monto (USD)'],
-    ['INGRESOS TOTALES',        +totalIng.toFixed(2)],
-    ['GASTOS EMPLEADOS',        +gasEmpl.toFixed(2)],
-    ['GASTOS GENERALES',        +gasGen.toFixed(2)],
-    ['TOTAL GASTOS',            +totalGas.toFixed(2)],
-    ['BALANCE NETO',            +balance.toFixed(2)],
-    ['RENTABILIDAD (%)',        totalIng > 0 ? +((balance / totalIng) * 100).toFixed(1) : 0],
+    ['INGRESOS', 'Monto (USD)'],
+    ['Ingresos totales (facturado)', +totalIng.toFixed(2)],
+    [],
+    ['GANANCIA POR FUENTE', 'Monto (USD)'],
+    ['Mano de obra (100% ganancia)',        +manoRev.toFixed(2)],
+    ['Repuestos inventario — venta',        +repInvRev.toFixed(2)],
+    ['Repuestos inventario — costo',        +repInvCost.toFixed(2)],
+    ['Repuestos inventario — GANANCIA',     +repInvProfit.toFixed(2)],
+    ['Piezas extras vendidas en registro',  +piezaExtraRev.toFixed(2)],
+    ['GANANCIA BRUTA (mano+repuestos+extras)', +gananciaBruta.toFixed(2)],
+    [],
+    ['GASTOS', 'Monto (USD)'],
+    ['Gastos empleados',        +gasEmpl.toFixed(2)],
+    ['Gastos generales',        +gasGen.toFixed(2)],
+    ['Total gastos',            +totalGas.toFixed(2)],
+    [],
+    ['RESULTADO', 'Monto (USD)'],
+    ['Balance neto (ingresos − gastos)', +balance.toFixed(2)],
+    ['GANANCIA NETA (ganancia bruta − gastos)', +gananciaNeta.toFixed(2)],
+    ['Margen sobre ingresos (%)', totalIng > 0 ? +((gananciaBruta / totalIng) * 100).toFixed(1) : 0],
   ];
   const wsRes = XLSX.utils.aoa_to_sheet(resumen);
-  wsRes['!cols'] = [{ wch: 28 }, { wch: 16 }];
+  wsRes['!cols'] = [{ wch: 38 }, { wch: 16 }];
+  wsRes['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
   XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen');
+
+  /* ── Hoja 2: GANANCIAS (desglose por registro) ── */
+  if (gananciaRows.length > 0) {
+    const wsGan = XLSX.utils.aoa_to_sheet([
+      ['Fecha', 'Placa', 'Servicio',
+       'Mano obra ($)', 'Repuesto venta ($)', 'Repuesto costo ($)', 'Repuesto ganancia ($)',
+       'Piezas extras ($)', 'Ganancia total ($)'],
+      ...gananciaRows,
+      [],
+      ['', '', 'TOTALES',
+       +manoRev.toFixed(2), +repInvRev.toFixed(2), +repInvCost.toFixed(2), +repInvProfit.toFixed(2),
+       +piezaExtraRev.toFixed(2), +gananciaBruta.toFixed(2)],
+    ]);
+    wsGan['!cols'] = [{ wch: 12 }, { wch: 11 }, { wch: 22 }, { wch: 13 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 15 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, wsGan, 'Ganancias');
+  }
 
   /* ── Hoja 2: INGRESOS ── */
   const ingRows = [
@@ -299,6 +377,7 @@ export default function ContabilidadPage() {
   const pageRef = usePageEntrance();
   const { theme } = useTheme();
   const isDark = theme !== 'light';
+  const { user, isAdmin } = useAuth();
 
   const [registros,   setRegistros]   = useState<RegistroDetalle[]>([]);
   const [gastos,      setGastos]      = useState<PagoEmpleadoAPI[]>([]);
@@ -352,13 +431,17 @@ export default function ContabilidadPage() {
         usuariosApi.list(),
         productosApi.list(),
       ]);
-      setRegistros(Array.isArray(rRes.data) ? rRes.data : []);
+      const allRegistros: RegistroDetalle[] = Array.isArray(rRes.data) ? rRes.data : [];
+      /* Mecánico ve solo sus propias órdenes */
+      const myId = user?.id_usuario;
+      setRegistros(isAdmin || !myId ? allRegistros : allRegistros.filter(r => r.id_encargado === myId));
       setGastos(Array.isArray(gRes.data) ? gRes.data : []);
       setEmpleados(Array.isArray(uRes.data) ? uRes.data : []);
       setProductos(Array.isArray(pRes.data) ? pRes.data : []);
     } catch { /* silencioso */ }
     finally { setLoading(false); }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, user?.id_usuario]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -401,39 +484,61 @@ export default function ContabilidadPage() {
 
   /* ── Chart adaptable al filtro activo ── */
   const { chartIngresos, chartGastos, chartLabels } = useMemo(() => {
-    if (filtroTipo === 'mes' || filtroTipo === 'dia' || filtroTipo === 'semana') {
-      // Mostrar los últimos 6 meses del año seleccionado
-      const año = filtroAnio;
-      const mesRef = filtroTipo === 'mes' ? filtroMes : new Date().getMonth() + 1;
+    const cobrados = registros.filter(r => r.estado === 4);
+
+    if (filtroTipo === 'dia') {
+      // Últimos 7 días desde la fecha seleccionada
+      const base = new Date(filtroFecha + 'T12:00:00');
+      const dias = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(base); d.setDate(base.getDate() - 6 + i);
+        return d.toISOString().slice(0, 10);
+      });
+      const ing = dias.map(d => cobrados.filter(r => toIsoStr(r.fecha) === d).reduce((s,r) => s+(r.costo_total??0), 0));
+      const gas = dias.map(d => gastos.filter(g => toIsoStr(g.fecha) === d).reduce((s,g) => s+Number(g.monto), 0));
+      return { chartIngresos: ing, chartGastos: gas, chartLabels: dias.map(d => { const dd = new Date(d+'T12:00:00'); return `${dd.getDate()}/${dd.getMonth()+1}`; }) };
+    }
+
+    if (filtroTipo === 'semana') {
+      // Últimas 4 semanas desde la semana activa
+      const [wMon] = getWeekRange(filtroFecha);
+      const semanas = Array.from({ length: 4 }, (_, i) => {
+        const d = new Date(wMon + 'T12:00:00'); d.setDate(d.getDate() - (3 - i) * 7);
+        const mon = d.toISOString().slice(0,10);
+        const sun = new Date(d); sun.setDate(d.getDate() + 6);
+        return { mon, sun: sun.toISOString().slice(0,10) };
+      });
+      const ing = semanas.map(({ mon, sun }) => cobrados.filter(r => { const f=toIsoStr(r.fecha); return f>=mon && f<=sun; }).reduce((s,r) => s+(r.costo_total??0), 0));
+      const gas = semanas.map(({ mon, sun }) => gastos.filter(g => { const f=toIsoStr(g.fecha); return f>=mon && f<=sun; }).reduce((s,g) => s+Number(g.monto), 0));
+      const labels = semanas.map(({ mon }) => { const d=new Date(mon+'T12:00:00'); return `S${d.getDate()}/${d.getMonth()+1}`; });
+      return { chartIngresos: ing, chartGastos: gas, chartLabels: labels };
+    }
+
+    if (filtroTipo === 'mes') {
+      // Últimos 6 meses desde el mes seleccionado
       const meses = Array.from({ length: 6 }, (_, i) => {
-        let m = mesRef - 5 + i;
-        let y = año;
+        let m = filtroMes - 5 + i; let y = filtroAnio;
         if (m <= 0) { m += 12; y -= 1; }
         return { m, y };
       });
-      const cobrados = registros.filter(r => r.estado === 4);
-      const ing = meses.map(({ m, y }) =>
-        cobrados.filter(r => { const f = toIsoStr(r.fecha); return f.startsWith(`${y}-${String(m).padStart(2,'0')}`); })
-                .reduce((s, r) => s + (r.costo_total ?? 0), 0)
-      );
-      const gas = meses.map(({ m, y }) =>
-        gastos.filter(g => { const f = toIsoStr(g.fecha); return f.startsWith(`${y}-${String(m).padStart(2,'0')}`); })
-              .reduce((s, g) => s + Number(g.monto), 0)
-      );
+      const ing = meses.map(({ m, y }) => cobrados.filter(r => { const f=toIsoStr(r.fecha); return f.startsWith(`${y}-${String(m).padStart(2,'0')}`); }).reduce((s,r) => s+(r.costo_total??0), 0));
+      const gas = meses.map(({ m, y }) => gastos.filter(g => { const f=toIsoStr(g.fecha); return f.startsWith(`${y}-${String(m).padStart(2,'0')}`); }).reduce((s,g) => s+Number(g.monto), 0));
       return { chartIngresos: ing, chartGastos: gas, chartLabels: meses.map(({ m }) => MES_SHORT[m-1]) };
     }
-    // Año completo (filtroTipo === 'anio' | 'todo')
-    const año = filtroTipo === 'anio' ? filtroAnio : anioActual;
-    const cobrados = registros.filter(r => r.estado === 4 && toIsoStr(r.fecha).startsWith(String(año)));
-    const ing = Array.from({ length: 12 }, (_, m) =>
-      cobrados.filter(r => Number(toIsoStr(r.fecha).slice(5,7)) === m+1).reduce((s,r) => s+(r.costo_total??0), 0)
-    );
-    const gas = Array.from({ length: 12 }, (_, m) =>
-      gastos.filter(g => toIsoStr(g.fecha).startsWith(String(año)) && Number(toIsoStr(g.fecha).slice(5,7)) === m+1)
-            .reduce((s,g) => s+Number(g.monto), 0)
-    );
-    return { chartIngresos: ing, chartGastos: gas, chartLabels: MES_SHORT };
-  }, [registros, gastos, anioActual, filtroTipo, filtroMes, filtroAnio]);
+
+    if (filtroTipo === 'anio') {
+      const año = filtroAnio;
+      const cobradosAnio = cobrados.filter(r => toIsoStr(r.fecha).startsWith(String(año)));
+      const ing = Array.from({ length: 12 }, (_, m) => cobradosAnio.filter(r => Number(toIsoStr(r.fecha).slice(5,7)) === m+1).reduce((s,r) => s+(r.costo_total??0), 0));
+      const gas = Array.from({ length: 12 }, (_, m) => gastos.filter(g => toIsoStr(g.fecha).startsWith(String(año)) && Number(toIsoStr(g.fecha).slice(5,7)) === m+1).reduce((s,g) => s+Number(g.monto), 0));
+      return { chartIngresos: ing, chartGastos: gas, chartLabels: MES_SHORT };
+    }
+
+    // todo: últimos 3 años, por año
+    const años = [anioActual - 2, anioActual - 1, anioActual];
+    const ing = años.map(y => cobrados.filter(r => toIsoStr(r.fecha).startsWith(String(y))).reduce((s,r) => s+(r.costo_total??0), 0));
+    const gas = años.map(y => gastos.filter(g => toIsoStr(g.fecha).startsWith(String(y))).reduce((s,g) => s+Number(g.monto), 0));
+    return { chartIngresos: ing, chartGastos: gas, chartLabels: años.map(String) };
+  }, [registros, gastos, anioActual, filtroTipo, filtroFecha, filtroMes, filtroAnio]);
 
   const nombreEmpleado = (idEmp: number) => {
     if (idEmp === 0) return 'Gasto general';
@@ -594,7 +699,7 @@ export default function ContabilidadPage() {
                 try {
                   const results = await Promise.allSettled(
                     ordered.map(r => r.id_factura
-                      ? registrosApi.detalles(r.id_factura).then(res => ({ id: r.id_registro, d: res.data as DetalleFila[] }))
+                      ? detallesFacturaApi.byFactura(r.id_factura).then(res => ({ id: r.id_registro, d: res.data as DetalleFila[] }))
                       : Promise.resolve({ id: r.id_registro, d: [] as DetalleFila[] })
                     )
                   );
@@ -603,7 +708,7 @@ export default function ContabilidadPage() {
                   );
                 } catch { /* skip breakdown on error */ }
                 exportarExcel(ordered, filtrar(gastos), empleados,
-                  filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio), detallesMap);
+                  filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio), detallesMap, productos);
                 setExportLoading(false);
               }}
               className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-xl transition-all"
@@ -775,7 +880,7 @@ export default function ContabilidadPage() {
             try {
               const results = await Promise.allSettled(
                 ordered.map(r => r.id_factura
-                  ? registrosApi.detalles(r.id_factura).then(res => res.data as DetalleFila[])
+                  ? detallesFacturaApi.byFactura(r.id_factura).then(res => res.data as DetalleFila[])
                   : Promise.resolve([] as DetalleFila[])
                 )
               );

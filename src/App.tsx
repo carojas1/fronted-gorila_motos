@@ -84,14 +84,21 @@ export default function App() {
                 <Route path="/metodologia" element={<MetodologiaPage />}  />
                 <Route path="/ajustes"     element={<AjustesPage />}       />
 
+                {/* Todos los autenticados: ver clientes */}
+                <Route path="/clientes"     element={<ClientesPage />}     />
+
                 {/* Solo ADMIN + MECÁNICO */}
                 <Route element={<RequireRole roles={['admin', 'mecanico']} />}>
                   <Route path="/registros"    element={<RecordsPage />}      />
                   <Route path="/inventario"   element={<InventoryPage />}    />
-                  <Route path="/clientes"     element={<ClientesPage />}     />
                   <Route path="/alertas"      element={<AlertasPage />}      />
                   <Route path="/diagnostico"  element={<DiagnosticoPage />}  />
                   <Route path="/proveedores"  element={<ProveedoresPage />}  />
+                </Route>
+
+                {/* ADMIN + MECÁNICO: contabilidad (mecánico ve solo sus datos) */}
+                <Route element={<RequireRole roles={['admin', 'mecanico']} />}>
+                  <Route path="/contabilidad" element={<ContabilidadPage />}    />
                 </Route>
 
                 {/* Solo ADMIN */}
@@ -99,7 +106,6 @@ export default function App() {
                   <Route path="/perfiles"     element={<ProfilesPage />}        />
                   <Route path="/perfiles/:id" element={<EmpleadoDetailPage />}  />
                   <Route path="/pagos"        element={<PagosPage />}           />
-                  <Route path="/contabilidad" element={<ContabilidadPage />}    />
                 </Route>
 
               </Route>

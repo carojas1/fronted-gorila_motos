@@ -238,10 +238,9 @@ export default function RecordsPage() {
       const headers  = gsap.utils.toArray<HTMLElement>('.header-enter');
       const cards    = gsap.utils.toArray<HTMLElement>('.card-enter');
       const sections = gsap.utils.toArray<HTMLElement>('.section-enter');
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-      if (headers.length)  tl.fromTo(headers,  { y: -16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.05 });
-      if (cards.length)    tl.fromTo(cards,    { y: 32, opacity: 0, scale: 0.96 }, { y: 0, opacity: 1, scale: 1, stagger: 0.08, duration: 0.6, clearProps: 'transform' }, '-=0.25');
-      if (sections.length) tl.fromTo(sections, { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, '-=0.3');
+      if (headers.length)  gsap.fromTo(headers,  { y: -16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.05, ease: 'power3.out', overwrite: 'auto' });
+      if (cards.length)    gsap.fromTo(cards,    { y: 32, opacity: 0, scale: 0.96 }, { y: 0, opacity: 1, scale: 1, stagger: 0.08, duration: 0.6, ease: 'power3.out', clearProps: 'transform', overwrite: 'auto', delay: 0.1 });
+      if (sections.length) gsap.fromTo(sections, { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out', overwrite: 'auto', delay: 0.2 });
     }, pageRef);
     return () => ctx.revert();
   }, [loading]);

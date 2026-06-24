@@ -231,9 +231,9 @@ export default function MotoPerfilPage() {
     background: isDark ? '#111117' : '#FFFFFF', border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : '#E4E7EC'}`, borderRadius: 16, padding: '20px 24px',
   };
   // Color helpers para modo claro/oscuro en las tarjetas (fuera del hero)
-  const ct  = isDark ? '#EBEBEB' : '#15151B';          // texto principal
-  const cs  = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.5)';  // texto secundario
-  const cm  = isDark ? 'rgba(255,255,255,0.28)' : 'rgba(21,21,27,0.4)';  // texto muted
+  const ct  = isDark ? '#EBEBEB' : '#15151B';           // texto principal
+  const cs  = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(21,21,27,0.72)'; // texto secundario
+  const cm  = isDark ? 'rgba(255,255,255,0.32)' : 'rgba(21,21,27,0.58)'; // texto muted
   const cbg = isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC';             // fondo tarjeta mini
   const cbd = isDark ? 'rgba(255,255,255,0.06)' : '#E4E7EC';             // borde tarjeta mini
 

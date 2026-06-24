@@ -92,6 +92,12 @@ export function extractCedula(descripcion: string | undefined | null): string | 
   return match ? match[1] : null;
 }
 
+/** Número de orden/comprobante ÚNICO y estable, basado en id_registro.
+   Fuente de verdad para web, impresión, email y APK: formato ORD-000NNN. */
+export function ordenNumero(idRegistro: number): string {
+  return `ORD-${String(idRegistro).padStart(6, '0')}`;
+}
+
 /** Genera el siguiente código secuencial de producto (formato COD-001) */
 export function nextProductCode(existingCodes: string[]): string {
   const nums = existingCodes

@@ -5,8 +5,40 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { isNativeApp } from '../lib/platform';
 
 gsap.registerPlugin(ScrollTrigger);
+
+/* ── Configuración global: reducir duración en APK para evitar trabas ── */
+if (isNativeApp) {
+  gsap.config({ force3D: true });
+  gsap.defaults({ duration: 0.25, ease: 'power2.out' });
+}
+
+/**
+ * Ejecuta una animación GSAP de forma segura:
+ * - Si no hay elementos en el DOM con ese selector, no hace nada
+ * - En APK reduce la duración y el stagger al 50%
+ * - Agrega overwrite:'auto' para no acumular tweens
+ */
+export function safeFromTo(
+  selector: string | Element | Element[],
+  from: gsap.TweenVars,
+  to: gsap.TweenVars
+) {
+  const targets =
+    typeof selector === 'string'
+      ? gsap.utils.toArray<Element>(selector)
+      : Array.isArray(selector) ? selector : [selector];
+  if (!targets.length) return;
+
+  const toFinal: gsap.TweenVars = { ...to, overwrite: 'auto' };
+  if (isNativeApp) {
+    if (typeof toFinal.duration === 'number') toFinal.duration *= 0.5;
+    if (typeof toFinal.stagger === 'number') toFinal.stagger  *= 0.5;
+  }
+  gsap.fromTo(targets, from, toFinal);
+}
 
 /** Animación de entrada en cascada para la página */
 export function usePageReveal(deps: unknown[] = []) {
@@ -130,6 +162,8 @@ export function useTilt3D(opts?: { max?: number; idle?: boolean }) {
   const idle = opts?.idle ?? true;
 
   useEffect(() => {
+    /* En APK (touch) el tilt y el idle-loop son inútiles y consumen CPU */
+    if (isNativeApp) return;
     const scene = sceneRef.current;
     const tilt  = tiltRef.current;
     if (!scene || !tilt) return;
@@ -210,10 +244,11 @@ export function useCardEntrance(selector = '.card-enter', deps: unknown[] = []) 
         { y: 36, opacity: 0, scale: 0.97 },
         {
           y: 0, opacity: 1, scale: 1,
-          stagger: { amount: 0.45, ease: 'power1.inOut' },
-          duration: 0.65,
+          stagger: { amount: isNativeApp ? 0.2 : 0.45, ease: 'power1.inOut' },
+          duration: isNativeApp ? 0.3 : 0.65,
           ease: 'power3.out',
           clearProps: 'transform',
+          overwrite: 'auto',
         },
       );
     }, ref);
@@ -235,22 +270,32 @@ export function usePageEntrance() {
       const cards    = gsap.utils.toArray<HTMLElement>('.card-enter');
       const sections = gsap.utils.toArray<HTMLElement>('.section-enter');
       const rows     = gsap.utils.toArray<HTMLElement>('.row-enter');
+
+      /* En APK con muchos elementos: skip animación, mostrar directamente */
+      const totalEls = headers.length + cards.length + sections.length + rows.length;
+      if (isNativeApp && totalEls > 20) {
+        gsap.set([...headers, ...cards, ...sections, ...rows], { opacity: 1, y: 0, x: 0, scale: 1, clearProps: 'all' });
+        return;
+      }
+
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-      if (headers.length)  tl.fromTo(headers,  { y: -18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, stagger: 0.05 });
-      if (cards.length)    tl.fromTo(cards,    { y: 36, opacity: 0, scale: 0.97 }, { y: 0, opacity: 1, scale: 1, stagger: 0.07, duration: 0.6, clearProps: 'transform' }, '-=0.3');
-      if (sections.length) tl.fromTo(sections, { y: 24, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.55 }, '-=0.35');
-      if (rows.length)     tl.fromTo(rows,     { x: -12, opacity: 0 }, { x: 0, opacity: 1, stagger: 0.04, duration: 0.4 }, '-=0.3');
+      const d = isNativeApp ? 0.5 : 1;
+      if (headers.length)  tl.fromTo(headers,  { y: -18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55 * d, stagger: 0.05 * d, overwrite: 'auto' });
+      if (cards.length)    tl.fromTo(cards,    { y: 36, opacity: 0, scale: 0.97 }, { y: 0, opacity: 1, scale: 1, stagger: 0.07 * d, duration: 0.6 * d, clearProps: 'transform', overwrite: 'auto' }, '-=0.3');
+      if (sections.length) tl.fromTo(sections, { y: 24, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08 * d, duration: 0.55 * d, overwrite: 'auto' }, '-=0.35');
+      if (rows.length)     tl.fromTo(rows,     { x: -12, opacity: 0 }, { x: 0, opacity: 1, stagger: 0.04 * d, duration: 0.4 * d, overwrite: 'auto' }, '-=0.3');
     }, pageRef);
     return () => ctx.revert();
   }, []);
   return pageRef;
 }
 
-/** Parallax de mouse (movimiento suave del fondo) */
+/** Parallax de mouse (movimiento suave del fondo — deshabilitado en APK/touch) */
 export function useMouseParallax(strength = 18) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (isNativeApp) return;
     const el = ref.current;
     if (!el) return;
 

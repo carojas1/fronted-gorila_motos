@@ -8,12 +8,12 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bike, Star, Wrench, Clock, AlertTriangle,
-  CheckCircle, ChevronRight, Phone, MapPin, Mail,
+  CheckCircle, ChevronRight, Phone, MapPin, Mail, Fuel,
 } from 'lucide-react';
-import { motosApi, registrosApi } from '../../lib/api';
+import { motosApi, registrosApi, combustibleApi } from '../../lib/api';
 import { usePolling } from '../../hooks/usePolling';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Moto, RegistroDetalle } from '../../types';
+import type { Moto, RegistroDetalle, CargaCombustible } from '../../types';
 import { fmtDate, fmtMoney, toIsoStr } from '../../lib/utils';
 import { WORKSHOP_CONTACT } from '../../lib/constants';
 
@@ -52,14 +52,16 @@ export default function PortalClientePage() {
   const { user } = useAuth();
   const [motos,    setMotos]    = useState<Moto[]>([]);
   const [registros,setRegistros]= useState<RegistroDetalle[]>([]);
+  const [combustible, setCombustible] = useState<CargaCombustible[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [tab,      setTab]      = useState<'historial' | 'alertas' | 'puntos'>('historial');
   const [filterPlaca, setFilterPlaca] = useState('');
 
   const load = useCallback(async () => {
-    const [mr, rr] = await Promise.allSettled([motosApi.list(), registrosApi.list()]);
+    const [mr, rr, cr] = await Promise.allSettled([motosApi.list(), registrosApi.list(), combustibleApi.list()]);
     const allMotos:    Moto[]            = mr.status === 'fulfilled' ? mr.value.data : [];
     const allRegistros:RegistroDetalle[] = rr.status === 'fulfilled' ? rr.value.data : [];
+    const allCargas:   CargaCombustible[] = cr.status === 'fulfilled' ? cr.value.data : [];
 
     const myMotos    = allMotos.filter(m => m.id_usuario === user?.id_usuario);
     const myPlacas   = new Set(myMotos.map(m => m.placa));
@@ -68,6 +70,7 @@ export default function PortalClientePage() {
 
     setMotos(myMotos);
     setRegistros(myRegistros);
+    setCombustible(allCargas.filter(c => myPlacas.has(c.placa ?? '')));
     setLoading(false);
   }, [user]);
 
@@ -76,8 +79,14 @@ export default function PortalClientePage() {
   /* Refresco en tiempo real: el cliente ve nuevos servicios/km sin recargar */
   usePolling(load, { intervalMs: 25_000 });
 
-  /* Puntos totales */
-  const puntosTotales = useMemo(() => {
+  /* Puntos por combustible: 2 pts por cada día único con carga (igual que PuntosPage) */
+  const ptsCombustible = useMemo(() => {
+    const dias = new Set(combustible.map(c => String(c.fecha).slice(0, 10)));
+    return dias.size * 2;
+  }, [combustible]);
+
+  /* Puntos por servicios */
+  const ptsServicios = useMemo(() => {
     const motoMap = new Map(motos.map(m => [m.placa, m]));
     return registros.reduce((sum, r) => {
       const cc = motoMap.get(r.placa)?.cilindraje ?? 125;
@@ -86,6 +95,9 @@ export default function PortalClientePage() {
       return sum + ptsForCc(cc) + oilBonus;
     }, 0);
   }, [registros, motos]);
+
+  /* Puntos totales = servicios + combustible (coincide con el ranking del admin) */
+  const puntosTotales = ptsServicios + ptsCombustible;
 
   /* Alertas de aceite por moto */
   const oilAlerts = useMemo(() => motos.map(m => {
@@ -347,6 +359,32 @@ export default function PortalClientePage() {
               <Star size={14} className="text-gm-red" /> Ver programa completo
             </Link>
           </div>
+
+          {/* Desglose: servicios vs combustible */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="gm-card-d rounded-2xl p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                   style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                <Wrench size={16} className="text-amber-400" />
+              </div>
+              <div>
+                <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Por servicios</p>
+                <p className="text-2xl font-black text-white">{ptsServicios}<span className="text-xs text-white/30 ml-1">pts</span></p>
+              </div>
+            </div>
+            <div className="gm-card-d rounded-2xl p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                   style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)' }}>
+                <Fuel size={16} className="text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Por combustible</p>
+                <p className="text-2xl font-black text-white">{ptsCombustible}<span className="text-xs text-white/30 ml-1">pts</span></p>
+                <p className="text-[10px] text-white/25">2 pts por día con carga</p>
+              </div>
+            </div>
+          </div>
+
           <div className="gm-card-d rounded-2xl p-4">
             <p className="text-[10px] tracking-[0.28em] uppercase text-white/25 font-bold mb-3">
               Últimos 5 servicios

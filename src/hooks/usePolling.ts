@@ -9,9 +9,10 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useRef } from 'react';
+import { isNativeApp } from '../lib/platform';
 
 interface Options {
-  /** Milisegundos entre refrescos automáticos. Default 20 000. */
+  /** Milisegundos entre refrescos automáticos. Default 20 000 (40 000 en APK). */
   intervalMs?: number;
   /** Si es false, no hace nada (p.ej. sin sesión). Default true. */
   enabled?: boolean;
@@ -23,16 +24,26 @@ interface Options {
  * @param fetchFn  función que recarga los datos (debe ser estable, p.ej. useCallback)
  */
 export function usePolling(fetchFn: () => void | Promise<void>, options: Options = {}) {
-  const { intervalMs = 20_000, enabled = true, refetchOnFocus = true } = options;
-  const fnRef = useRef(fetchFn);
-  fnRef.current = fetchFn;
+  const {
+    /* En APK reducimos frecuencia para no saturar el WebView ni despertar Render */
+    intervalMs = isNativeApp ? 45_000 : 20_000,
+    enabled = true,
+    refetchOnFocus = true,
+  } = options;
+  const fnRef    = useRef(fetchFn);
+  const running  = useRef(false); // evita llamadas solapadas
+  fnRef.current  = fetchFn;
 
   useEffect(() => {
     if (!enabled) return;
 
     const run = () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-      Promise.resolve(fnRef.current()).catch(() => {});
+      if (running.current) return; // no solapar
+      running.current = true;
+      Promise.resolve(fnRef.current())
+        .catch(() => {})
+        .finally(() => { running.current = false; });
     };
 
     const id = window.setInterval(run, intervalMs);

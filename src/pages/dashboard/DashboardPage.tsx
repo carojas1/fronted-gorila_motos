@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import {
   AreaChart, Area, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
+  XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../lib/theme';
@@ -588,26 +588,7 @@ function WebDashboard() {
           </Link>
         </div>
         <div className="recharts-custom h-52">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            <AreaChart data={areaData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gradOrdenes" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#E11428" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#E11428" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradIngresos" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#10B981" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="day" tick={{ fill: 'rgba(255,255,255,0.28)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: 'rgba(255,255,255,0.28)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<DarkTooltip />} />
-              <Area type="monotone" dataKey="ordenes" name="Órdenes" stroke="#E11428" strokeWidth={2} fill="url(#gradOrdenes)" dot={false} />
-              {isAdmin && <Area type="monotone" dataKey="ingresos" name="Ingresos $" stroke="#10B981" strokeWidth={2} fill="url(#gradIngresos)" dot={false} />}
-            </AreaChart>
-          </ResponsiveContainer>
+          <ActivityAreaChart data={areaData} isAdmin={isAdmin} isDark={isDark} />
         </div>
       </div>
 
@@ -633,16 +614,7 @@ function WebDashboard() {
             <p className="text-[10px] tracking-[0.28em] uppercase text-white/28 font-bold">Estado de órdenes</p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="recharts-custom w-36 h-36 shrink-0">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" strokeWidth={2} stroke="rgba(0,0,0,0.5)">
-                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip content={<DarkTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <EstadosPieChart data={pieData} isDark={isDark} />
             <div className="flex-1 space-y-2">
               {pieData.map(d => (
                 <div key={d.name} className="flex items-center justify-between">

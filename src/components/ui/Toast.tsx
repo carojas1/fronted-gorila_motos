@@ -50,16 +50,19 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
     if (!ref.current) return;
     gsap.fromTo(ref.current,
       { x: 64, opacity: 0 },
-      { x: 0,  opacity: 1, duration: 0.3, ease: 'power2.out' }
+      { x: 0,  opacity: 1, duration: 0.3, ease: 'power2.out', overwrite: true }
     );
     const timer = setTimeout(() => dismiss(), 4200);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (ref.current) gsap.killTweensOf(ref.current);
+    };
   }, []);
 
   const dismiss = () => {
     if (!ref.current) { onRemove(toast.id); return; }
     gsap.to(ref.current, {
-      x: 64, opacity: 0, duration: 0.25,
+      x: 64, opacity: 0, duration: 0.22, overwrite: true,
       onComplete: () => onRemove(toast.id),
     });
   };
