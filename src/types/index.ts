@@ -12,6 +12,8 @@ export interface Usuario {
   descripcion:     string;
   ruta_imagen:     string | null;
   roles:           string[] | null;
+  telefono?:       string | null;
+  direccion?:      string | null;
 }
 
 export interface AuthResponse {

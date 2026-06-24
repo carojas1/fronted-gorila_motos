@@ -5,8 +5,8 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useMemo } from 'react';
-import { Star, Gift, Trophy, Zap, TrendingUp, Award, Users } from 'lucide-react';
-import { registrosApi, motosApi, usuariosApi } from '../../lib/api';
+import { Star, Gift, Trophy, Zap, TrendingUp, Award, Users, Fuel } from 'lucide-react';
+import { registrosApi, motosApi, usuariosApi, combustibleApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import type { RegistroDetalle, Moto, Usuario } from '../../types';
 import { fmtDate, fmtMoney, toIsoStr } from '../../lib/utils';
@@ -66,6 +66,7 @@ interface UserPoints {
   historia: HistItem[];
   totales: number;
   canjeados: number;
+  ptsCombustible: number;
 }
 
 export default function PuntosPage() {
@@ -77,12 +78,13 @@ export default function PuntosPage() {
 
   useEffect(() => {
     async function load() {
-      const [rr, mr, ur] = await Promise.allSettled([
-        registrosApi.list(), motosApi.list(), usuariosApi.list(),
+      const [rr, mr, ur, cr] = await Promise.allSettled([
+        registrosApi.list(), motosApi.list(), usuariosApi.list(), combustibleApi.list(),
       ]);
       const records: RegistroDetalle[] = rr.status === 'fulfilled' ? rr.value.data : [];
       const motos:   Moto[]            = mr.status === 'fulfilled' ? mr.value.data : [];
       const users:   Usuario[]         = ur.status === 'fulfilled' ? ur.value.data : [];
+      const cargasAll: import('../../types').CargaCombustible[] = cr.status === 'fulfilled' ? cr.value.data : [];
 
       const motoMap = new Map(motos.map(m => [m.placa, m]));
 
@@ -113,8 +115,14 @@ export default function PuntosPage() {
           })
           .sort((a, b) => toIsoStr(b.fecha).localeCompare(toIsoStr(a.fecha)));
 
-        const totales = historia.reduce((s, h) => s + h.total, 0);
-        return { usuario: u, motos: userMotos, historia, totales, canjeados: 0 };
+        const totalesServicio = historia.reduce((s, h) => s + h.total, 0);
+        // Puntos por combustible: 2 pts por cada día único con carga
+        const placasSet = new Set(userMotos.map(m => m.placa));
+        const cargasUser = cargasAll.filter(c => placasSet.has(c.placa));
+        const diasUnicos = new Set(cargasUser.map(c => String(c.fecha).slice(0, 10)));
+        const ptsCombustible = diasUnicos.size * 2;
+        const totales = totalesServicio + ptsCombustible;
+        return { usuario: u, motos: userMotos, historia, totales, canjeados: 0, ptsCombustible };
       });
 
       userPoints.sort((a, b) => b.totales - a.totales);
@@ -257,9 +265,9 @@ export default function PuntosPage() {
           {tab === 'resumen' && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { icon: Zap,       label: 'Puntos ganados',   value: selected.totales,    color: '#F59E0B', unit: 'pts'  },
-                { icon: TrendingUp,label: 'Servicios totales',value: selected.historia.length, color: '#3B82F6', unit: 'svc' },
-                { icon: Award,     label: 'Cashback total',   value: cashback,             color: '#10B981', unit: 'USD' },
+                { icon: Zap,       label: 'Puntos por servicios', value: selected.totales - selected.ptsCombustible, color: '#F59E0B', unit: 'pts'  },
+                { icon: Fuel,      label: 'Puntos por combustible', value: selected.ptsCombustible, color: '#3B82F6', unit: 'pts' },
+                { icon: Award,     label: 'Cashback disponible',  value: cashback,                  color: '#10B981', unit: 'USD' },
               ].map(({ icon: Icon, label, value, color, unit }) => (
                 <div key={label} className="gm-card-d rounded-2xl p-5">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"

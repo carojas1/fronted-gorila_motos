@@ -9,7 +9,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Fuel, Plus, Trash2, TrendingDown, DollarSign, Gauge, X,
-  AlertTriangle, TrendingUp, Activity, Wrench, Search, Users, Mail,
+  AlertTriangle, TrendingUp, Activity, Wrench, Search, Users, Mail, Star,
 } from 'lucide-react';
 import {
   ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell,
@@ -208,11 +208,18 @@ export default function CombustiblePage() {
 
       const kmRec = kmActual && kmAnterior ? kmActual - kmAnterior : null;
       const rend  = kmRec && galones > 0 ? (kmRec / galones).toFixed(1) : null;
-      toast.success(
-        rend
-          ? `Carga guardada · ${rend} km/gal · $${costoFinal.toFixed(2)}`
-          : `Carga guardada · $${costoFinal.toFixed(2)}`
-      );
+      // Verificar si es la primera carga del día para este usuario
+      const today = new Date().toISOString().slice(0, 10);
+      const yaHayCargaHoy = logs.some(l => String(l.fecha).slice(0, 10) === today);
+      if (!yaHayCargaHoy && !canManage) {
+        toast.success('¡+2 puntos! Primera carga del día registrada 🌟');
+      } else {
+        toast.success(
+          rend
+            ? `Carga guardada · ${rend} km/gal · $${costoFinal.toFixed(2)}`
+            : `Carga guardada · $${costoFinal.toFixed(2)}`
+        );
+      }
       setOpen(false);
       setForm(emptyForm());
       cargarLogs(motos);
@@ -277,6 +284,13 @@ export default function CombustiblePage() {
     });
     return Array.from(acc.values()).sort((a, b) => b.costo - a.costo);
   }, [filtered]);
+
+  /* ── Puntos por combustible: 2 pts por día único con carga (máx 1 por día) ── */
+  const puntosGasolina = useMemo(() => {
+    if (canManage) return null;
+    const dias = new Set(logs.map(l => String(l.fecha).slice(0, 10)));
+    return dias.size * 2;
+  }, [logs, canManage]);
 
   const removeLog = async (id: number) => {
     try { await combustibleApi.remove(id); cargarLogs(motos); }
@@ -443,6 +457,30 @@ export default function CombustiblePage() {
               <p className="text-[11px] text-white/35 mt-0.5">{label}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── Puntos por combustible ── */}
+      {puntosGasolina !== null && puntosGasolina > 0 && (
+        <div className="rounded-2xl p-4 flex items-center gap-4"
+             style={{ background: 'linear-gradient(135deg,rgba(245,158,11,0.10) 0%,rgba(245,158,11,0.04) 100%)',
+                      border: '1px solid rgba(245,158,11,0.28)' }}>
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+               style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)' }}>
+            <Star size={20} color="#F59E0B" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[13px] font-black" style={{ color: '#F59E0B' }}>
+              {puntosGasolina} puntos acumulados por combustible
+            </p>
+            <p className="text-[12px] mt-0.5" style={{ color: 'rgba(245,158,11,0.6)' }}>
+              2 pts por cada día que registras combustible · {Math.floor(puntosGasolina / 100) > 0 ? `${Math.floor(puntosGasolina / 100)} descuento(s) de $5 disponibles` : `${100 - puntosGasolina} pts más para tu primer descuento de $5`}
+            </p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-2xl font-black" style={{ color: '#F59E0B' }}>{puntosGasolina}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(245,158,11,0.5)' }}>pts</p>
+          </div>
         </div>
       )}
 

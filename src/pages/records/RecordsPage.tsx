@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Search, Wrench, CheckCircle, Clock, Loader, ChevronRight,
   Plus, Printer, Phone, Package, FileText, History, X, Gauge,
-  UserPlus, Zap, AlertTriangle,
+  UserPlus, Zap, AlertTriangle, CreditCard, MapPin,
 } from 'lucide-react';
 import gsap from 'gsap';
 import { registrosApi, usuariosApi, motosApi, tiposApi, authApi, mantenimientosApi, productosApi } from '../../lib/api';
@@ -839,14 +839,29 @@ export default function RecordsPage() {
                           </button>
                           {(() => {
                             const cli = usuarios.find(u => u.nombre_completo === r.nombre_cliente);
-                            const tel = cli ? extractPhone(cli.descripcion) : null;
-                            return tel ? (
-                              <a href={`tel:${tel}`}
-                                className="flex items-center gap-1 text-[10px] text-emerald-400/70 hover:text-emerald-400 mt-0.5"
-                                onClick={e => e.stopPropagation()}>
-                                <Phone size={9}/> {tel}
-                              </a>
-                            ) : null;
+                            const tel = cli?.telefono || (cli ? extractPhone(cli.descripcion) : null);
+                            const cedId = cli ? extractCedula(cli.descripcion) : null;
+                            return (
+                              <div className="flex flex-col gap-0.5 mt-0.5">
+                                {tel && (
+                                  <a href={`tel:${tel}`}
+                                    className="flex items-center gap-1 text-[10px] text-emerald-400/70 hover:text-emerald-400"
+                                    onClick={e => e.stopPropagation()}>
+                                    <Phone size={9}/> {tel}
+                                  </a>
+                                )}
+                                {cedId && (
+                                  <span className="flex items-center gap-1 text-[10px] text-white/30">
+                                    <CreditCard size={9}/> {cedId}
+                                  </span>
+                                )}
+                                {cli?.direccion && (
+                                  <span className="flex items-center gap-1 text-[10px] text-white/30">
+                                    <MapPin size={9}/> {cli.direccion}
+                                  </span>
+                                )}
+                              </div>
+                            );
                           })()}
                         </td>
                         <td><span className="plate-tag">{r.placa}</span></td>

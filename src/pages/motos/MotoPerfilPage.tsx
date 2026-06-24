@@ -281,15 +281,15 @@ export default function MotoPerfilPage() {
 
               {/* Placa + nombre */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '2px 8px' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', color: cs, background: cbg, border: `1px solid ${cbd}`, borderRadius: 6, padding: '2px 8px' }}>
                   {moto.placa}
                 </span>
               </div>
-              <h1 style={{ color: '#EBEBEB', fontWeight: 800, fontSize: 24, margin: '0 0 2px', letterSpacing: '-0.03em' }}>
-                {moto.marca} <span style={{ color: 'rgba(255,255,255,0.55)' }}>{moto.modelo}</span>
+              <h1 style={{ color: ct, fontWeight: 800, fontSize: 24, margin: '0 0 2px', letterSpacing: '-0.03em' }}>
+                {moto.marca} <span style={{ color: cm }}>{moto.modelo}</span>
               </h1>
               {moto.nombre_moto && (
-                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: 0 }}>
+                <p style={{ color: cs, fontSize: 13, margin: 0 }}>
                   "{moto.nombre_moto}"
                 </p>
               )}
@@ -309,16 +309,16 @@ export default function MotoPerfilPage() {
           </div>
 
           {/* Stats */}
-          <div style={{ display: 'flex', gap: 0, marginTop: 18, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', gap: 0, marginTop: 18, background: cbg, border: `1px solid ${cbd}`, borderRadius: 12, overflow: 'hidden' }}>
             {[
               { icon: <Gauge size={13} />,    val: `${moto.cilindraje} cc`, lbl: 'Cilindraje' },
               { icon: <Zap size={13} />,      val: moto.kilometraje.toLocaleString('es-CO'), lbl: 'Kilómetros' },
               { icon: <Calendar size={13} />, val: moto.anio, lbl: antiguedad === 0 ? 'Nuevo' : `${antiguedad} años` },
             ].map((st, i) => (
-              <div key={i} style={{ flex: 1, padding: '14px 0', textAlign: 'center', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', color: 'rgba(255,255,255,0.3)', marginBottom: 4 }}>{st.icon}</div>
-                <p style={{ color: '#EBEBEB', fontWeight: 800, fontSize: 16, margin: 0, letterSpacing: '-0.02em' }}>{st.val}</p>
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10.5, margin: '2px 0 0' }}>{st.lbl}</p>
+              <div key={i} style={{ flex: 1, padding: '14px 0', textAlign: 'center', borderRight: i < 2 ? `1px solid ${cbd}` : 'none' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', color: cm, marginBottom: 4 }}>{st.icon}</div>
+                <p style={{ color: ct, fontWeight: 800, fontSize: 16, margin: 0, letterSpacing: '-0.02em' }}>{st.val}</p>
+                <p style={{ color: cm, fontSize: 10.5, margin: '2px 0 0' }}>{st.lbl}</p>
               </div>
             ))}
           </div>

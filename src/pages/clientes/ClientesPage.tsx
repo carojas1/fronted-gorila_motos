@@ -237,14 +237,20 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                         <span className="font-mono font-black text-white/85 tracking-widest">{cedula}</span>
                       </span>
                     )}
-                    {phone && (
+                    {(phone || client.telefono) && (
                       <span className="flex items-center gap-1.5 text-[12px]">
                         <Phone size={11} className="text-gm-red" />
-                        <span className="font-mono font-black text-white/85 tracking-widest">{phone}</span>
+                        <span className="font-mono font-black text-white/85 tracking-widest">{client.telefono || phone}</span>
                       </span>
                     )}
-                    {!cedula && !phone && (
-                      <span className="text-[11px] text-white/25 italic">Sin datos de contacto en descripción</span>
+                    {client.direccion && (
+                      <span className="flex items-center gap-1.5 text-[12px]">
+                        <MapPin size={11} className="text-gm-red" />
+                        <span className="text-white/85">{client.direccion}</span>
+                      </span>
+                    )}
+                    {!cedula && !phone && !client.telefono && !client.direccion && (
+                      <span className="text-[11px] text-white/25 italic">Sin datos de contacto registrados</span>
                     )}
                     <span className="flex items-center gap-1 text-[11px] text-emerald-400/70">
                       <Unlock size={10} /> Datos verificados
@@ -257,7 +263,7 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                     onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.background='rgba(225,20,40,0.08)'; (e.currentTarget as HTMLButtonElement).style.borderColor='rgba(225,20,40,0.25)'; (e.currentTarget as HTMLButtonElement).style.color='#E11428'; }}
                     onMouseOut={e  => { (e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.borderColor='rgba(255,255,255,0.10)'; (e.currentTarget as HTMLButtonElement).style.color='rgba(255,255,255,0.45)'; }}>
                     <Shield size={12} />
-                    Ver cédula y teléfono — requiere verificación
+                    Ver cédula, teléfono y dirección — requiere verificación
                   </button>
                 )}
               </div>
@@ -902,6 +908,8 @@ export default function ClientesPage() {
   /* GSAP entrada */
   useEffect(() => {
     if (loading || selected) return;
+    const targets = document.querySelectorAll('.cl-card');
+    if (!targets.length) return;
     gsap.fromTo('.cl-card',
       { y:20, opacity:0, scale:0.97 },
       { y:0, opacity:1, scale:1, stagger:0.06, duration:0.45, ease:'power3.out', clearProps:'transform' }
