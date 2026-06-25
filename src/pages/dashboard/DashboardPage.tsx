@@ -17,7 +17,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../lib/theme';
 import { motosApi, registrosApi, productosApi, usuariosApi, combustibleApi } from '../../lib/api';
-import { fmtDate, fmtMoney } from '../../lib/utils';
+import { fmtDate, fmtMoney, parsePermisos } from '../../lib/utils';
 import { usePolling } from '../../hooks/usePolling';
 import { useCountUp } from '../../hooks/useGsap';
 import type { RegistroDetalle, Moto, Producto } from '../../types';
@@ -541,6 +541,14 @@ function WebDashboard() {
           ] : []),
         ];
 
+        /* Respetar los permisos del mecánico: solo módulos a los que el admin le dio acceso */
+        const mecPermisos = isMecanico ? parsePermisos(user?.descripcion) : null;
+        const puedeMod = (to: string) => {
+          if (isAdmin || !isMecanico || !mecPermisos) return true;
+          return mecPermisos.includes(to.replace('/', ''));
+        };
+        const MODS_VISIBLES = MODS.filter(m => puedeMod(m.to));
+
         return (
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.22em] mb-3"
@@ -548,7 +556,7 @@ function WebDashboard() {
               Panel general · haz clic para ir al módulo
             </p>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
-              {MODS.map(({ to, label, icon: Icon, color, val, sub, pct: p }) => (
+              {MODS_VISIBLES.map(({ to, label, icon: Icon, color, val, sub, pct: p }) => (
                 <Link key={to} to={to}
                   className="gm-mod-card rounded-xl p-3.5 text-center block"
                   style={{ textDecoration:'none' }}
