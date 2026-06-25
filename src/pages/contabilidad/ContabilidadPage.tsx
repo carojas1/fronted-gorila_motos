@@ -375,7 +375,7 @@ function filtroLabel(tipo: FiltroTipo, fecha: string, mes: number, anio: number)
 export default function ContabilidadPage() {
   const toast   = useToast();
   const pageRef = usePageEntrance();
-  const { theme } = useTheme();
+  const [theme] = useTheme();
   const isDark = theme !== 'light';
   const { user, isAdmin } = useAuth();
 

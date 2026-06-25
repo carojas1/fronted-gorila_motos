@@ -215,6 +215,8 @@ export default function DashboardPage() {
 }
 
 function WebDashboard() {
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
   const { user, isAdmin, isMecanico, isCliente } = useAuth();
 
   const [motos,       setMotos]       = useState<Moto[]>([]);
