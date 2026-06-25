@@ -111,6 +111,7 @@ export interface Registro {
 
 export interface RegistroDetalle {
   id_registro:      number;
+  id_moto?:         number;
   nombre_cliente:   string;
   nombre_encargado?: string;
   marca_moto:       string;

@@ -427,10 +427,12 @@ export default function ContabilidadPage() {
   const [filtroAnio,  setFiltroAnio]  = useState(anioActual);
 
   const [form, setForm] = useState({
-    concepto: 'Compra inventario',
-    fecha:    hoyStr,
-    monto:    '',
-    notas:    '',
+    concepto:    'Compra inventario',
+    fecha:       hoyStr,
+    monto:       '',
+    notas:       '',
+    empleadoId:  0,
+    empSearch:   '',
   });
 
   const fetchData = useCallback(async () => {
@@ -554,15 +556,20 @@ export default function ContabilidadPage() {
     return u ? u.nombre_completo.split(' ').slice(0,2).join(' ') : `Empleado #${idEmp}`;
   };
 
+  const CONCEPTOS_EMPLEADO = ['Sueldo', 'Bono', 'Anticipo'];
+
   const handleGuardarGasto = async () => {
     const monto = parseFloat(form.monto);
     if (isNaN(monto) || monto <= 0) { toast.error('Ingresa un monto válido'); return; }
+    const necesitaEmpleado = CONCEPTOS_EMPLEADO.includes(form.concepto);
+    if (necesitaEmpleado && form.empleadoId === 0) { toast.error('Selecciona un empleado'); return; }
+    const idEmp = necesitaEmpleado ? form.empleadoId : 0;
     setSavingGasto(true);
     try {
-      await pagosEmpleadoApi.create({ id_empleado:0, fecha:form.fecha, concepto:form.concepto, monto, notas:form.notas||undefined });
+      await pagosEmpleadoApi.create({ id_empleado: idEmp, fecha: form.fecha, concepto: form.concepto, monto, notas: form.notas || undefined });
       toast.success('Gasto registrado');
       setModalGasto(false);
-      setForm({ concepto:'Compra inventario', fecha:hoyStr, monto:'', notas:'' });
+      setForm({ concepto: 'Compra inventario', fecha: hoyStr, monto: '', notas: '', empleadoId: 0, empSearch: '' });
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setSavingGasto(false); }
@@ -1205,10 +1212,63 @@ export default function ContabilidadPage() {
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-white/70 block mb-1.5">Concepto</label>
-            <select className="gm-select-d w-full" value={form.concepto} onChange={e => setForm(f => ({...f,concepto:e.target.value}))}>
+            <select className="gm-select-d w-full" value={form.concepto}
+              onChange={e => setForm(f => ({ ...f, concepto: e.target.value, empleadoId: 0, empSearch: '' }))}>
               {CONCEPTOS_GASTO.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+
+          {/* Selector de empleado — solo para Sueldo, Bono, Anticipo */}
+          {CONCEPTOS_EMPLEADO.includes(form.concepto) && (() => {
+            const mecYAdmin = empleados.filter(e =>
+              !e.roles?.length ||
+              e.roles.some(r => ['MECANICO','ADMIN'].includes(r.rol?.nombre ?? ''))
+            );
+            const filtrados = form.empSearch.trim()
+              ? mecYAdmin.filter(e => e.nombre_completo.toLowerCase().includes(form.empSearch.toLowerCase()))
+              : mecYAdmin;
+            const selEmp = empleados.find(e => e.id_usuario === form.empleadoId);
+            return (
+              <div>
+                <label className="text-sm font-medium text-white/70 block mb-1.5">
+                  Empleado <span className="text-gm-red">*</span>
+                </label>
+                {selEmp ? (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-xl"
+                       style={{ background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.25)' }}>
+                    <span className="text-sm font-bold text-emerald-400">{selEmp.nombre_completo.split(' ').slice(0,3).join(' ')}</span>
+                    <button className="text-white/30 hover:text-white/70 text-xs ml-2"
+                      onClick={() => setForm(f => ({ ...f, empleadoId: 0, empSearch: '' }))}>✕</button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="text"
+                      className="gm-input-d mb-2"
+                      placeholder="Buscar empleado..."
+                      value={form.empSearch}
+                      onChange={e => setForm(f => ({ ...f, empSearch: e.target.value }))}
+                    />
+                    <div className="max-h-36 overflow-y-auto rounded-xl divide-y"
+                         style={{ border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.03)' }}>
+                      {filtrados.length === 0
+                        ? <p className="px-3 py-2 text-xs text-white/30">Sin resultados</p>
+                        : filtrados.map(e => (
+                          <button key={e.id_usuario}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-white/[0.06] transition-colors"
+                            onClick={() => setForm(f => ({ ...f, empleadoId: e.id_usuario!, empSearch: '' }))}
+                          >
+                            <span className="font-semibold text-white/80">{e.nombre_completo.split(' ').slice(0,3).join(' ')}</span>
+                          </button>
+                        ))
+                      }
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <div>
             <label className="text-sm font-medium text-white/70 block mb-1.5">Fecha</label>
             <input type="date" className="gm-input-d" value={form.fecha} onChange={e => setForm(f => ({...f,fecha:e.target.value}))}/>

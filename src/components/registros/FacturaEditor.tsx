@@ -11,7 +11,7 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import { useTheme } from '../../lib/theme';
-import { registrosApi } from '../../lib/api';
+import { registrosApi, mantenimientosApi } from '../../lib/api';
 import { fmtMoney, getErrorMsg } from '../../lib/utils';
 import {
   CATEGORIAS_REPUESTO, buildManoDescripcion, buildRepuestoDescripcion,
@@ -165,6 +165,37 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
       if (completarAlGuardar && registro.estado < 2) {
         await registrosApi.estado(registro.id_registro, 2);
       }
+
+      /* ── Auto-registro de mantenimiento según categoría del producto ──
+         Si el registro tiene id_moto y kilometraje, detectamos qué tipos de
+         mantenimiento corresponden a los productos de inventario agregados.
+         Se registra en segundo plano sin bloquear el guardado. */
+      const idMoto = registro.id_moto;
+      const km = registro.kilometraje;
+      if (idMoto && km != null) {
+        const MANT_MAP: [RegExp, string][] = [
+          [/aceite/i,                    'ACEITE'],
+          [/filtro\s*(de\s*)?aire/i,     'FILTRO_AIRE'],
+          [/buj[ií]a/i,                  'BUJIA'],
+          [/cadena|correa/i,             'CADENA'],
+          [/llanta|neum[aá]tico|tire/i,  'LLANTA_TRASERA'],
+          [/freno|pastilla|brake/i,       'FRENOS'],
+        ];
+        const tiposARegistrar = new Set<string>();
+        for (const item of limpios) {
+          if (item.idProducto == null) continue;
+          const prod = productos.find(p => p.id_producto === item.idProducto);
+          if (!prod) continue;
+          const texto = `${prod.nombre ?? ''} ${prod.descripcion ?? ''}`;
+          for (const [regex, tipo] of MANT_MAP) {
+            if (regex.test(texto)) { tiposARegistrar.add(tipo); break; }
+          }
+        }
+        tiposARegistrar.forEach(tipo =>
+          mantenimientosApi.registrar({ id_moto: idMoto, tipo, km_servicio: km }).catch(() => {})
+        );
+      }
+
       toast.success(
         completarAlGuardar
           ? 'Servicio completado · factura con mano de obra y repuestos lista.'
