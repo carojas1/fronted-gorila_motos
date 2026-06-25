@@ -183,30 +183,6 @@ const XS = {
   numCellRed:   { alignment:{horizontal:'right'}, numFmt:'"$"#,##0.00', font:{bold:true,color:{rgb:'FF7F1D1D'},sz:9}, fill:{patternType:'solid',fgColor:{rgb:'FFFEF2F2'}} },
 };
 type CellStyle = typeof XS.headerGreen;
-function styledSheet(aoa: (string|number)[][], headerStyles: CellStyle[], opts?: { totRowIdx?: number; numCols?: number[] }) {
-  const ws = XLSX.utils.aoa_to_sheet(aoa) as Record<string, { v: unknown; t: string; s?: CellStyle }>;
-  const cols = aoa[0]?.length ?? 0;
-  for (let c = 0; c < cols; c++) {
-    const addr = XLSX.utils.encode_cell({ r: 0, c });
-    if (ws[addr]) ws[addr].s = headerStyles[c] ?? XS.headerGray;
-  }
-  for (let r = 1; r < aoa.length; r++) {
-    const isTot = opts?.totRowIdx === r;
-    for (let c = 0; c < cols; c++) {
-      const addr = XLSX.utils.encode_cell({ r, c });
-      if (!ws[addr]) continue;
-      const isNum = opts?.numCols?.includes(c);
-      if (isTot) {
-        ws[addr].s = isNum ? XS.totRow : { ...XS.totRow, alignment: { horizontal: 'left' } };
-      } else {
-        ws[addr].s = isNum
-          ? { ...XS.numCell, ...(r % 2 === 0 ? { fill: XS.rowEven.fill } : {}) }
-          : (r % 2 === 0 ? XS.rowEven : XS.rowOdd);
-      }
-    }
-  }
-  return ws;
-}
 
 /* ─── Exportar datos filtrados a Excel (.xlsx) ─── */
 function exportarExcel(
@@ -273,140 +249,122 @@ function exportarExcel(
   const repInvProfit  = repInvRev - repInvCost;
   const gananciaBruta = manoRev + repInvProfit + piezaExtraRev; // ganancia antes de gastos operativos
   const gananciaNeta  = gananciaBruta - totalGas;
+  const margenPct     = totalIng > 0 ? ((gananciaBruta / totalIng) * 100).toFixed(1) : '0';
+
+  /* ══════════════════════════════════════════════════════════════
+     UNA SOLA HOJA "Reporte" — secciones apiladas con colores
+     (mano de obra · repuestos venta/costo/ganancia · piezas extras ·
+      ingresos · gastos · ganancia bruta/neta). No más pestañas sueltas.
+     ══════════════════════════════════════════════════════════════ */
+  const COLS = 9;
+  const sub  = { font: { sz: 10, italic: true, color: { rgb: 'FF6B7280' } } };
+  type RowMeta = {
+    cells: (string | number)[];
+    kind: 'title' | 'subtitle' | 'banner' | 'header' | 'data' | 'total' | 'blank';
+    headerStyles?: CellStyle[];
+    bannerStyle?: CellStyle;
+    numCols?: number[];
+    totStyle?: CellStyle;
+  };
+  const R: RowMeta[] = [];
+  const blank = () => R.push({ cells: [], kind: 'blank' });
+
+  /* ── Encabezado ── */
+  R.push({ cells: ['GORILA MOTOS — Reporte Contable'], kind: 'title' });
+  R.push({ cells: [`Período: ${label}`], kind: 'subtitle' });
+  R.push({ cells: [`Generado: ${hoy}`], kind: 'subtitle' });
+  blank();
+
+  /* ── 1. Resumen general ── */
+  R.push({ cells: ['RESUMEN GENERAL'], kind: 'banner' });
+  R.push({ cells: ['Concepto', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGray] });
+  R.push({ cells: ['Ingresos totales (facturado)', +totalIng.toFixed(2)], kind: 'data', numCols: [1] });
+  R.push({ cells: ['Ganancia bruta', +gananciaBruta.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [1] });
+  R.push({ cells: ['Total gastos', +totalGas.toFixed(2)], kind: 'total', totStyle: XS.totRowRed, numCols: [1] });
+  R.push({ cells: ['GANANCIA NETA', +gananciaNeta.toFixed(2)], kind: 'total', totStyle: gananciaNeta >= 0 ? XS.totRowGreen : XS.totRowRed, numCols: [1] });
+  R.push({ cells: ['Margen sobre ingresos', `${margenPct}%`], kind: 'data' });
+  blank();
+
+  /* ── 2. Ganancia por fuente (la separación que pediste) ── */
+  R.push({ cells: ['GANANCIA POR FUENTE'], kind: 'banner' });
+  R.push({ cells: ['Fuente', 'Venta ($)', 'Costo ($)', 'Ganancia ($)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGreen, XS.headerRed, XS.headerGreen] });
+  R.push({ cells: ['Mano de obra', +manoRev.toFixed(2), 0, +manoRev.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
+  R.push({ cells: ['Repuestos inventario', +repInvRev.toFixed(2), +repInvCost.toFixed(2), +repInvProfit.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
+  R.push({ cells: ['Piezas extras (manual)', +piezaExtraRev.toFixed(2), 0, +piezaExtraRev.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
+  R.push({ cells: ['GANANCIA BRUTA', +(manoRev + repInvRev + piezaExtraRev).toFixed(2), +repInvCost.toFixed(2), +gananciaBruta.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [1, 2, 3] });
+  blank();
+
+  /* ── 3. Detalle por servicio ── */
+  if (gananciaRows.length > 0) {
+    R.push({ cells: ['DETALLE POR SERVICIO'], kind: 'banner' });
+    R.push({
+      cells: ['Fecha', 'Placa', 'Servicio', 'Mano obra ($)', 'Rep. venta ($)', 'Rep. costo ($)', 'Rep. ganancia ($)', 'Piezas extras ($)', 'Ganancia total ($)'],
+      kind: 'header',
+      headerStyles: [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerAmber, XS.headerGreen, XS.headerRed, XS.headerGreen, XS.headerGreen, XS.headerGreen],
+    });
+    gananciaRows.forEach(row => R.push({ cells: row, kind: 'data', numCols: [3, 4, 5, 6, 7, 8] }));
+    R.push({
+      cells: ['', '', 'TOTALES', +manoRev.toFixed(2), +repInvRev.toFixed(2), +repInvCost.toFixed(2), +repInvProfit.toFixed(2), +piezaExtraRev.toFixed(2), +gananciaBruta.toFixed(2)],
+      kind: 'total', totStyle: XS.totRow, numCols: [3, 4, 5, 6, 7, 8],
+    });
+    blank();
+  }
+
+  /* ── 4. Ingresos ── */
+  R.push({ cells: ['INGRESOS'], kind: 'banner', bannerStyle: XS.headerGreen });
+  R.push({ cells: ['Fecha', 'Placa', 'Tipo de servicio', 'Estado', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGreen] });
+  ingresos.forEach(r => R.push({
+    cells: [toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio general', 'Cobrado', +(r.costo_total ?? 0).toFixed(2)],
+    kind: 'data', numCols: [4],
+  }));
+  R.push({ cells: ['', '', '', 'TOTAL', +totalIng.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [4] });
+  blank();
+
+  /* ── 5. Gastos ── */
+  R.push({ cells: ['GASTOS'], kind: 'banner', bannerStyle: XS.headerRed });
+  R.push({ cells: ['Fecha', 'Concepto', 'Empleado / Proveedor', 'Categoría', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerRed, XS.headerGray, XS.headerGray, XS.headerRed] });
+  gastos.forEach(g => R.push({
+    cells: [toIsoStr(g.fecha), g.concepto, nombreEmp(g.id_empleado), g.id_empleado > 0 ? 'Pago empleado' : 'Gasto general', +Number(g.monto).toFixed(2)],
+    kind: 'data', numCols: [4],
+  }));
+  R.push({ cells: ['', '', '', 'TOTAL GASTOS', +totalGas.toFixed(2)], kind: 'total', totStyle: XS.totRowRed, numCols: [4] });
+  R.push({ cells: ['', '', '', 'Empleados', +gasEmpl.toFixed(2)], kind: 'data', numCols: [4] });
+  R.push({ cells: ['', '', '', 'Generales', +gasGen.toFixed(2)], kind: 'data', numCols: [4] });
+  blank();
+
+  /* ── 6. Resultado final ── */
+  R.push({ cells: ['RESULTADO FINAL'], kind: 'banner' });
+  R.push({ cells: ['Balance neto (ingresos − gastos)', +balance.toFixed(2)], kind: 'total', totStyle: balance >= 0 ? XS.totRowGreen : XS.totRowRed, numCols: [1] });
+  R.push({ cells: ['GANANCIA NETA (bruta − gastos)', +gananciaNeta.toFixed(2)], kind: 'total', totStyle: gananciaNeta >= 0 ? XS.totRowGreen : XS.totRowRed, numCols: [1] });
+
+  /* ── Ensamblar la hoja con estilos por tipo de fila ── */
+  const aoa = R.map(m => { const p = [...m.cells]; while (p.length < COLS) p.push(''); return p; });
+  const ws = XLSX.utils.aoa_to_sheet(aoa) as Record<string, { v: unknown; t: string; s?: CellStyle }>;
+  const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
+  R.forEach((m, r) => {
+    if (m.kind === 'title' || m.kind === 'subtitle' || m.kind === 'banner') {
+      merges.push({ s: { r, c: 0 }, e: { r, c: COLS - 1 } });
+    }
+    for (let c = 0; c < COLS; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      if (!ws[addr]) continue;
+      const isNum = m.numCols?.includes(c);
+      if (m.kind === 'title')          ws[addr].s = XS.title;
+      else if (m.kind === 'subtitle')  ws[addr].s = sub as CellStyle;
+      else if (m.kind === 'banner')    ws[addr].s = m.bannerStyle ?? XS.headerGray;
+      else if (m.kind === 'header')    ws[addr].s = m.headerStyles?.[c] ?? XS.headerGray;
+      else if (m.kind === 'total')     ws[addr].s = isNum ? { ...(m.totStyle ?? XS.totRow), alignment: { horizontal: 'right' }, numFmt: '"$"#,##0.00' } as CellStyle : (m.totStyle ?? XS.totRow);
+      else if (m.kind === 'data') {
+        const base = r % 2 === 0 ? XS.rowEven : XS.rowOdd;
+        ws[addr].s = isNum ? { ...XS.numCell, fill: base.fill } as CellStyle : base;
+      }
+    }
+  });
+  ws['!merges'] = merges;
+  ws['!cols'] = [{ wch: 13 }, { wch: 13 }, { wch: 24 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 15 }, { wch: 15 }];
 
   const wb = XLSX.utils.book_new();
-
-  /* ── Hoja 1: RESUMEN ── */
-  const resumen = [
-    ['GORILA MOTOS — Reporte Contable'],
-    [`Período: ${label}`],
-    [`Generado: ${hoy}`],
-    [],
-    ['INGRESOS', 'Monto (USD)'],
-    ['Ingresos totales (facturado)', +totalIng.toFixed(2)],
-    [],
-    ['GANANCIA POR FUENTE', 'Monto (USD)'],
-    ['Mano de obra (100% ganancia)',        +manoRev.toFixed(2)],
-    ['Repuestos inventario — venta',        +repInvRev.toFixed(2)],
-    ['Repuestos inventario — costo',        +repInvCost.toFixed(2)],
-    ['Repuestos inventario — GANANCIA',     +repInvProfit.toFixed(2)],
-    ['Piezas extras vendidas en registro',  +piezaExtraRev.toFixed(2)],
-    ['GANANCIA BRUTA (mano+repuestos+extras)', +gananciaBruta.toFixed(2)],
-    [],
-    ['GASTOS', 'Monto (USD)'],
-    ['Gastos empleados',        +gasEmpl.toFixed(2)],
-    ['Gastos generales',        +gasGen.toFixed(2)],
-    ['Total gastos',            +totalGas.toFixed(2)],
-    [],
-    ['RESULTADO', 'Monto (USD)'],
-    ['Balance neto (ingresos − gastos)', +balance.toFixed(2)],
-    ['GANANCIA NETA (ganancia bruta − gastos)', +gananciaNeta.toFixed(2)],
-    ['Margen sobre ingresos (%)', totalIng > 0 ? +((gananciaBruta / totalIng) * 100).toFixed(1) : 0],
-  ];
-  const wsRes = styledSheet(resumen, [XS.headerGray, XS.headerGreen], { totRowIdx: resumen.length - 3, numCols: [1] });
-  wsRes['!cols'] = [{ wch: 42 }, { wch: 18 }];
-  wsRes['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
-  XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen');
-
-  /* ── Hoja 2: GANANCIAS (desglose por registro) ── */
-  if (gananciaRows.length > 0) {
-    const ganData = [
-      ['Fecha', 'Placa', 'Servicio',
-       'Mano obra ($)', 'Rep. venta ($)', 'Rep. costo ($)', 'Rep. ganancia ($)',
-       'Piezas extras ($)', 'Ganancia total ($)'],
-      ...gananciaRows,
-      [],
-      ['', '', 'TOTALES',
-       +manoRev.toFixed(2), +repInvRev.toFixed(2), +repInvCost.toFixed(2), +repInvProfit.toFixed(2),
-       +piezaExtraRev.toFixed(2), +gananciaBruta.toFixed(2)],
-    ];
-    const wsGan = styledSheet(ganData, [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerAmber, XS.headerGreen, XS.headerRed, XS.headerGreen, XS.headerGreen, XS.headerGreen],
-      { totRowIdx: ganData.length - 1, numCols: [3,4,5,6,7,8] });
-    wsGan['!cols'] = [{ wch: 12 }, { wch: 11 }, { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 15 }, { wch: 15 }];
-    XLSX.utils.book_append_sheet(wb, wsGan, 'Ganancias');
-  }
-
-  /* ── Hoja 2: INGRESOS ── */
-  const ingRows = [
-    ['Fecha', 'Placa', 'Tipo de servicio', 'Estado', 'Monto (USD)'],
-    ...ingresos.map(r => [
-      toIsoStr(r.fecha),
-      r.placa ?? '',
-      r.tipo_servicio ?? 'Servicio general',
-      'Cobrado',
-      +(r.costo_total ?? 0).toFixed(2),
-    ]),
-    [],
-    ['', '', '', 'TOTAL', +totalIng.toFixed(2)],
-  ];
-  const wsIng = styledSheet(ingRows, [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGreen],
-    { totRowIdx: ingRows.length - 1, numCols: [4] });
-  wsIng['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 26 }, { wch: 12 }, { wch: 14 }];
-  XLSX.utils.book_append_sheet(wb, wsIng, 'Ingresos');
-
-  /* ── Hoja 3: GASTOS ── */
-  const gasRows = [
-    ['Fecha', 'Concepto', 'Empleado / Proveedor', 'Categoría', 'Monto (USD)'],
-    ...gastos.map(g => [
-      toIsoStr(g.fecha),
-      g.concepto,
-      nombreEmp(g.id_empleado),
-      g.id_empleado > 0 ? 'Pago empleado' : 'Gasto general',
-      +Number(g.monto).toFixed(2),
-    ]),
-    [],
-    ['', '', '', 'TOTAL GASTOS',    +totalGas.toFixed(2)],
-    ['', '', '', 'Empleados',       +gasEmpl.toFixed(2)],
-    ['', '', '', 'Generales',       +gasGen.toFixed(2)],
-  ];
-  const wsGas = styledSheet(gasRows, [XS.headerGray, XS.headerRed, XS.headerGray, XS.headerGray, XS.headerRed],
-    { totRowIdx: gasRows.length - 3, numCols: [4] });
-  wsGas['!cols'] = [{ wch: 12 }, { wch: 24 }, { wch: 26 }, { wch: 16 }, { wch: 14 }];
-  XLSX.utils.book_append_sheet(wb, wsGas, 'Gastos');
-
-  /* ── Hoja 4: PAGOS EMPLEADOS (desglose) ── */
-  const pagoEmplRows = gastos.filter(g => g.id_empleado > 0).map(g => [
-    toIsoStr(g.fecha),
-    nombreEmp(g.id_empleado),
-    g.concepto,
-    g.notas ?? '',
-    +Number(g.monto).toFixed(2),
-  ]);
-  if (pagoEmplRows.length > 0) {
-    const pagoData = [
-      ['Fecha', 'Empleado', 'Concepto', 'Notas', 'Monto (USD)'],
-      ...pagoEmplRows,
-      [],
-      ['', '', '', 'TOTAL', +gasEmpl.toFixed(2)],
-    ];
-    const wsPag = styledSheet(pagoData, [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGray, XS.headerRed],
-      { totRowIdx: pagoData.length - 1, numCols: [4] });
-    wsPag['!cols'] = [{ wch: 12 }, { wch: 26 }, { wch: 22 }, { wch: 20 }, { wch: 14 }];
-    XLSX.utils.book_append_sheet(wb, wsPag, 'Pagos empleados');
-  }
-
-  /* ── Hoja 5: DESGLOSE MANO DE OBRA vs REPUESTOS ── */
-  if (detallesMap && detallesMap.size > 0) {
-    let totalMano = 0, totalRep = 0;
-    const breakRows = ingresos.map(r => {
-      const { mano, repuestos: rep } = splitTotales(detallesMap.get(r.id_registro) ?? []);
-      totalMano += mano;
-      totalRep  += rep;
-      return [toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio', +mano.toFixed(2), +rep.toFixed(2), +(r.costo_total ?? 0).toFixed(2)];
-    });
-    const breakData = [
-      ['Fecha', 'Placa', 'Tipo de servicio', 'Mano de obra ($)', 'Repuestos ($)', 'Total ($)'],
-      ...breakRows,
-      [],
-      ['', '', 'TOTALES', +totalMano.toFixed(2), +totalRep.toFixed(2), +(totalMano + totalRep).toFixed(2)],
-      ['', '', `Mano de obra:`, `${totalMano > 0 ? ((totalMano / (totalMano + totalRep)) * 100).toFixed(1) : 0}%`, '', ''],
-      ['', '', `Repuestos:`,    `${totalRep > 0 ? ((totalRep / (totalMano + totalRep)) * 100).toFixed(1) : 0}%`, '', ''],
-    ];
-    const wsBreak = styledSheet(breakData, [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerAmber, XS.headerGreen, XS.headerGreen],
-      { totRowIdx: breakData.length - 3, numCols: [3,4,5] });
-    wsBreak['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 28 }, { wch: 18 }, { wch: 14 }, { wch: 12 }];
-    XLSX.utils.book_append_sheet(wb, wsBreak, 'M.O. vs Repuestos');
-  }
+  XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
 
   const filename = `gorila_motos_${label.replace(/[\s/\\:*?"<>|]/g, '-')}_${hoy}.xlsx`;
   XLSX.writeFile(wb, filename);
@@ -453,6 +411,8 @@ export default function ContabilidadPage() {
   }
   const [cierre, setCierre] = useState<CierreResult | null>(null);
   const [cierreLoading, setCierreLoading] = useState(false);
+  /* Una vez el usuario calcula el cierre, se recalcula solo al cambiar el filtro (día/semana/mes/año). */
+  const cierreActivoRef = useRef(false);
   const [modalGasto,    setModalGasto]    = useState(false);
   const [savingGasto,   setSavingGasto]   = useState(false);
 
@@ -495,9 +455,6 @@ export default function ContabilidadPage() {
   }, [isAdmin, user?.id_usuario]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  /* Resetear cierre cuando cambia el período */
-  useEffect(() => { setCierre(null); }, [filtroTipo, filtroFecha, filtroMes, filtroAnio]);
 
   /* ── filtrado por periodo ── */
   const filtrar = useCallback(<T extends { fecha: unknown }>(arr: T[]): T[] => {
@@ -669,7 +626,8 @@ export default function ContabilidadPage() {
   ];
 
   /* ── Calcular cierre de caja del período ── */
-  const calcularCierre = async () => {
+  const calcularCierre = useCallback(async () => {
+    cierreActivoRef.current = true;
     setCierreLoading(true);
     try {
       const ordered = filtrar(registros.filter(r => r.estado === 4));
@@ -717,7 +675,13 @@ export default function ContabilidadPage() {
         label: filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio),
       });
     } catch { /* ignorar */ } finally { setCierreLoading(false); }
-  };
+  }, [filtrar, registros, productos, filtroTipo, filtroFecha, filtroMes, filtroAnio]);
+
+  /* Recalcular el cierre automáticamente al cambiar el filtro (si ya estaba activo). */
+  useEffect(() => {
+    if (cierreActivoRef.current) calcularCierre();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtroTipo, filtroFecha, filtroMes, filtroAnio]);
 
   const FILTROS: { key: FiltroTipo; label: string }[] = [
     { key:'dia',    label:'Día'    },

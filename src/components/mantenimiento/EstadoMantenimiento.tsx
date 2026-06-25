@@ -169,9 +169,12 @@ export function EstadoMotoLive({ moto, compact = false }: { moto: Moto; compact?
                       ? `Excede por ${Math.abs(e.kmRestante).toLocaleString('es-EC')} km`
                       : `Faltan ${e.kmRestante.toLocaleString('es-EC')} km`}
                   </span>
-                  {/* Acción del mecánico: marcar como cambiado */}
+                  {/* Acción del mecánico: marcar como cambiado.
+                      Se muestra "registrado/deshacer" SOLO si la pieza está al día por un cambio reciente.
+                      Si la pieza volvió a desgastarse (PROXIMO/VENCIDO), aparece de nuevo "Marcar cambiado"
+                      aunque ya tenga historial, para poder reiniciarla a 0%. */}
                   {canService && (
-                    yaCambiado ? (
+                    (yaCambiado && e.estado === 'OK') ? (
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <span style={{ fontSize: 10, color: '#10B981', display: 'flex', alignItems: 'center', gap: 3 }}>
                           <Check size={11} /> registrado

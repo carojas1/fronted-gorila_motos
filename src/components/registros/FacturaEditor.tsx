@@ -63,6 +63,9 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
   const [prodOpen, setProdOpen] = useState(false);
   const [prodQuery, setProdQuery] = useState('');
 
+  /* Factura emitida (estado 4 = Facturado) → solo lectura: ya no se edita, solo se ven los detalles. */
+  const readOnly = (registro?.estado ?? 0) >= 4;
+
   /* Cargar los detalles existentes al abrir */
   useEffect(() => {
     if (!open || !registro) return;
@@ -134,7 +137,7 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
 
   /* ── Guardar ── */
   const guardar = async () => {
-    if (!registro) return;
+    if (!registro || readOnly) return;
     const limpios = items.filter(i => i.precio > 0 || i.idProducto != null);
     if (limpios.length === 0) {
       toast.error('Agrega al menos un ítem con precio (mano de obra o repuesto).');
@@ -199,9 +202,11 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
           <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: i.kind === 'mano' ? '#3B82F6' : '#F59E0B' }}>
             {i.kind === 'mano' ? 'Mano de obra' : esInv ? 'Repuesto · inventario' : 'Repuesto manual'}
           </span>
-          <button onClick={() => remove(i.uid)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', display: 'flex' }} title="Quitar">
-            <Trash2 size={14} />
-          </button>
+          {!readOnly && (
+            <button onClick={() => remove(i.uid)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', display: 'flex' }} title="Quitar">
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
 
         {/* Descripción */}
@@ -220,9 +225,10 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
         ) : (
           <input
             value={i.nombre}
+            disabled={readOnly}
             onChange={e => patch(i.uid, { nombre: e.target.value })}
             placeholder={i.kind === 'mano' ? 'Ej. Mano de obra: cambio de aceite' : 'Ej. Pastillas de freno (compra externa)'}
-            style={{ ...inputStyle, width: '100%', marginBottom: 8 }}
+            style={{ ...inputStyle, width: '100%', marginBottom: 8, opacity: readOnly ? 0.7 : 1 }}
           />
         )}
 
@@ -230,8 +236,9 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
         {i.kind === 'repuesto' && !esInv && (
           <select
             value={i.categoria}
+            disabled={readOnly}
             onChange={e => patch(i.uid, { categoria: e.target.value })}
-            style={{ ...inputStyle, width: '100%', marginBottom: 8 }}
+            style={{ ...inputStyle, width: '100%', marginBottom: 8, opacity: readOnly ? 0.7 : 1 }}
           >
             {CATEGORIAS_REPUESTO.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
@@ -243,17 +250,18 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
             <span style={{ fontSize: 11, color: muted }}>Cant.</span>
             <input
               type="number" min={1} value={i.cantidad}
+              disabled={readOnly}
               onChange={e => patch(i.uid, { cantidad: Math.max(1, parseInt(e.target.value) || 1) })}
-              style={{ ...inputStyle, width: 58 }}
+              style={{ ...inputStyle, width: 58, opacity: readOnly ? 0.7 : 1 }}
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontSize: 11, color: muted }}>$ c/u</span>
             <input
               type="number" min={0} step="0.01" value={i.precio}
-              disabled={esInv}
+              disabled={esInv || readOnly}
               onChange={e => patch(i.uid, { precio: Math.max(0, parseFloat(e.target.value) || 0) })}
-              style={{ ...inputStyle, width: 84, opacity: esInv ? 0.6 : 1 }}
+              style={{ ...inputStyle, width: 84, opacity: (esInv || readOnly) ? 0.6 : 1 }}
               title={esInv ? 'Precio tomado del inventario (PVP)' : undefined}
             />
           </div>
@@ -267,15 +275,19 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
     <Modal
       open={open}
       onClose={onClose}
-      title={completarAlGuardar ? 'Completar servicio · factura' : 'Mano de obra y repuestos'}
+      title={readOnly ? 'Factura emitida · solo lectura' : completarAlGuardar ? 'Completar servicio · factura' : 'Mano de obra y repuestos'}
       size="lg"
       footer={
-        <>
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button onClick={guardar} loading={saving} disabled={items.length === 0}>
-            <CheckCircle size={14} /> {completarAlGuardar ? 'Completar y facturar' : 'Guardar factura'}
-          </Button>
-        </>
+        readOnly ? (
+          <Button onClick={onClose}>Cerrar</Button>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+            <Button onClick={guardar} loading={saving} disabled={items.length === 0}>
+              <CheckCircle size={14} /> {completarAlGuardar ? 'Completar y facturar' : 'Guardar factura'}
+            </Button>
+          </>
+        )
       }
     >
       {registro && (
@@ -288,18 +300,30 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
             </p>
           </div>
 
+          {/* Aviso de factura emitida */}
+          {readOnly && (
+            <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CheckCircle size={15} color="#10B981" />
+              <span style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(21,21,27,0.7)' }}>
+                Esta factura ya fue emitida. Solo puedes ver el detalle; no se puede modificar.
+              </span>
+            </div>
+          )}
+
           {/* Botones para agregar */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button onClick={addMano} style={addBtn('#3B82F6', isDark)}>
-              <Wrench size={13} /> Mano de obra
-            </button>
-            <button onClick={() => { setProdOpen(v => !v); setProdQuery(''); }} style={addBtn('#F59E0B', isDark)}>
-              <Package size={13} /> Repuesto inventario
-            </button>
-            <button onClick={addManual} style={addBtn('#10B981', isDark)}>
-              <Plus size={13} /> Repuesto manual
-            </button>
-          </div>
+          {!readOnly && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button onClick={addMano} style={addBtn('#3B82F6', isDark)}>
+                <Wrench size={13} /> Mano de obra
+              </button>
+              <button onClick={() => { setProdOpen(v => !v); setProdQuery(''); }} style={addBtn('#F59E0B', isDark)}>
+                <Package size={13} /> Repuesto inventario
+              </button>
+              <button onClick={addManual} style={addBtn('#10B981', isDark)}>
+                <Plus size={13} /> Repuesto manual
+              </button>
+            </div>
+          )}
 
           {/* Buscador de productos del inventario */}
           {prodOpen && (
@@ -348,7 +372,7 @@ export default function FacturaEditor({ open, registro, productos, completarAlGu
             <p style={{ fontSize: 13, color: muted, textAlign: 'center', padding: '16px 0' }}>Cargando factura…</p>
           ) : items.length === 0 ? (
             <p style={{ fontSize: 13, color: muted, textAlign: 'center', padding: '16px 0' }}>
-              Agrega mano de obra y repuestos. El total se calcula solo.
+              {readOnly ? 'Esta factura no tiene ítems registrados.' : 'Agrega mano de obra y repuestos. El total se calcula solo.'}
             </p>
           ) : (
             <div>{items.map(renderRow)}</div>
