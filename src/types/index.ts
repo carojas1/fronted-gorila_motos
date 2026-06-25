@@ -14,6 +14,8 @@ export interface Usuario {
   roles:           string[] | null;
   telefono?:       string | null;
   direccion?:      string | null;
+  puntosBonus?:    number | null;
+  codigoReferido?: string | null;
 }
 
 export interface AuthResponse {

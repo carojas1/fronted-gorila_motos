@@ -4,7 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import {
   TrendingUp, DollarSign, Wallet, Plus, Trash2,
   ArrowUpRight, ArrowDownRight, BarChart2, Receipt, Calendar,
@@ -165,6 +165,49 @@ function BusinessChart({ ingresos, gastos, labels, isDark }: {
   );
 }
 
+/* ─── Helpers de estilo para xlsx-js-style ─── */
+// Colores ARGB: sin transparencia (FF = opaco)
+const XS = {
+  headerGreen:  { fill:{patternType:'solid',fgColor:{rgb:'FF0F7A4E'}}, font:{bold:true,color:{rgb:'FFFFFFFF'},sz:10}, border:{bottom:{style:'medium',color:{rgb:'FF10B981'}}}, alignment:{horizontal:'center'} },
+  headerRed:    { fill:{patternType:'solid',fgColor:{rgb:'FF8B0000'}}, font:{bold:true,color:{rgb:'FFFFFFFF'},sz:10}, border:{bottom:{style:'medium',color:{rgb:'FFF43F5E'}}}, alignment:{horizontal:'center'} },
+  headerGray:   { fill:{patternType:'solid',fgColor:{rgb:'FF1F2937'}}, font:{bold:true,color:{rgb:'FFFFFFFF'},sz:10}, border:{bottom:{style:'medium',color:{rgb:'FF6B7280'}}}, alignment:{horizontal:'center'} },
+  headerAmber:  { fill:{patternType:'solid',fgColor:{rgb:'FF92400E'}}, font:{bold:true,color:{rgb:'FFFFFFFF'},sz:10}, border:{bottom:{style:'medium',color:{rgb:'FFF59E0B'}}}, alignment:{horizontal:'center'} },
+  title:        { font:{bold:true,sz:13,color:{rgb:'FF111827'}}, fill:{patternType:'solid',fgColor:{rgb:'FFEEF2FF'}} },
+  totRow:       { font:{bold:true,sz:10,color:{rgb:'FF111827'}}, fill:{patternType:'solid',fgColor:{rgb:'FFFEF3C7'}}, border:{top:{style:'medium',color:{rgb:'FFF59E0B'}}} },
+  totRowGreen:  { font:{bold:true,sz:10,color:{rgb:'FF065F46'}}, fill:{patternType:'solid',fgColor:{rgb:'FFD1FAE5'}}, border:{top:{style:'medium',color:{rgb:'FF10B981'}}} },
+  totRowRed:    { font:{bold:true,sz:10,color:{rgb:'FF7F1D1D'}}, fill:{patternType:'solid',fgColor:{rgb:'FFFEE2E2'}}, border:{top:{style:'medium',color:{rgb:'FFF43F5E'}}} },
+  rowEven:      { fill:{patternType:'solid',fgColor:{rgb:'FFF9FAFB'}}, font:{sz:9} },
+  rowOdd:       { fill:{patternType:'solid',fgColor:{rgb:'FFFFFFFF'}}, font:{sz:9} },
+  numCell:      { alignment:{horizontal:'right'}, numFmt:'"$"#,##0.00', font:{sz:9} },
+  numCellGreen: { alignment:{horizontal:'right'}, numFmt:'"$"#,##0.00', font:{bold:true,color:{rgb:'FF065F46'},sz:9}, fill:{patternType:'solid',fgColor:{rgb:'FFF0FDF4'}} },
+  numCellRed:   { alignment:{horizontal:'right'}, numFmt:'"$"#,##0.00', font:{bold:true,color:{rgb:'FF7F1D1D'},sz:9}, fill:{patternType:'solid',fgColor:{rgb:'FFFEF2F2'}} },
+};
+type CellStyle = typeof XS.headerGreen;
+function styledSheet(aoa: (string|number)[][], headerStyles: CellStyle[], opts?: { totRowIdx?: number; numCols?: number[] }) {
+  const ws = XLSX.utils.aoa_to_sheet(aoa) as Record<string, { v: unknown; t: string; s?: CellStyle }>;
+  const cols = aoa[0]?.length ?? 0;
+  for (let c = 0; c < cols; c++) {
+    const addr = XLSX.utils.encode_cell({ r: 0, c });
+    if (ws[addr]) ws[addr].s = headerStyles[c] ?? XS.headerGray;
+  }
+  for (let r = 1; r < aoa.length; r++) {
+    const isTot = opts?.totRowIdx === r;
+    for (let c = 0; c < cols; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      if (!ws[addr]) continue;
+      const isNum = opts?.numCols?.includes(c);
+      if (isTot) {
+        ws[addr].s = isNum ? XS.totRow : { ...XS.totRow, alignment: { horizontal: 'left' } };
+      } else {
+        ws[addr].s = isNum
+          ? { ...XS.numCell, ...(r % 2 === 0 ? { fill: XS.rowEven.fill } : {}) }
+          : (r % 2 === 0 ? XS.rowEven : XS.rowOdd);
+      }
+    }
+  }
+  return ws;
+}
+
 /* ─── Exportar datos filtrados a Excel (.xlsx) ─── */
 function exportarExcel(
   ingresos: RegistroDetalle[], gastos: PagoEmpleadoAPI[],
@@ -260,24 +303,26 @@ function exportarExcel(
     ['GANANCIA NETA (ganancia bruta − gastos)', +gananciaNeta.toFixed(2)],
     ['Margen sobre ingresos (%)', totalIng > 0 ? +((gananciaBruta / totalIng) * 100).toFixed(1) : 0],
   ];
-  const wsRes = XLSX.utils.aoa_to_sheet(resumen);
-  wsRes['!cols'] = [{ wch: 38 }, { wch: 16 }];
+  const wsRes = styledSheet(resumen, [XS.headerGray, XS.headerGreen], { totRowIdx: resumen.length - 3, numCols: [1] });
+  wsRes['!cols'] = [{ wch: 42 }, { wch: 18 }];
   wsRes['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
   XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen');
 
   /* ── Hoja 2: GANANCIAS (desglose por registro) ── */
   if (gananciaRows.length > 0) {
-    const wsGan = XLSX.utils.aoa_to_sheet([
+    const ganData = [
       ['Fecha', 'Placa', 'Servicio',
-       'Mano obra ($)', 'Repuesto venta ($)', 'Repuesto costo ($)', 'Repuesto ganancia ($)',
+       'Mano obra ($)', 'Rep. venta ($)', 'Rep. costo ($)', 'Rep. ganancia ($)',
        'Piezas extras ($)', 'Ganancia total ($)'],
       ...gananciaRows,
       [],
       ['', '', 'TOTALES',
        +manoRev.toFixed(2), +repInvRev.toFixed(2), +repInvCost.toFixed(2), +repInvProfit.toFixed(2),
        +piezaExtraRev.toFixed(2), +gananciaBruta.toFixed(2)],
-    ]);
-    wsGan['!cols'] = [{ wch: 12 }, { wch: 11 }, { wch: 22 }, { wch: 13 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 15 }, { wch: 16 }];
+    ];
+    const wsGan = styledSheet(ganData, [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerAmber, XS.headerGreen, XS.headerRed, XS.headerGreen, XS.headerGreen, XS.headerGreen],
+      { totRowIdx: ganData.length - 1, numCols: [3,4,5,6,7,8] });
+    wsGan['!cols'] = [{ wch: 12 }, { wch: 11 }, { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 15 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, wsGan, 'Ganancias');
   }
 
@@ -294,7 +339,8 @@ function exportarExcel(
     [],
     ['', '', '', 'TOTAL', +totalIng.toFixed(2)],
   ];
-  const wsIng = XLSX.utils.aoa_to_sheet(ingRows);
+  const wsIng = styledSheet(ingRows, [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGreen],
+    { totRowIdx: ingRows.length - 1, numCols: [4] });
   wsIng['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 26 }, { wch: 12 }, { wch: 14 }];
   XLSX.utils.book_append_sheet(wb, wsIng, 'Ingresos');
 
@@ -313,7 +359,8 @@ function exportarExcel(
     ['', '', '', 'Empleados',       +gasEmpl.toFixed(2)],
     ['', '', '', 'Generales',       +gasGen.toFixed(2)],
   ];
-  const wsGas = XLSX.utils.aoa_to_sheet(gasRows);
+  const wsGas = styledSheet(gasRows, [XS.headerGray, XS.headerRed, XS.headerGray, XS.headerGray, XS.headerRed],
+    { totRowIdx: gasRows.length - 3, numCols: [4] });
   wsGas['!cols'] = [{ wch: 12 }, { wch: 24 }, { wch: 26 }, { wch: 16 }, { wch: 14 }];
   XLSX.utils.book_append_sheet(wb, wsGas, 'Gastos');
 
@@ -326,12 +373,14 @@ function exportarExcel(
     +Number(g.monto).toFixed(2),
   ]);
   if (pagoEmplRows.length > 0) {
-    const wsPag = XLSX.utils.aoa_to_sheet([
+    const pagoData = [
       ['Fecha', 'Empleado', 'Concepto', 'Notas', 'Monto (USD)'],
       ...pagoEmplRows,
       [],
       ['', '', '', 'TOTAL', +gasEmpl.toFixed(2)],
-    ]);
+    ];
+    const wsPag = styledSheet(pagoData, [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGray, XS.headerRed],
+      { totRowIdx: pagoData.length - 1, numCols: [4] });
     wsPag['!cols'] = [{ wch: 12 }, { wch: 26 }, { wch: 22 }, { wch: 20 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsPag, 'Pagos empleados');
   }
@@ -345,14 +394,16 @@ function exportarExcel(
       totalRep  += rep;
       return [toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio', +mano.toFixed(2), +rep.toFixed(2), +(r.costo_total ?? 0).toFixed(2)];
     });
-    const wsBreak = XLSX.utils.aoa_to_sheet([
+    const breakData = [
       ['Fecha', 'Placa', 'Tipo de servicio', 'Mano de obra ($)', 'Repuestos ($)', 'Total ($)'],
       ...breakRows,
       [],
       ['', '', 'TOTALES', +totalMano.toFixed(2), +totalRep.toFixed(2), +(totalMano + totalRep).toFixed(2)],
       ['', '', `Mano de obra:`, `${totalMano > 0 ? ((totalMano / (totalMano + totalRep)) * 100).toFixed(1) : 0}%`, '', ''],
       ['', '', `Repuestos:`,    `${totalRep > 0 ? ((totalRep / (totalMano + totalRep)) * 100).toFixed(1) : 0}%`, '', ''],
-    ]);
+    ];
+    const wsBreak = styledSheet(breakData, [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerAmber, XS.headerGreen, XS.headerGreen],
+      { totRowIdx: breakData.length - 3, numCols: [3,4,5] });
     wsBreak['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 28 }, { wch: 18 }, { wch: 14 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, wsBreak, 'M.O. vs Repuestos');
   }
@@ -1058,9 +1109,11 @@ export default function ContabilidadPage() {
           <div>
             <p className="text-sm font-bold text-white/85 flex items-center gap-2">
               <Activity size={15} className="text-gm-red"/>
-              {filtroTipo === 'anio' ? `Análisis financiero ${filtroAnio}` :
-               filtroTipo === 'todo' ? `Resumen anual ${anioActual}` :
-               `Últimos 6 meses`}
+              {filtroTipo === 'dia'    ? `Últimos 7 días` :
+               filtroTipo === 'semana' ? `Últimas 4 semanas` :
+               filtroTipo === 'mes'   ? `Últimos 6 meses` :
+               filtroTipo === 'anio'  ? `Análisis financiero ${filtroAnio}` :
+               `Resumen histórico`}
             </p>
             <p className="text-[11px] text-white/30 mt-0.5">
               Barras: ingresos / gastos · Línea amarilla: balance neto por período

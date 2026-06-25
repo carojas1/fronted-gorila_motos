@@ -116,6 +116,8 @@ export const usuariosApi = {
   remove:  (id: number)  => api.delete(`/usuarios/${id}`),
   upload:  (form: FormData) =>
     api.post('/usuarios/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  usarReferido: (id: number, codigo: string) =>
+    api.post(`/usuarios/${id}/usar-referido`, { codigo }),
 };
 
 /* ── Motos ── */

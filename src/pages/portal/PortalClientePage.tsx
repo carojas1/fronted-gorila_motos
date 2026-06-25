@@ -8,12 +8,12 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bike, Star, Wrench, Clock, AlertTriangle,
-  CheckCircle, ChevronRight, Phone, MapPin, Mail, Fuel,
+  CheckCircle, ChevronRight, Phone, MapPin, Mail, Fuel, Gift, Copy,
 } from 'lucide-react';
-import { motosApi, registrosApi, combustibleApi } from '../../lib/api';
+import { motosApi, registrosApi, combustibleApi, usuariosApi } from '../../lib/api';
 import { usePolling } from '../../hooks/usePolling';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Moto, RegistroDetalle, CargaCombustible } from '../../types';
+import type { Moto, RegistroDetalle, CargaCombustible, Usuario } from '../../types';
 import { fmtDate, fmtMoney, toIsoStr } from '../../lib/utils';
 import { WORKSHOP_CONTACT } from '../../lib/constants';
 
@@ -34,17 +34,18 @@ function ptsForCc(cc: number) { return PTS_TABLE.find(r => cc <= r.max)?.pts ?? 
 function oilThreshold(cc: number) { return cc >= 300 ? 5000 : 1000; }
 
 const URGENCY_CFG = {
-  overdue: { label: 'Vencido',  color: '#EF4444', bg: 'rgba(239,68,68,0.10)' },
-  due:     { label: 'Urgente',  color: '#F59E0B', bg: 'rgba(245,158,11,0.10)' },
-  soon:    { label: 'Próximo',  color: '#3B82F6', bg: 'rgba(59,130,246,0.10)' },
-  ok:      { label: 'Al día',   color: '#10B981', bg: 'rgba(16,185,129,0.10)' },
+  overdue: { label: 'Vencido',      color: '#EF4444', bg: 'rgba(239,68,68,0.10)' },
+  due:     { label: 'Urgente',      color: '#F59E0B', bg: 'rgba(245,158,11,0.10)' },
+  soon:    { label: 'Próximo',      color: '#3B82F6', bg: 'rgba(59,130,246,0.10)' },
+  ok:      { label: 'Al día',       color: '#10B981', bg: 'rgba(16,185,129,0.10)' },
+  unknown: { label: 'Sin historial',color: '#6B7280', bg: 'rgba(107,114,128,0.10)' },
 };
 
 function getUrgency(kmSince: number | null, thr: number) {
-  if (!kmSince) return 'ok';
-  if (kmSince >= thr)        return 'overdue';
-  if (kmSince >= thr * 0.8)  return 'due';
-  if (kmSince >= thr * 0.6)  return 'soon';
+  if (kmSince === null) return 'unknown';
+  if (kmSince >= thr)       return 'overdue';
+  if (kmSince >= thr * 0.8) return 'due';
+  if (kmSince >= thr * 0.6) return 'soon';
   return 'ok';
 }
 
@@ -56,14 +57,29 @@ export default function PortalClientePage() {
   const [loading,  setLoading]  = useState(true);
   const [tab,      setTab]      = useState<'historial' | 'alertas' | 'puntos'>('historial');
   const [filterPlaca, setFilterPlaca] = useState('');
+  const [puntosBonus,    setPuntosBonus]    = useState(0);
+  const [codigoReferido, setCodigoReferido] = useState<string | null>(null);
+  const [codigoInput,    setCodigoInput]    = useState('');
+  const [referidoLoading,setReferidoLoading]= useState(false);
+  const [referidoMsg,    setReferidoMsg]    = useState<{ ok: boolean; text: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
-    const [mr, rr, cr] = await Promise.allSettled([motosApi.list(), registrosApi.list(), combustibleApi.list()]);
+    const uid = user?.id_usuario;
+    const [mr, rr, cr, ur] = await Promise.allSettled([
+      motosApi.list(), registrosApi.list(), combustibleApi.list(),
+      uid ? usuariosApi.get(uid) : Promise.resolve({ data: null }),
+    ]);
     const allMotos:    Moto[]            = mr.status === 'fulfilled' ? mr.value.data : [];
     const allRegistros:RegistroDetalle[] = rr.status === 'fulfilled' ? rr.value.data : [];
     const allCargas:   CargaCombustible[] = cr.status === 'fulfilled' ? cr.value.data : [];
+    if (ur.status === 'fulfilled' && ur.value.data) {
+      const u = ur.value.data as Usuario;
+      setPuntosBonus(u.puntosBonus ?? 0);
+      setCodigoReferido(u.codigoReferido ?? null);
+    }
 
-    const myMotos    = allMotos.filter(m => m.id_usuario === user?.id_usuario);
+    const myMotos    = allMotos.filter(m => m.id_usuario === uid);
     const myPlacas   = new Set(myMotos.map(m => m.placa));
     const myRegistros= allRegistros.filter(r => myPlacas.has(r.placa))
                                    .sort((a,b) => toIsoStr(b.fecha).localeCompare(toIsoStr(a.fecha)));
@@ -96,8 +112,23 @@ export default function PortalClientePage() {
     }, 0);
   }, [registros, motos]);
 
-  /* Puntos totales = servicios + combustible (coincide con el ranking del admin) */
-  const puntosTotales = ptsServicios + ptsCombustible;
+  /* Puntos totales = servicios + combustible + bonus de referidos */
+  const puntosTotales = ptsServicios + ptsCombustible + puntosBonus;
+
+  const handleUsarReferido = async () => {
+    if (!codigoInput.trim() || !user?.id_usuario) return;
+    setReferidoLoading(true);
+    setReferidoMsg(null);
+    try {
+      await usuariosApi.usarReferido(user.id_usuario, codigoInput.trim());
+      setReferidoMsg({ ok: true, text: '¡Listo! 50 puntos acreditados a tu cuenta y a la de tu referente.' });
+      setCodigoInput('');
+      load(); // refresca puntosBonus y codigoReferido
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: unknown } })?.response?.data;
+      setReferidoMsg({ ok: false, text: typeof msg === 'string' ? msg : 'Código no válido o ya usado.' });
+    } finally { setReferidoLoading(false); }
+  };
 
   /* Alertas de aceite por moto */
   const oilAlerts = useMemo(() => motos.map(m => {
@@ -204,13 +235,21 @@ export default function PortalClientePage() {
                   <div className="mt-3">
                     <div className="flex justify-between text-[10px] text-white/30 mb-1">
                       <span>Próximo cambio de aceite</span>
-                      <span style={{ color: cfg.color }}>{pct}%</span>
+                      {alert?.urgency === 'unknown'
+                        ? <span style={{ color: cfg.color }}>—</span>
+                        : <span style={{ color: cfg.color }}>{pct}%</span>}
                     </div>
-                    <div className="prog-bar">
-                      <div className="prog-bar-fill" style={{
-                        width: `${pct}%`, background: cfg.color, boxShadow: `0 0 6px ${cfg.color}50`,
-                      }} />
-                    </div>
+                    {alert?.urgency === 'unknown' ? (
+                      <p className="text-[10px]" style={{ color: '#6B7280' }}>
+                        Sin historial de aceite — el mecánico lo registrará en el próximo servicio
+                      </p>
+                    ) : (
+                      <div className="prog-bar">
+                        <div className="prog-bar-fill" style={{
+                          width: `${pct}%`, background: cfg.color, boxShadow: `0 0 6px ${cfg.color}50`,
+                        }} />
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -360,8 +399,8 @@ export default function PortalClientePage() {
             </Link>
           </div>
 
-          {/* Desglose: servicios vs combustible */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Desglose: servicios, combustible y referidos */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="gm-card-d rounded-2xl p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                    style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
@@ -383,6 +422,85 @@ export default function PortalClientePage() {
                 <p className="text-[10px] text-white/25">2 pts por día con carga</p>
               </div>
             </div>
+            <div className="gm-card-d rounded-2xl p-4 flex items-center gap-3 col-span-2 sm:col-span-1">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                   style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}>
+                <Gift size={16} style={{ color: '#8B5CF6' }} />
+              </div>
+              <div>
+                <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Por referidos</p>
+                <p className="text-2xl font-black text-white">{puntosBonus}<span className="text-xs text-white/30 ml-1">pts</span></p>
+                <p className="text-[10px] text-white/25">50 pts por código canjeado</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Código de referido */}
+          <div className="gm-card-d rounded-2xl p-5 space-y-4">
+            {/* Tu código */}
+            <div>
+              <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Tu código de referido</p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 px-4 py-2.5 rounded-xl font-black text-lg tracking-widest text-gm-red"
+                     style={{ background: 'rgba(225,20,40,0.08)', border: '1px solid rgba(225,20,40,0.2)' }}>
+                  {user?.nombre_usuario ?? '—'}
+                </div>
+                <button
+                  className="p-2.5 rounded-xl transition-all"
+                  style={{ background: copied ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)' }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(user?.nombre_usuario ?? '').catch(() => {});
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}>
+                  <Copy size={15} style={{ color: copied ? '#10B981' : 'rgba(255,255,255,0.4)' }} />
+                </button>
+              </div>
+              <p className="text-[11px] text-white/25 mt-1.5">
+                Compártelo — tu amigo gana 50 pts y tú también
+              </p>
+            </div>
+
+            {/* Ingresar código ajeno */}
+            {codigoReferido ? (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-xl"
+                   style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                <Gift size={14} style={{ color: '#8B5CF6' }} />
+                <p className="text-sm text-white/60">
+                  Código canjeado de <span className="font-black text-purple-400">@{codigoReferido}</span> · +50 pts acreditados
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">¿Tienes un código?</p>
+                <div className="flex gap-2">
+                  <input
+                    className="gm-input-d flex-1 text-sm"
+                    placeholder="Nombre de usuario del referente…"
+                    value={codigoInput}
+                    onChange={e => setCodigoInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleUsarReferido()}
+                    disabled={referidoLoading}
+                  />
+                  <button
+                    onClick={handleUsarReferido}
+                    disabled={referidoLoading || !codigoInput.trim()}
+                    className="px-4 py-2 rounded-xl text-sm font-black transition-all"
+                    style={{
+                      background: codigoInput.trim() ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(139,92,246,0.3)',
+                      color: codigoInput.trim() ? '#A78BFA' : 'rgba(255,255,255,0.2)',
+                    }}>
+                    {referidoLoading ? '…' : 'Canjear'}
+                  </button>
+                </div>
+                {referidoMsg && (
+                  <p className="text-xs mt-2" style={{ color: referidoMsg.ok ? '#10B981' : '#F43F5E' }}>
+                    {referidoMsg.text}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="gm-card-d rounded-2xl p-4">
