@@ -79,7 +79,7 @@ export default function InventoryPage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoTarget, setPhotoTarget]   = useState<Producto | null>(null);
   const [photoUploading, setPhotoUploading] = useState<Record<number, boolean>>({});
-  const [, setImageFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   /* Venta Normal — con cliente registrado, busca por email o placa */
@@ -161,11 +161,18 @@ export default function InventoryPage() {
   const onSubmit = async (data: Form) => {
     setSaving(true);
     try {
+      let finalUrl: string | undefined = undefined;
+      if (imageFile) {
+        finalUrl = await comprimirImagen(imageFile);
+      }
+
+      const submissionData = { ...data, ruta_imagenproductos: finalUrl };
+
       if (editTarget) {
-        await productosApi.update(editTarget.id_producto, data);
+        await productosApi.update(editTarget.id_producto, submissionData);
         toast.success('Producto actualizado');
       } else {
-        await productosApi.create(data);
+        await productosApi.create(submissionData);
         toast.success('Producto creado');
       }
       setModalOpen(false);
