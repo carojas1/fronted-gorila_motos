@@ -204,7 +204,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const roleNames = new Set<string>(
     (state.user?.roles ?? [])
-      .map((r) => {
+      .filter((r: any) => typeof r === 'string' || r.estado === 1 || r.estado === undefined)
+      .map((r: any) => {
         if (typeof r === 'string') return r;
         const obj = r as { nombre?: string; rol?: { nombre?: string } };
         return obj.rol?.nombre ?? obj.nombre ?? '';

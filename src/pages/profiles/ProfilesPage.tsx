@@ -29,12 +29,14 @@ import { z } from "zod";
 /* ── Helpers ── */
 function getRolName(roles: unknown[]): string {
   if (!roles || roles.length === 0) return "";
-  const r = roles[0];
+  const activeRoles = roles.filter((r: any) => r.estado === 1 || r.estado === undefined);
+  if (activeRoles.length === 0) return "";
+  const r = activeRoles[0];
   const raw = typeof r === "string"
     ? r
     : ((r as { rol?: { nombre?: string }; nombre?: string })?.rol?.nombre
         ?? (r as { nombre?: string })?.nombre ?? "");
-  return raw.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  return raw.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 /* ── Módulos configurables para mecánicos ── */

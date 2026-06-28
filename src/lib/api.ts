@@ -32,7 +32,11 @@ api.interceptors.request.use(
       (url === '/usuarios' && config.method?.toLowerCase() === 'post') ||
       url.includes('/recuperacion');
     if (token && !isPublic && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+      if (typeof config.headers.set === 'function') {
+        config.headers.set('Authorization', `Bearer ${token}`);
+      } else {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -146,8 +150,8 @@ export const motosApi = {
   update:    (id: number, data: Record<string, unknown>) => api.put(`/motos/${id}`, data),
   remove:    (id: number)  => api.delete(`/motos/${id}`),
   /** Sube foto al storage Supabase → devuelve { url } */
-  upload:    (form: FormData) =>
-    api.post('/motos/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  upload: (form: FormData) =>
+    api.post('/motos/upload', form),
 };
 
 /* ── Registros ── */
@@ -170,7 +174,7 @@ export const productosApi = {
   update: (id: number, data: Record<string, unknown>) => api.put(`/productos/${id}`, data),
   remove: (id: number)  => api.delete(`/productos/${id}`),
   upload: (form: FormData) =>
-    api.post('/productos/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post('/productos/upload', form),
   enviarComprobante: (data: Record<string, unknown>) =>
     api.post('/productos/venta-comprobante', data),
 };
@@ -328,7 +332,6 @@ export async function uploadWithRetry(
 
       onProgress?.('Subiendo imagen…');
       const { data } = await api.post(endpoint, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 90_000,
       });
       return (data as { url: string }).url;

@@ -25,7 +25,7 @@ import { Sun, Moon } from 'lucide-react';
 import { whatsappCitaLink } from '../../lib/constants';
 
 export default function AppLayout() {
-  const { user, isAdmin, isMecanico, logout } = useAuth();
+  const { user, isAdmin, isMecanico, isCliente, logout } = useAuth();
   const location  = useLocation();
   const navigate  = useNavigate();
   const toast      = useToast();
@@ -71,8 +71,8 @@ export default function AppLayout() {
   const hour      = new Date().getHours();
   const greeting  = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches';
   const firstName = user?.nombre_completo?.split(' ')[0] ?? 'Usuario';
-  const roleLabel = isAdmin ? 'Administrador' : isMecanico ? 'Mecánico' : 'Cliente';
-  const roleColor = isAdmin ? '#E11428' : isMecanico ? '#3B82F6' : '#10B981';
+  const roleLabel = isAdmin ? 'Administrador' : isMecanico ? 'Mecánico' : isCliente ? 'Cliente' : 'Sin rol';
+  const roleColor = isAdmin ? '#E11428' : isMecanico ? '#3B82F6' : isCliente ? '#10B981' : '#8B8FA8';
   const isDark    = theme === 'dark';
   const topText   = isDark ? 'rgba(255,255,255,0.38)'  : 'rgba(22,22,26,0.50)';
   const topTextHi = isDark ? 'rgba(255,255,255,0.80)'  : 'rgba(22,22,26,0.90)';
