@@ -25,10 +25,10 @@ export const WORKSHOP_CONTACT = {
   /** Teléfono de soporte formateado para display */
   telefonoSoporte: '0980 834 367',
   /** Correo general de contacto */
-  email:         'info@gorilamoto.com',
-  emailFacturacion: 'facturacion@gorilamoto.com',
-  emailPrivacidad:  'info@gorilamoto.com',
-  emailLegal:       'info@gorilamoto.com',
+  email:         'gorilamotos2026@gmail.com',
+  emailFacturacion: 'gorilamotos2026@gmail.com',
+  emailPrivacidad:  'gorilamotos2026@gmail.com',
+  emailLegal:       'gorilamotos2026@gmail.com',
   web:           'gmotors-frontend.vercel.app',
   webUrl:        'https://gmotors-frontend.vercel.app',
   horario:       'Lun–Vie 8:00–18:00 · Sáb 9:00–14:00',

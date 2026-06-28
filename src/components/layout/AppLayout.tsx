@@ -222,8 +222,8 @@ export default function AppLayout() {
                        style={{ boxShadow: '0 0 0 1.5px rgba(225,20,40,0.4)', backgroundColor: '#111' }}>
                     <img src="/brand/gorila-logo.png" alt="GM" className="w-full h-full object-cover" />
                   </div>
-                  <span className="font-black text-white leading-none"
-                        style={{ fontFamily: "'Dancing Script', cursive", fontSize: 22 }}>
+                  <span className="font-black leading-none"
+                        style={{ fontFamily: "'Dancing Script', cursive", fontSize: 22, color: isDark ? '#fff' : '#16161A' }}>
                     Gorila <span style={{ color: '#E11428' }}>Motos</span>
                   </span>
                 </Link>
@@ -246,7 +246,7 @@ export default function AppLayout() {
                     {initials(user?.nombre_completo ?? 'U')}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-black text-white/90 truncate leading-tight">{user?.nombre_completo}</p>
+                    <p className="text-[13px] font-black truncate leading-tight" style={{ color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(21,21,27,0.9)' }}>{user?.nombre_completo}</p>
                     <p className="text-[10px] font-bold uppercase tracking-[0.12em] mt-0.5" style={{ color: roleColor }}>{roleLabel}</p>
                   </div>
                   <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"
@@ -256,7 +256,7 @@ export default function AppLayout() {
 
               {/* Nav links */}
               <nav className="flex-1 px-3 py-3 overflow-y-auto dark-scroll">
-                <p className="px-3 mb-2 text-[9px] font-black tracking-[0.3em] text-white/20 uppercase">Navegación</p>
+                <p className="px-3 mb-2 text-[9px] font-black tracking-[0.3em] uppercase" style={{ color: isDark ? 'rgba(255,255,255,0.20)' : 'rgba(21,21,27,0.3)' }}>Navegación</p>
                 <div className="space-y-0.5">
                   {[...NAV, ...NAV_MORE].map(({ label, to }) => {
                     const active = location.pathname === to || location.pathname.startsWith(to + '/');

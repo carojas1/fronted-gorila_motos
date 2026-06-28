@@ -7,6 +7,7 @@ import {
   Home, Wrench, Bike, Package, LayoutGrid, Zap, Star, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../lib/theme';
 
 interface Tab {
   label: string;
@@ -19,6 +20,8 @@ export default function MobileTabBar({ onMore }: { onMore: () => void }) {
   const { isAdmin, isMecanico } = useAuth();
   const loc = useLocation();
   const nav = useNavigate();
+  const [theme] = useTheme();
+  const isDark = theme === 'dark';
 
   /* Cualquiera que NO sea admin ni mecánico ve la vista de cliente.
      Esto incluye usuarios SIN ningún rol asignado (no deben ver módulos internos). */
@@ -43,6 +46,8 @@ export default function MobileTabBar({ onMore }: { onMore: () => void }) {
   const activo = (to?: string) =>
     !!to && (loc.pathname === to || loc.pathname.startsWith(to + '/'));
 
+  const inactiveColor = isDark ? 'rgba(255,255,255,0.42)' : 'rgba(21,21,27,0.38)';
+
   return (
     <nav className="gm-tabbar" role="navigation" aria-label="Navegación principal">
       {tabs.map((t) => {
@@ -53,7 +58,7 @@ export default function MobileTabBar({ onMore }: { onMore: () => void }) {
             type="button"
             className="gm-tabbar-item"
             onClick={() => (t.more ? onMore() : nav(t.to!))}
-            style={{ color: on ? '#FF3B47' : 'rgba(255,255,255,0.42)' }}
+            style={{ color: on ? '#FF3B47' : inactiveColor }}
           >
             {on && <span className="gm-tabbar-ind" />}
             <t.icon size={21} strokeWidth={on ? 2.4 : 2} />

@@ -4,12 +4,13 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, ShoppingCart, Tags, FolderPlus, Minus, UserCheck, Mail, Camera } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, ShoppingCart, Tags, FolderPlus, Minus, UserCheck, Mail, Camera, ImagePlus } from 'lucide-react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import gsap from 'gsap';
-import { productosApi, categoriasApi, usuariosApi, motosApi, facturasApi, detallesFacturaApi, uploadWithRetry } from '../../lib/api';
+import { productosApi, categoriasApi, usuariosApi, motosApi, facturasApi, detallesFacturaApi } from '../../lib/api';
+import { isNativeApp } from '../../lib/platform';
 import { useTheme } from '../../lib/theme';
 import { useToast } from '../../components/ui/Toast';
 import { fmtMoney, getErrorMsg, nextProductCode } from '../../lib/utils';
@@ -635,15 +636,85 @@ export default function InventoryPage() {
             <Input label="Stock" type="number" placeholder="0" error={errors.stock?.message} {...register('stock')} />
           </div>
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Foto del producto (opcional)</label>
-            <input type="file" accept="image/*" onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                setImageFile(file);
-                setPreviewUrl(URL.createObjectURL(file));
-              }
-            }} className="gm-input-d w-full mb-2" />
-            {previewUrl && <img src={previewUrl} alt="Preview" className="h-20 rounded object-cover" />}
+            <label className="text-sm font-medium block mb-1.5" style={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(21,21,27,0.6)' }}>Foto del producto (opcional)</label>
+            <div className="flex gap-2 mb-2">
+              {/* Botón Cámara */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isNativeApp) {
+                    import('@capacitor/camera').then(({ Camera: CapCamera, CameraResultType, CameraSource }) => {
+                      CapCamera.getPhoto({ quality: 70, width: 720, resultType: CameraResultType.DataUrl, source: CameraSource.Camera })
+                        .then(photo => {
+                          if (photo.dataUrl) {
+                            setPreviewUrl(photo.dataUrl);
+                            // Create a File from dataUrl for comprimirImagen compatibility
+                            fetch(photo.dataUrl).then(r => r.blob()).then(blob => {
+                              setImageFile(new File([blob], 'camera.jpg', { type: 'image/jpeg' }));
+                            });
+                          }
+                        }).catch(() => {});
+                    }).catch(() => {
+                      // Fallback: open file input with capture
+                      const inp = document.createElement('input');
+                      inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
+                      inp.onchange = () => { const f = inp.files?.[0]; if (f) { setImageFile(f); setPreviewUrl(URL.createObjectURL(f)); } };
+                      inp.click();
+                    });
+                  } else {
+                    const inp = document.createElement('input');
+                    inp.type = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
+                    inp.onchange = () => { const f = inp.files?.[0]; if (f) { setImageFile(f); setPreviewUrl(URL.createObjectURL(f)); } };
+                    inp.click();
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all hover:scale-105"
+                style={{ background: '#E11428', color: '#fff' }}
+              >
+                <Camera size={14} /> Cámara
+              </button>
+              {/* Botón Galería / Archivos */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isNativeApp) {
+                    import('@capacitor/camera').then(({ Camera: CapCamera, CameraResultType, CameraSource }) => {
+                      CapCamera.getPhoto({ quality: 70, width: 720, resultType: CameraResultType.DataUrl, source: CameraSource.Photos })
+                        .then(photo => {
+                          if (photo.dataUrl) {
+                            setPreviewUrl(photo.dataUrl);
+                            fetch(photo.dataUrl).then(r => r.blob()).then(blob => {
+                              setImageFile(new File([blob], 'gallery.jpg', { type: 'image/jpeg' }));
+                            });
+                          }
+                        }).catch(() => {});
+                    }).catch(() => {
+                      const inp = document.createElement('input');
+                      inp.type = 'file'; inp.accept = 'image/*';
+                      inp.onchange = () => { const f = inp.files?.[0]; if (f) { setImageFile(f); setPreviewUrl(URL.createObjectURL(f)); } };
+                      inp.click();
+                    });
+                  } else {
+                    const inp = document.createElement('input');
+                    inp.type = 'file'; inp.accept = 'image/*';
+                    inp.onchange = () => { const f = inp.files?.[0]; if (f) { setImageFile(f); setPreviewUrl(URL.createObjectURL(f)); } };
+                    inp.click();
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all hover:scale-105"
+                style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: isDark ? '#fff' : '#333', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #ddd' }}
+              >
+                <ImagePlus size={14} /> Galería
+              </button>
+            </div>
+            {previewUrl && (
+              <div className="relative inline-block">
+                <img src={previewUrl} alt="Preview" className="h-20 rounded-lg object-cover border" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#ddd' }} />
+                <button type="button" onClick={() => { setPreviewUrl(null); setImageFile(null); }}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
+                  style={{ background: '#E11428' }}>✕</button>
+              </div>
+            )}
           </div>
           <div>
             <label className="text-sm font-medium text-white/70 block mb-1.5">Categoría</label>
