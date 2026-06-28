@@ -445,7 +445,21 @@ export default function RecordsPage() {
       }
     }
 
-    const logoUrl = `${window.location.origin}/brand/gorila-logo.png`;
+    // Convertir logo a base64 data-URL para que funcione en APK (donde origin = https://localhost
+    // y el print window es un WebView separado sin acceso al servidor Capacitor local).
+    let logoUrl = `${window.location.origin}/brand/gorila-logo.png`;
+    try {
+      const logoResp = await fetch(`${window.location.origin}/brand/gorila-logo.png`);
+      if (logoResp.ok) {
+        const blob = await logoResp.blob();
+        logoUrl = await new Promise<string>((res, rej) => {
+          const fr = new FileReader();
+          fr.onload  = () => res(fr.result as string);
+          fr.onerror = rej;
+          fr.readAsDataURL(blob);
+        });
+      }
+    } catch { /* keep URL fallback */ }
     const estLabel = ESTADO_REGISTRO[r.estado]?.label ?? '—';
     const hasDesglose = manoRows || repRows;
 

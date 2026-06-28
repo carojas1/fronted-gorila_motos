@@ -184,13 +184,15 @@ const XS = {
 };
 type CellStyle = typeof XS.headerGreen;
 
-/* ─── Exportar datos filtrados a Excel (.xlsx) ─── */
-function exportarExcel(
-  ingresos: RegistroDetalle[], gastos: PagoEmpleadoAPI[],
-  empleados: Usuario[], label: string,
+/* ─── Helper: construye una WorkSheet para un sub-período de datos ─── */
+function buildReportSheet(
+  ingresos: RegistroDetalle[],
+  gastos:   PagoEmpleadoAPI[],
+  empleados: Usuario[],
+  label:     string,
   detallesMap?: Map<number, DetalleFila[]>,
-  productos: Producto[] = []
-) {
+  productos:  Producto[] = []
+): Record<string, { v: unknown; t: string; s?: CellStyle }> {
   const hoy    = new Date().toISOString().slice(0, 10);
   const nombreEmp = (id: number) => {
     if (id === 0) return 'Gasto general';
@@ -210,13 +212,7 @@ function exportarExcel(
   const totalGas = gasEmpl + gasGen;
   const balance  = totalIng - totalGas;
 
-  /* ── Cálculo de GANANCIAS separadas por fuente ──
-     · Mano de obra    → 100% ganancia (no tiene costo de inventario)
-     · Repuesto invent.→ ganancia = pvp_vendido − costo_producto
-     · Pieza extra/manual (sin id_producto) → se vende sin costo conocido → ganancia = precio */
-  let manoRev = 0;            // ingreso mano de obra
-  let repInvRev = 0, repInvCost = 0;   // repuestos de inventario
-  let piezaExtraRev = 0;     // repuestos manuales/externos (piezas extras vendidas en el registro)
+  let manoRev = 0, repInvRev = 0, repInvCost = 0, piezaExtraRev = 0;
   const gananciaRows: (string | number)[][] = [];
   if (detallesMap) {
     for (const r of ingresos) {
@@ -231,7 +227,7 @@ function exportarExcel(
           rInvRev += sub;
           rInvCost += (c ?? 0) * (d.cantidad ?? 1);
         } else {
-          rExtra += sub; // pieza extra / manual
+          rExtra += sub;
         }
       }
       manoRev += rMano; repInvRev += rInvRev; repInvCost += rInvCost; piezaExtraRev += rExtra;
@@ -247,15 +243,10 @@ function exportarExcel(
     }
   }
   const repInvProfit  = repInvRev - repInvCost;
-  const gananciaBruta = manoRev + repInvProfit + piezaExtraRev; // ganancia antes de gastos operativos
+  const gananciaBruta = manoRev + repInvProfit + piezaExtraRev;
   const gananciaNeta  = gananciaBruta - totalGas;
   const margenPct     = totalIng > 0 ? ((gananciaBruta / totalIng) * 100).toFixed(1) : '0';
 
-  /* ══════════════════════════════════════════════════════════════
-     UNA SOLA HOJA "Reporte" — secciones apiladas con colores
-     (mano de obra · repuestos venta/costo/ganancia · piezas extras ·
-      ingresos · gastos · ganancia bruta/neta). No más pestañas sueltas.
-     ══════════════════════════════════════════════════════════════ */
   const COLS = 9;
   const sub  = { font: { sz: 10, italic: true, color: { rgb: 'FF6B7280' } } };
   type RowMeta = {
@@ -269,13 +260,11 @@ function exportarExcel(
   const R: RowMeta[] = [];
   const blank = () => R.push({ cells: [], kind: 'blank' });
 
-  /* ── Encabezado ── */
   R.push({ cells: ['GORILA MOTOS — Reporte Contable'], kind: 'title' });
   R.push({ cells: [`Período: ${label}`], kind: 'subtitle' });
   R.push({ cells: [`Generado: ${hoy}`], kind: 'subtitle' });
   blank();
 
-  /* ── 1. Resumen general ── */
   R.push({ cells: ['RESUMEN GENERAL'], kind: 'banner' });
   R.push({ cells: ['Concepto', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGray] });
   R.push({ cells: ['Ingresos totales (facturado)', +totalIng.toFixed(2)], kind: 'data', numCols: [1] });
@@ -285,7 +274,6 @@ function exportarExcel(
   R.push({ cells: ['Margen sobre ingresos', `${margenPct}%`], kind: 'data' });
   blank();
 
-  /* ── 2. Ganancia por fuente (la separación que pediste) ── */
   R.push({ cells: ['GANANCIA POR FUENTE'], kind: 'banner' });
   R.push({ cells: ['Fuente', 'Venta ($)', 'Costo ($)', 'Ganancia ($)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGreen, XS.headerRed, XS.headerGreen] });
   R.push({ cells: ['Mano de obra', +manoRev.toFixed(2), 0, +manoRev.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
@@ -294,7 +282,6 @@ function exportarExcel(
   R.push({ cells: ['GANANCIA BRUTA', +(manoRev + repInvRev + piezaExtraRev).toFixed(2), +repInvCost.toFixed(2), +gananciaBruta.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [1, 2, 3] });
   blank();
 
-  /* ── 3. Detalle por servicio ── */
   if (gananciaRows.length > 0) {
     R.push({ cells: ['DETALLE POR SERVICIO'], kind: 'banner' });
     R.push({
@@ -310,7 +297,6 @@ function exportarExcel(
     blank();
   }
 
-  /* ── 4. Ingresos ── */
   R.push({ cells: ['INGRESOS'], kind: 'banner', bannerStyle: XS.headerGreen });
   R.push({ cells: ['Fecha', 'Placa', 'Tipo de servicio', 'Estado', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGreen] });
   ingresos.forEach(r => R.push({
@@ -320,7 +306,6 @@ function exportarExcel(
   R.push({ cells: ['', '', '', 'TOTAL', +totalIng.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [4] });
   blank();
 
-  /* ── 5. Gastos ── */
   R.push({ cells: ['GASTOS'], kind: 'banner', bannerStyle: XS.headerRed });
   R.push({ cells: ['Fecha', 'Concepto', 'Empleado / Proveedor', 'Categoría', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerRed, XS.headerGray, XS.headerGray, XS.headerRed] });
   gastos.forEach(g => R.push({
@@ -332,12 +317,10 @@ function exportarExcel(
   R.push({ cells: ['', '', '', 'Generales', +gasGen.toFixed(2)], kind: 'data', numCols: [4] });
   blank();
 
-  /* ── 6. Resultado final ── */
   R.push({ cells: ['RESULTADO FINAL'], kind: 'banner' });
   R.push({ cells: ['Balance neto (ingresos − gastos)', +balance.toFixed(2)], kind: 'total', totStyle: balance >= 0 ? XS.totRowGreen : XS.totRowRed, numCols: [1] });
   R.push({ cells: ['GANANCIA NETA (bruta − gastos)', +gananciaNeta.toFixed(2)], kind: 'total', totStyle: gananciaNeta >= 0 ? XS.totRowGreen : XS.totRowRed, numCols: [1] });
 
-  /* ── Ensamblar la hoja con estilos por tipo de fila ── */
   const aoa = R.map(m => { const p = [...m.cells]; while (p.length < COLS) p.push(''); return p; });
   const ws = XLSX.utils.aoa_to_sheet(aoa) as Record<string, { v: unknown; t: string; s?: CellStyle }>;
   const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
@@ -362,9 +345,55 @@ function exportarExcel(
   });
   ws['!merges'] = merges;
   ws['!cols'] = [{ wch: 13 }, { wch: 13 }, { wch: 24 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 15 }, { wch: 15 }];
+  return ws;
+}
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
+/* ─── Exportar datos filtrados a Excel (.xlsx) ─── */
+/* Cuando filtroTipo === 'anio' → hoja "Resumen" + una hoja por mes con datos.
+   Cuando filtroTipo === 'semana' → hoja "Resumen" + una hoja por día con datos.
+   Demás filtros → solo hoja "Resumen". */
+function exportarExcel(
+  ingresos: RegistroDetalle[], gastos: PagoEmpleadoAPI[],
+  empleados: Usuario[], label: string,
+  detallesMap?: Map<number, DetalleFila[]>,
+  productos: Producto[] = [],
+  filtroTipo: FiltroTipo = 'mes',
+  filtroAnio: number = new Date().getFullYear(),
+  filtroFecha: string = ''
+) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const wb  = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(ingresos, gastos, empleados, label, detallesMap, productos), 'Resumen');
+
+  if (filtroTipo === 'anio') {
+    for (let m = 1; m <= 12; m++) {
+      const mStr = String(m).padStart(2, '0');
+      const mIng = ingresos.filter(r => toIsoStr(r.fecha).slice(5, 7) === mStr);
+      const mGas = gastos.filter(g  => toIsoStr(g.fecha).slice(5, 7) === mStr);
+      if (!mIng.length && !mGas.length) continue;
+      XLSX.utils.book_append_sheet(wb,
+        buildReportSheet(mIng, mGas, empleados, `${MES_LABELS[m - 1]} ${filtroAnio}`, detallesMap, productos),
+        MES_SHORT[m - 1]
+      );
+    }
+  } else if (filtroTipo === 'semana') {
+    const [wMon] = getWeekRange(filtroFecha || hoy);
+    const DIA_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const DIA_FULL  = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    for (let d = 0; d < 7; d++) {
+      const dayDate = new Date(wMon + 'T12:00:00');
+      dayDate.setDate(dayDate.getDate() + d);
+      const dayStr = dayDate.toISOString().slice(0, 10);
+      const dIng   = ingresos.filter(r => toIsoStr(r.fecha) === dayStr);
+      const dGas   = gastos.filter(g  => toIsoStr(g.fecha) === dayStr);
+      if (!dIng.length && !dGas.length) continue;
+      XLSX.utils.book_append_sheet(wb,
+        buildReportSheet(dIng, dGas, empleados, `${DIA_FULL[d]} ${dayStr}`, detallesMap, productos),
+        `${DIA_SHORT[d]} ${dayStr.slice(8)}`
+      );
+    }
+  }
 
   const filename = `gorila_motos_${label.replace(/[\s/\\:*?"<>|]/g, '-')}_${hoy}.xlsx`;
   XLSX.writeFile(wb, filename);
@@ -730,7 +759,8 @@ export default function ContabilidadPage() {
                   );
                 } catch { /* skip breakdown on error */ }
                 exportarExcel(ordered, filtrar(gastos), empleados,
-                  filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio), detallesMap, productos);
+                  filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio), detallesMap, productos,
+                  filtroTipo, filtroAnio, filtroFecha);
                 setExportLoading(false);
               }}
               className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-xl transition-all"

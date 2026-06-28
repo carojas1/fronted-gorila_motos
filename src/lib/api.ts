@@ -67,12 +67,16 @@ export function tokenVencido(token: string | null): boolean {
 }
 
 /* ── Response interceptor: manejo global de errores ──
-   IMPORTANTE: solo cerramos sesión si el token está REALMENTE vencido.
-   Un 401 con token aún válido (rol, hipo transitorio del backend, etc.) NO
-   debe expulsar al usuario en medio de una acción (ej. guardar combustible).
-   Así el usuario nunca "se cae" de la app por un 401 puntual. */
+   LÓGICA DE LOGOUT:
+   1) Si el token está vencido según exp → logout inmediato
+   2) Si hay 3+ errores 401 consecutivos con token "válido" →
+      significa que Render tiene diferente JWT_SECRET (redeploy, etc.)
+      → logout para forzar re-login y obtener token nuevo
+   Así el usuario nunca queda en un loop infinito de 401 sin solución. */
+let _consecutivo401 = 0;
+
 api.interceptors.response.use(
-  (res) => res,
+  (res) => { _consecutivo401 = 0; return res; },  // reset contador en éxito
   (err: AxiosError) => {
     // Endpoints públicos de auth: un 401 aquí (credenciales malas) NO debe disparar
     // un logout global aunque haya quedado un token vencido residual en localStorage.
@@ -86,11 +90,24 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && !isAuthPublico) {
       const token = localStorage.getItem('gm_token');
       if (token && tokenVencido(token)) {
+        // Token expirado — logout inmediato
+        _consecutivo401 = 0;
         localStorage.removeItem('gm_token');
         localStorage.removeItem('gm_user');
         window.dispatchEvent(new Event('gm:unauthorized'));
+      } else if (token) {
+        // Token aparentemente válido pero servidor dice 401
+        // (posible cambio de JWT_SECRET en Render)
+        _consecutivo401++;
+        if (_consecutivo401 >= 3) {
+          _consecutivo401 = 0;
+          localStorage.removeItem('gm_token');
+          localStorage.removeItem('gm_user');
+          window.dispatchEvent(new Event('gm:unauthorized'));
+        }
       }
-      // token presente pero vigente → no cerramos sesión; el caller maneja el error
+    } else {
+      _consecutivo401 = 0;
     }
     return Promise.reject(err);
   }

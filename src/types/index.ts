@@ -11,7 +11,7 @@ export interface Usuario {
   ciudad:          string;
   descripcion:     string;
   ruta_imagen:     string | null;
-  roles:           string[] | null;
+  roles:           UsuarioRol[] | null;
   telefono?:       string | null;
   direccion?:      string | null;
   puntosBonus?:    number | null;
@@ -29,11 +29,12 @@ export interface Rol {
 }
 
 export interface UsuarioRol {
-  id_usuario:         number;
-  id_rol:             number;
+  idUsuario:          number;
+  idRol:              number;
   estado:             number;   // 1 activo, 0 inactivo
-  fecha_creacion:     string;
-  fecha_modificacion: string | null;
+  fechaCreacion:      string;
+  fechaModificacion:  string | null;
+  rol?:               { id_rol: number; nombre: string };
 }
 
 export interface Moto {
@@ -112,6 +113,7 @@ export interface Registro {
 export interface RegistroDetalle {
   id_registro:      number;
   id_moto?:         number;
+  id_encargado?:    number;
   nombre_cliente:   string;
   nombre_encargado?: string;
   marca_moto:       string;
