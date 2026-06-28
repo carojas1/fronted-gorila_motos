@@ -15,6 +15,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid,
   ComposedChart, Bar, Line, ReferenceLine,
 } from 'recharts';
+import ContabilidadChart from '../../components/charts/ContabilidadChart';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../lib/theme';
 import { motosApi, registrosApi, productosApi, usuariosApi, combustibleApi, pagosEmpleadoApi, type PagoEmpleadoAPI } from '../../lib/api';
@@ -185,7 +186,7 @@ function WebDashboard() {
   const [registros,   setRegistros]   = useState<RegistroDetalle[]>([]);
   const [productos,   setProductos]   = useState<Producto[]>([]);
   const [usuarios,    setUsuarios]    = useState<unknown[]>([]);
-  const [combustible, setCombustible] = useState<{ id:number; fecha:string }[]>([]);
+  const [combustible, setCombustible] = useState<{ id_carga:number; fecha:string; costo_total:number }[]>([]);
   const [gastos,      setGastos]      = useState<PagoEmpleadoAPI[]>([]);
   const [loading,     setLoading]     = useState(true);
 
@@ -490,6 +491,28 @@ function WebDashboard() {
       {(isAdmin || isMecanico) && !loading && (() => {
         const hoyStr  = new Date().toISOString().slice(0, 7); // yyyy-MM
         const combMes = combustible.filter(c => String(c.fecha ?? '').slice(0, 7) === hoyStr).length;
+        
+        // Comparativa semanal combustible
+        const now = new Date();
+        const startOfThisWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+        const startOfLastWeek = new Date(startOfThisWeek.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        const combThisWeek = combustible.filter(c => new Date(c.fecha) >= startOfThisWeek).reduce((s, c) => s + (c.costo_total ?? 0), 0);
+        const combLastWeek = combustible.filter(c => {
+            const d = new Date(c.fecha);
+            return d >= startOfLastWeek && d < startOfThisWeek;
+        }).reduce((s, c) => s + (c.costo_total ?? 0), 0);
+        
+        let combTrend = '—';
+        let combColor = '#8B5CF6';
+        if (combLastWeek > 0) {
+            const diff = ((combThisWeek - combLastWeek) / combLastWeek) * 100;
+            combTrend = `${diff > 0 ? '+' : ''}${diff.toFixed(1)}% vs sem. ant.`;
+            combColor = diff > 0 ? '#F43F5E' : '#10B981'; // Más gasto es rojo, menos es verde
+        } else if (combThisWeek > 0) {
+            combTrend = 'Gasto iniciado';
+        }
+
         const facturados = registros.filter(r => r.estado === 4).length;
         const pct = (n: number, total: number) => total > 0 ? Math.round((n / total) * 100) : 0;
 
@@ -505,8 +528,8 @@ function WebDashboard() {
           { to:'/inventario',  label:'Inventario',   icon:Package,     color:'#F59E0B',
             val: productos.length,  sub:`${stockCritico} con stock crítico`,
             pct: productos.length > 0 ? Math.round(((productos.length - stockCritico) / productos.length) * 100) : 100 },
-          { to:'/combustible', label:'Combustible',  icon:Zap,         color:'#8B5CF6',
-            val: combustible.length, sub:`${combMes} cargas este mes`, pct: 100 },
+          { to:'/combustible', label:'Combustible',  icon:Zap,         color: combColor,
+            val: combustible.length, sub:`${combTrend}`, pct: 100 },
           { to:'/clientes',    label:'Clientes',     icon:Users,       color:'#10B981',
             val: usuarios.length,   sub:`usuarios del sistema`, pct: 100 },
           ...(isAdmin ? [
