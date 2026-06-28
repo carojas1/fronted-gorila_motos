@@ -363,7 +363,7 @@ export default function InventoryPage() {
     const id = photoTarget.id_producto;
     setPhotoUploading(prev => ({ ...prev, [id]: true }));
     try {
-      const url = await uploadWithRetry('/productos/upload', file);
+      const url = await comprimirImagen(file);
       await productosApi.update(id, { ruta_imagenproductos: url } as unknown as Record<string, unknown>);
       toast.success('Foto de producto actualizada');
       fetchData();
