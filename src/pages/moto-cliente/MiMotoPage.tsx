@@ -96,9 +96,9 @@ export default function MiMotoPage() {
   const parsedDireccion = user?.direccion || '';
   const nombreCompleto = user?.nombre_completo || '';
 
-  const cedula    = perfilLocal?.cedula    ?? parsedCedula   || null;
-  const telefono  = perfilLocal?.telefono  ?? parsedTelefono || null;
-  const direccion = perfilLocal?.direccion ?? parsedDireccion || null;
+  const cedula    = (perfilLocal?.cedula    ?? parsedCedula)   || null;
+  const telefono  = (perfilLocal?.telefono  ?? parsedTelefono) || null;
+  const direccion = (perfilLocal?.direccion ?? parsedDireccion) || null;
 
   const perfilOk = !!cedula && !!telefono && !!direccion && !!nombreCompleto;
 
