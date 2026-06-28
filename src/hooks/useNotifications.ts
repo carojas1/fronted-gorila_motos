@@ -117,6 +117,7 @@ export function useNotifications() {
       /* ── 1. Alertas de aceite ── */
       const OIL_KW = ['cambio de aceite', 'aceite', 'oil'];
       motos.forEach(m => {
+        if (m.id_usuario !== uid) return;
         const oilRecs = registros
           .filter(r => r.placa === m.placa && OIL_KW.some(k => r.tipo_servicio?.toLowerCase().includes(k)) && r.kilometraje != null)
           .sort((a, b) => (b.kilometraje ?? 0) - (a.kilometraje ?? 0));

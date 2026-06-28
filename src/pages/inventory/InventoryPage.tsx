@@ -13,6 +13,7 @@ import { productosApi, categoriasApi, usuariosApi, motosApi, facturasApi, detall
 import { useTheme } from '../../lib/theme';
 import { useToast } from '../../components/ui/Toast';
 import { fmtMoney, getErrorMsg, nextProductCode } from '../../lib/utils';
+import { comprimirImagen } from '../../lib/fotos';
 import type { Producto, Categoria, Usuario, Moto } from '../../types';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -615,6 +616,17 @@ export default function InventoryPage() {
             <Input label="Costo ($)" type="number" placeholder="0.00" error={errors.costo?.message} {...register('costo')} />
             <Input label="PVP ($)" type="number" placeholder="0.00" error={errors.pvp?.message} {...register('pvp')} />
             <Input label="Stock" type="number" placeholder="0" error={errors.stock?.message} {...register('stock')} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-white/70 block mb-1.5">Foto del producto (opcional)</label>
+            <input type="file" accept="image/*" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                setImageFile(file);
+                setPreviewUrl(URL.createObjectURL(file));
+              }
+            }} className="gm-input-d w-full mb-2" />
+            {previewUrl && <img src={previewUrl} alt="Preview" className="h-20 rounded object-cover" />}
           </div>
           <div>
             <label className="text-sm font-medium text-white/70 block mb-1.5">Categoría</label>
