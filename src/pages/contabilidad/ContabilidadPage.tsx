@@ -192,7 +192,7 @@ function buildReportSheet(
   label:     string,
   detallesMap?: Map<number, DetalleFila[]>,
   productos:  Producto[] = [],
-  mode: 'all' | 'resumen' | 'ingresos' | 'gastos' | 'inventario' = 'all'
+  mode: 'all' | 'resumen' | 'ingresos' | 'gastos' | 'inventario' | 'pendientes' | 'activas' = 'all'
 ): Record<string, { v: unknown; t: string; s?: CellStyle }> {
   const hoy    = new Date().toISOString().slice(0, 10);
   const nombreEmp = (id: number) => {
@@ -300,14 +300,26 @@ function buildReportSheet(
     blank();
   }
 
-  if (mode === 'all' || mode === 'ingresos') {
-    R.push({ cells: ['INGRESOS'], kind: 'banner', bannerStyle: XS.headerGreen });
+  if (mode === 'all' || mode === 'ingresos' || mode === 'pendientes' || mode === 'activas') {
+    let bannerTitle = 'INGRESOS (COBRADOS)';
+    let bStyle = XS.headerGreen;
+    if (mode === 'pendientes') { bannerTitle = 'MOTOS PENDIENTES DE PAGO / ENTREGA'; bStyle = XS.headerAmber; }
+    if (mode === 'activas') { bannerTitle = 'MOTOS ACTIVAS EN TALLER'; bStyle = XS.headerRed; }
+
+    R.push({ cells: [bannerTitle], kind: 'banner', bannerStyle: bStyle });
     R.push({ cells: ['Fecha', 'Placa', 'Tipo de servicio', 'Estado', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGreen] });
-    ingresos.forEach(r => R.push({
-      cells: [toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio general', 'Cobrado', +(r.costo_total ?? 0).toFixed(2)],
-      kind: 'data', numCols: [4],
-    }));
-    R.push({ cells: ['', '', '', 'TOTAL', +totalIng.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [4] });
+    
+    let subTotal = 0;
+    ingresos.forEach(r => {
+      const estStr = ['Pendiente','En proceso','Completado','Entregado','Cobrado'][r.estado] ?? 'Desconocido';
+      const monto = +(r.costo_total ?? 0).toFixed(2);
+      subTotal += monto;
+      R.push({
+        cells: [toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio general', estStr, monto],
+        kind: 'data', numCols: [4],
+      });
+    });
+    R.push({ cells: ['', '', '', 'TOTAL', +subTotal.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [4] });
     blank();
   }
 
@@ -373,15 +385,26 @@ function exportarExcel(
   const hoy = new Date().toISOString().slice(0, 10);
   const wb  = XLSX.utils.book_new();
 
-  XLSX.utils.book_append_sheet(wb, buildReportSheet(ingresos, gastos, empleados, label, detallesMap, productos, 'resumen'), 'Resumen');
-  XLSX.utils.book_append_sheet(wb, buildReportSheet(ingresos, gastos, empleados, label, detallesMap, productos, 'ingresos'), 'Ingresos');
-  XLSX.utils.book_append_sheet(wb, buildReportSheet(ingresos, gastos, empleados, label, detallesMap, productos, 'gastos'), 'Gastos');
-  XLSX.utils.book_append_sheet(wb, buildReportSheet(ingresos, gastos, empleados, label, detallesMap, productos, 'inventario'), 'Inventario');
+  const cobrados = ingresos.filter(r => r.estado === 4);
+  const pendientes = ingresos.filter(r => r.estado !== 4);
+  const activas = ingresos.filter(r => r.estado < 3);
+
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'resumen'), 'Resumen');
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'ingresos'), 'Ingresos');
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'gastos'), 'Gastos');
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'inventario'), 'Inventario');
+
+  if (pendientes.length > 0) {
+    XLSX.utils.book_append_sheet(wb, buildReportSheet(pendientes, [], empleados, label, detallesMap, productos, 'pendientes'), 'Pendientes');
+  }
+  if (activas.length > 0) {
+    XLSX.utils.book_append_sheet(wb, buildReportSheet(activas, [], empleados, label, detallesMap, productos, 'activas'), 'Motos Activas');
+  }
 
   if (filtroTipo === 'anio') {
     for (let m = 1; m <= 12; m++) {
       const mStr = String(m).padStart(2, '0');
-      const mIng = ingresos.filter(r => toIsoStr(r.fecha).slice(5, 7) === mStr);
+      const mIng = cobrados.filter(r => toIsoStr(r.fecha).slice(5, 7) === mStr);
       const mGas = gastos.filter(g  => toIsoStr(g.fecha).slice(5, 7) === mStr);
       if (!mIng.length && !mGas.length) continue;
       XLSX.utils.book_append_sheet(wb,
@@ -397,7 +420,7 @@ function exportarExcel(
       const dayDate = new Date(wMon + 'T12:00:00');
       dayDate.setDate(dayDate.getDate() + d);
       const dayStr = dayDate.toISOString().slice(0, 10);
-      const dIng   = ingresos.filter(r => toIsoStr(r.fecha) === dayStr);
+      const dIng   = cobrados.filter(r => toIsoStr(r.fecha) === dayStr);
       const dGas   = gastos.filter(g  => toIsoStr(g.fecha) === dayStr);
       if (!dIng.length && !dGas.length) continue;
       XLSX.utils.book_append_sheet(wb,
@@ -770,7 +793,7 @@ export default function ContabilidadPage() {
                     results.flatMap(res => res.status === 'fulfilled' ? [[res.value.id, res.value.d]] : [])
                   );
                 } catch { /* skip breakdown on error */ }
-                exportarExcel(ordered, filtrar(gastos), empleados,
+                exportarExcel(filtrar(registros), filtrar(gastos), empleados,
                   filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio), detallesMap, productos,
                   filtroTipo, filtroAnio, filtroFecha);
                 setExportLoading(false);

@@ -49,8 +49,9 @@ type MotoForm = z.infer<typeof motoSchema>;
 
 /* ─── Schema perfil personal ─── */
 const perfilSchema = z.object({
-  cedula:   z.string().min(8, 'Cédula/ID mínimo 8 dígitos').max(20),
-  telefono: z.string().min(7, 'Teléfono mínimo 7 dígitos').max(15),
+  cedula:    z.string().min(8, 'Cédula/ID mínimo 8 dígitos').max(20),
+  telefono:  z.string().min(7, 'Teléfono mínimo 7 dígitos').max(15),
+  direccion: z.string().min(5, 'Ingresa una dirección válida').max(300),
 });
 type PerfilForm = z.infer<typeof perfilSchema>;
 
@@ -80,7 +81,7 @@ export default function MiMotoPage() {
      `user.descripcion` en memoria queda viejo y `perfilOk` seguiría en false,
      trabando el registro de la moto. Con este override la UI refleja al
      instante la cédula/teléfono recién guardados sin recargar la página. */
-  const [perfilLocal, setPerfilLocal] = useState<{ cedula: string; telefono: string } | null>(null);
+  const [perfilLocal, setPerfilLocal] = useState<{ cedula: string; telefono: string; direccion: string } | null>(null);
 
   /* Actualización de km */
   const [kmMoto,       setKmMoto]       = useState<Record<number, string>>({});
@@ -89,9 +90,10 @@ export default function MiMotoPage() {
   /* Mantenimientos por moto (desde el backend) para los badges */
   const [serviciosMap, setServiciosMap] = useState<Record<number, Record<string, number>>>({});
 
-  const cedula   = perfilLocal?.cedula   ?? extractCedula(user?.descripcion ?? '');
-  const telefono = perfilLocal?.telefono ?? extractPhone(user?.descripcion  ?? '');
-  const perfilOk = !!cedula && !!telefono;
+  const cedula    = perfilLocal?.cedula    ?? user?.cedula;
+  const telefono  = perfilLocal?.telefono  ?? user?.telefono;
+  const direccion = perfilLocal?.direccion ?? user?.direccion;
+  const perfilOk  = !!cedula && !!telefono && !!direccion;
 
   /* ── Moto form ── */
   const {
@@ -168,7 +170,7 @@ export default function MiMotoPage() {
   /* Pre-rellenar form perfil con datos actuales */
   useEffect(() => {
     if (editingPerfil) {
-      resetPerfil({ cedula: cedula ?? '', telefono: telefono ?? '' });
+      resetPerfil({ cedula: cedula ?? '', telefono: telefono ?? '', direccion: direccion ?? '' });
     }
   }, [editingPerfil]);
 
@@ -266,13 +268,15 @@ export default function MiMotoPage() {
     setSavingPerfil(true);
     try {
       await usuariosApi.update(user.id_usuario, {
-        descripcion: `CEDULA: ${data.cedula} | TELEFONO: ${data.telefono}`,
+        cedula: data.cedula,
+        telefono: data.telefono,
+        direccion: data.direccion
       });
-      toast.success('Datos personales actualizados.', 'Perfil');
+      toast.success('Datos personales guardados', 'Perfil');
       setEditingPerfil(false);
       // Reflejar los datos al instante en la UI (perfilOk → true sin recargar),
       // para que el cliente pueda registrar su moto sin trabarse.
-      setPerfilLocal({ cedula: data.cedula, telefono: data.telefono });
+      setPerfilLocal({ cedula: data.cedula, telefono: data.telefono, direccion: data.direccion });
       // Actualizar user en localStorage
       const storedUser = JSON.parse(localStorage.getItem('gm_user') ?? '{}');
       storedUser.descripcion = `CEDULA: ${data.cedula} | TELEFONO: ${data.telefono}`;
@@ -380,7 +384,7 @@ export default function MiMotoPage() {
               </div>
               <div style={{ flex: '1 1 140px' }}>
                 <Input
-                  label="Teléfono / WhatsApp"
+                  label="Teléfono / WhatsApp *"
                   type="tel"
                   placeholder="0987 654 321"
                   prefix={<Phone size={14} />}
@@ -388,6 +392,14 @@ export default function MiMotoPage() {
                   {...regPerfil('telefono')}
                 />
               </div>
+            </div>
+            <div style={{ flex: '1 1 100%' }}>
+              <Input
+                label="Dirección de casa *"
+                placeholder="Av. Principal y Secundaria"
+                error={errPerfil.direccion?.message}
+                {...regPerfil('direccion')}
+              />
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setEditingPerfil(false)}
@@ -575,7 +587,7 @@ export default function MiMotoPage() {
               >
                 <CreditCard size={16} color="#F59E0B" style={{ flexShrink: 0 }} />
                 <span style={{ fontSize: 12.5, color: '#F59E0B', fontWeight: 600, lineHeight: 1.45 }}>
-                  Completa primero tus datos (cédula y teléfono). Toca aquí para llenarlos.
+                  Completa primero tus datos personales (cédula, teléfono y dirección). Toca aquí para llenarlos.
                 </span>
               </button>
             )}

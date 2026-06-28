@@ -349,8 +349,8 @@ export default function AppLayout() {
             </div>
             <div style={{ lineHeight: 1 }}>
               <span
-                className="hidden sm:block font-black drop-shadow-lg"
-                style={{ fontFamily: "'Dancing Script', cursive", fontSize: 38, fontWeight: 700, color: topBrand }}
+                className="font-black drop-shadow-lg text-[24px] sm:text-[38px]"
+                style={{ fontFamily: "'Dancing Script', cursive", fontWeight: 700, color: topBrand }}
               >
                 Gorila <span style={{
                   background: 'linear-gradient(135deg, #FF3B47 0%, #E11428 60%, #C00018 100%)',

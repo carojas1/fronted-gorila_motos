@@ -18,6 +18,10 @@ export function getTheme(): Theme {
 export function applyTheme(t: Theme) {
   document.documentElement.setAttribute('data-theme', t);
   try { localStorage.setItem(KEY, t); } catch { /* noop */ }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', t === 'light' ? '#F5F5F9' : '#0B0B0F');
+  }
   // Avisar a los componentes que escuchan
   window.dispatchEvent(new CustomEvent('gm-theme', { detail: t }));
 }

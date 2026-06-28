@@ -174,6 +174,7 @@ export default function RecordsPage() {
   const [qCorreo,       setQCorreo]       = useState('');
   const [qTelefono,     setQTelefono]     = useState('');
   const [qCedula,       setQCedula]       = useState('');
+  const [qDireccion,    setQDireccion]    = useState('');
   const [qMarca,        setQMarca]        = useState('');
   const [qModelo,       setQModelo]       = useState('');
   const [qCc,           setQCc]           = useState('');
@@ -284,7 +285,7 @@ export default function RecordsPage() {
     setNCliente(null); setNMoto(null); setNTipo(null);
     setNKm(''); setNObs(''); setNManCustom(''); setNPartes([]);
     setPlateQuery(''); setShowQuick(false);
-    setQNombre(''); setQCorreo(''); setQTelefono(''); setQCedula('');
+    setQNombre(''); setQCorreo(''); setQTelefono(''); setQCedula(''); setQDireccion('');
     setQMarca(''); setQModelo(''); setQCc(''); setQTipoMoto('Otro');
   };
 
@@ -313,8 +314,8 @@ export default function RecordsPage() {
 
   /* Crear cliente + moto al instante (cliente sin tiempo) */
   const crearRapido = async () => {
-    if (!plateQuery.trim() || !qNombre.trim() || !qMarca.trim() || !qModelo.trim() || !qCc) {
-      toast.error('Completa: placa, nombre del cliente, marca, modelo y cilindraje');
+    if (!plateQuery.trim() || !qNombre.trim() || !qMarca.trim() || !qModelo.trim() || !qCc || !qTelefono.trim() || !qCedula.trim() || !qDireccion.trim()) {
+      toast.error('Nombre, Cédula, Teléfono, Dirección, Placa, Marca, Modelo y Cilindraje son obligatorios');
       return;
     }
     setCreatingQuick(true);
@@ -335,7 +336,8 @@ export default function RecordsPage() {
         nombre_usuario:  `${base}_${Math.floor(Math.random() * 9000 + 1000)}`,
         correo,
         contrasena:      pass,
-        descripcion:     `CEDULA: ${qCedula.trim() || 'N/A'} | TELEFONO: ${qTelefono.trim() || 'N/A'}`,
+        descripcion:     `CEDULA: ${qCedula.trim()} | TELEFONO: ${qTelefono.trim()}`,
+        direccion:       qDireccion.trim(),
         pais: 'Ecuador', ciudad: 'Ecuador',
       });
 
@@ -1022,17 +1024,17 @@ export default function RecordsPage() {
                     Crea la moto y un cliente básico ahora. El cliente podrá completar sus datos después con calma.
                   </p>
                   <div className="grid grid-cols-2 gap-3">
-                    <input className="gm-input-d" placeholder="Nombre del cliente *" value={qNombre} onChange={e => setQNombre(e.target.value)} />
-                    <input className="gm-input-d" placeholder="Teléfono / WhatsApp" value={qTelefono} onChange={e => setQTelefono(e.target.value)} />
-                  </div>
-                  <div>
-                    <input className="gm-input-d w-full" type="email" placeholder="Correo del cliente (recomendado — para que pueda iniciar sesión)" value={qCorreo} onChange={e => setQCorreo(e.target.value)} />
-                    <p className="text-[10.5px] text-white/30 mt-1">
-                      Si pones su correo real, el cliente podrá entrar y ver su moto. Sin correo, se crea una cuenta interna y completa datos luego.
-                    </p>
+                    <input className="gm-input-d" placeholder="Nombre completo *" value={qNombre} onChange={e => setQNombre(e.target.value)} />
+                    <input className="gm-input-d" placeholder="Teléfono / WhatsApp *" value={qTelefono} onChange={e => setQTelefono(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <input className="gm-input-d" placeholder="Cédula (opcional)" value={qCedula} onChange={e => setQCedula(e.target.value)} />
+                    <input className="gm-input-d" placeholder="Cédula *" value={qCedula} onChange={e => setQCedula(e.target.value)} />
+                    <input className="gm-input-d" placeholder="Dirección de casa *" value={qDireccion} onChange={e => setQDireccion(e.target.value)} />
+                  </div>
+                  <div>
+                    <input className="gm-input-d w-full" type="email" placeholder="Correo (si lo tiene, para que inicie sesión)" value={qCorreo} onChange={e => setQCorreo(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
                     <select className="gm-select-d" value={qTipoMoto} onChange={e => setQTipoMoto(e.target.value)}>
                       {['Sport','Naked','Touring','Enduro','Scrambler','Cruiser','Scooter','Otro'].map(t => <option key={t} value={t}>{t}</option>)}
                     </select>

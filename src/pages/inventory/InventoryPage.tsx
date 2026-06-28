@@ -164,7 +164,13 @@ export default function InventoryPage() {
     try {
       let finalUrl: string | undefined = undefined;
       if (imageFile) {
-        finalUrl = await comprimirImagen(imageFile);
+        const base64 = await comprimirImagen(imageFile);
+        const resBlob = await fetch(base64).then(r => r.blob());
+        const compFile = new File([resBlob], imageFile.name || 'foto.jpg', { type: 'image/jpeg' });
+        const fd = new FormData();
+        fd.append('file', compFile);
+        const { data: uploadRes } = await productosApi.upload(fd);
+        finalUrl = uploadRes.url;
       }
 
       const submissionData = { ...data, ruta_imagenproductos: finalUrl };
@@ -381,8 +387,13 @@ export default function InventoryPage() {
     const id = photoTarget.id_producto;
     setPhotoUploading(prev => ({ ...prev, [id]: true }));
     try {
-      const url = await comprimirImagen(file);
-      await productosApi.update(id, { ruta_imagenproductos: url } as unknown as Record<string, unknown>);
+      const base64 = await comprimirImagen(file);
+      const resBlob = await fetch(base64).then(r => r.blob());
+      const compFile = new File([resBlob], file.name || 'foto.jpg', { type: 'image/jpeg' });
+      const fd = new FormData();
+      fd.append('file', compFile);
+      const { data: uploadRes } = await productosApi.upload(fd);
+      await productosApi.update(id, { ruta_imagenproductos: uploadRes.url } as unknown as Record<string, unknown>);
       toast.success('Foto de producto actualizada');
       fetchData();
     } catch (err) {

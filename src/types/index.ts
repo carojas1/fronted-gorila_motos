@@ -13,6 +13,7 @@ export interface Usuario {
   ruta_imagen:     string | null;
   roles:           UsuarioRol[] | null;
   telefono?:       string | null;
+  cedula?:         string | null;
   direccion?:      string | null;
   puntosBonus?:    number | null;
   codigoReferido?: string | null;

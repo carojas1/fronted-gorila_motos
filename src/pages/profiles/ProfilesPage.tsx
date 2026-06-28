@@ -66,7 +66,8 @@ const regSchema = z.object({
   nombre_usuario:  z.string().min(3),
   contrasena:      z.string().min(4),
   correo:          z.string().email().optional().or(z.literal("")),
-  telefono:        z.string().optional(),
+  telefono:        z.string().min(7, "Teléfono mínimo 7 dígitos").max(15),
+  direccion:       z.string().min(5, "Ingresa una dirección válida").max(300),
   rol:             z.string().min(1, "Selecciona un rol"),
 });
 
@@ -416,6 +417,7 @@ export default function ProfilesPage() {
         correo,
         contrasena: data.contrasena,
         descripcion: `CEDULA: ${data.cedula} | TELEFONO: ${data.telefono || "N/A"}`,
+        direccion: data.direccion.trim(),
         pais: "Ecuador", ciudad: "Quito",
       });
 
@@ -781,8 +783,12 @@ export default function ProfilesPage() {
           <div className="grid grid-cols-2 gap-3">
             <Input label="Correo (opcional)" type="email" placeholder="juan@correo.com"
               error={errors.correo?.message} {...register("correo")} />
-            <Input label="Teléfono (opcional)" placeholder="0987654321"
+            <Input label="Teléfono *" placeholder="0987654321"
               error={errors.telefono?.message} {...register("telefono")} />
+          </div>
+          <div>
+            <Input label="Dirección de casa *" placeholder="Av. Principal y Secundaria"
+              error={errors.direccion?.message} {...register("direccion")} />
           </div>
           <div>
             <label className="text-sm font-medium text-white/70 block mb-1.5">Rol *</label>
