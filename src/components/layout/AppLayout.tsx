@@ -122,7 +122,6 @@ export default function AppLayout() {
     ...(puede('puntos')      && (isAdmin || isMecanico) ? [{ label: 'Puntos',       to: '/puntos'        }] : []),
     ...(puede('combustible') && (isAdmin || isMecanico) ? [{ label: 'Combustible',  to: '/combustible'   }] : []),
     ...(verCliente                                      ? [{ label: 'Combustible',  to: '/combustible'   }] : []),
-    ...(verCliente                                      ? [{ label: 'Alertas',       to: '/alertas'       }] : []),
     ...(isAdmin                                         ? [{ label: 'Contabilidad', to: '/contabilidad'  }] : []),
     ...(isAdmin                                         ? [{ label: 'Perfiles',     to: '/perfiles'      }] : []),
   ];

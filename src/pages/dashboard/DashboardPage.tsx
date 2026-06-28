@@ -403,11 +403,10 @@ function WebDashboard() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            { label: 'Mis motos',    to: '/motos',       color: '#3B82F6', icon: Bike   },
+            { label: 'Mis motos',    to: '/mi-moto',     color: '#3B82F6', icon: Bike   },
             { label: 'Mis puntos',   to: '/puntos',      color: '#F59E0B', icon: Star   },
             { label: 'Mi portal',    to: '/portal',      color: '#10B981', icon: Users  },
             { label: 'Combustible',  to: '/combustible', color: '#8B5CF6', icon: Zap    },
-            { label: 'Alertas',      to: '/alertas',     color: '#E11428', icon: Bell   },
           ].map(({ label, to, color, icon: Icon }) => (
             <Link key={to} to={to}
                   className="gm-card-d rounded-2xl p-4 flex items-center gap-3 hover:border-gm-red/30 transition-all">

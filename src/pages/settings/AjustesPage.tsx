@@ -121,7 +121,9 @@ export default function AjustesPage() {
   /* ─── Editar perfil ─── */
   const [editOpen,   setEditOpen]   = useState(false);
   const [editNombre, setEditNombre] = useState(user?.nombre_completo ?? '');
-  const [editTel,    setEditTel]    = useState('');
+  const [editTel,    setEditTel]    = useState(user?.telefono ?? '');
+  const [editCedula, setEditCedula] = useState(user?.cedula ?? '');
+  const [editDir,    setEditDir]    = useState(user?.direccion ?? '');
   const [editSaving, setEditSaving] = useState(false);
 
   /* ─── Cambiar contraseña ─── */
@@ -134,8 +136,9 @@ export default function AjustesPage() {
   useEffect(() => {
     if (user) {
       setEditNombre(user.nombre_completo ?? '');
-      const tel = extractPhone(user.descripcion ?? '');
-      setEditTel(tel ?? '');
+      setEditTel(user.telefono ?? extractPhone(user.descripcion ?? '') ?? '');
+      setEditCedula(user.cedula ?? '');
+      setEditDir(user.direccion ?? '');
     }
   }, [user]);
 
@@ -145,14 +148,20 @@ export default function AjustesPage() {
     setEditSaving(true);
     try {
       const telClean = editTel.trim();
-      const desc = user.descripcion ?? '';
+      const cedClean = editCedula.trim();
+      const dirClean = editDir.trim();
+
       const newDesc = telClean
-        ? desc.replace(/TELEFONO:\s*[^\s|]*/i, `TELEFONO: ${telClean}`) ||
-          (desc ? `${desc} | TELEFONO: ${telClean}` : `TELEFONO: ${telClean}`)
-        : desc;
+        ? (user.descripcion ?? '').replace(/TELEFONO:\s*[^\s|]*/i, `TELEFONO: ${telClean}`) ||
+          `${user.descripcion ? user.descripcion + ' | ' : ''}TELEFONO: ${telClean}`
+        : user.descripcion ?? '';
+
       await usuariosApi.update(user.id_usuario, {
         nombre_completo: editNombre.trim(),
         descripcion: newDesc,
+        telefono: telClean,
+        cedula: cedClean,
+        direccion: dirClean,
       });
       toast.success('Datos actualizados');
       setEditOpen(false);
@@ -343,31 +352,13 @@ export default function AjustesPage() {
           </>
         }
       >
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
-              Nombre completo
-            </label>
-            <input
-              className="gm-input-d w-full"
-              value={editNombre}
-              onChange={e => setEditNombre(e.target.value)}
-              placeholder="Tu nombre completo"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
-              Número de teléfono
-            </label>
-            <input
-              className="gm-input-d w-full"
-              value={editTel}
-              onChange={e => setEditTel(e.target.value)}
-              placeholder="Ej. 0989 443 282"
-              type="tel"
-            />
-          </div>
-          <p className="text-[11px] text-white/30">
+        <div className="space-y-4 pt-1">
+          <Input label="Nombres completos" value={editNombre} onChange={e => setEditNombre(e.target.value)} disabled={editSaving} />
+          <Input label="Cédula" value={editCedula} onChange={e => setEditCedula(e.target.value)} disabled={editSaving} placeholder="0123456789" />
+          <Input label="Teléfono" value={editTel} onChange={e => setEditTel(e.target.value)} disabled={editSaving} placeholder="0999999999" />
+          <Input label="Dirección de casa" value={editDir} onChange={e => setEditDir(e.target.value)} disabled={editSaving} placeholder="Av. Principal y Secundaria" />
+          
+          <p className="text-[11px] text-white/30 pt-2">
             El correo electrónico no se puede cambiar aquí. Contacta al soporte si necesitas actualizarlo.
           </p>
         </div>

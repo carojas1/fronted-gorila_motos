@@ -180,25 +180,24 @@ export default function InvoicePage() {
         style={{ fontFamily: "'Segoe UI', Arial, sans-serif", fontSize: '13px', lineHeight: '1.5' }}
       >
         {/* ── Cabecera premium ── */}
-        <div style={{ background: 'linear-gradient(135deg, #0C0C10 0%, #1A1A22 100%)' }} className="p-6">
+        <div style={{ background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', borderBottom: '1px solid rgba(220,38,38,0.1)' }} className="p-6 border-b border-red-100">
           <div className="flex items-center justify-between">
             {/* Logo + taller */}
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 relative"
-                   style={{ border: '2px solid rgba(225,20,40,0.5)', boxShadow: '0 0 20px rgba(225,20,40,0.3)', background: 'linear-gradient(135deg,#E11428,#7a000e)' }}>
+              <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 relative bg-white shadow-sm"
+                   style={{ border: '1px solid rgba(220,38,38,0.2)' }}>
                 <img src="/brand/gorila-logo.png" alt="Gorila Motos"
                      className="w-full h-full object-cover relative z-10"
                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                <span className="absolute inset-0 flex items-center justify-center text-white font-black text-lg" style={{ letterSpacing: '-1px' }}>GM</span>
               </div>
               <div>
-                <h1 className="text-white font-black text-xl leading-none" style={{ fontFamily: "'Dancing Script', cursive" }}>
-                  Gorila <span style={{ color: '#E11428' }}>Motos</span>
+                <h1 className="font-black text-2xl leading-none" style={{ color: '#991B1B', fontFamily: "'Inter', sans-serif", letterSpacing: '-0.5px' }}>
+                  Gorila Motos
                 </h1>
-                <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, marginTop: 4 }}>
+                <p style={{ color: '#7F1D1D', fontSize: 11, marginTop: 4, opacity: 0.8 }}>
                   {WORKSHOP_CONTACT.direccion}
                 </p>
-                <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11 }}>
+                <p style={{ color: '#7F1D1D', fontSize: 11, opacity: 0.8 }}>
                   {WORKSHOP_CONTACT.telefono} · {WORKSHOP_CONTACT.email}
                 </p>
               </div>
@@ -206,16 +205,16 @@ export default function InvoicePage() {
             {/* Badge número */}
             <div className="text-right">
               <div style={{
-                background: 'rgba(225,20,40,0.15)', border: '1px solid rgba(225,20,40,0.5)',
-                borderRadius: 12, padding: '10px 18px',
+                background: '#FFFFFF', border: '1px solid rgba(220,38,38,0.15)',
+                borderRadius: 12, padding: '10px 18px', boxShadow: '0 4px 12px rgba(220,38,38,0.05)'
               }}>
-                <p style={{ color: '#E11428', fontSize: 9, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                <p style={{ color: '#DC2626', fontSize: 9, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
                   Nota de Servicio
                 </p>
-                <p className="text-white font-black" style={{ fontSize: 22, letterSpacing: '-0.5px', marginTop: 2 }}>
+                <p className="font-black" style={{ color: '#7F1D1D', fontSize: 22, letterSpacing: '-0.5px', marginTop: 2 }}>
                   {numComp}
                 </p>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{fmtDate(reg.fecha)}</p>
+                <p style={{ color: '#991B1B', fontSize: 11, marginTop: 2, opacity: 0.6 }}>{fmtDate(reg.fecha)}</p>
               </div>
             </div>
           </div>
@@ -505,18 +504,18 @@ export default function InvoicePage() {
                 <span>$0.00</span>
               </div>
             </div>
-            <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(225,20,40,0.25)' }}>
-              <div className="p-4" style={{ background: 'linear-gradient(135deg, #E11428 0%, #B91C1C 60%, #7f1010 100%)' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(220,38,38,0.15)' }}>
+              <div className="p-4" style={{ background: 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)' }}>
                 <div className="flex items-end justify-between">
                   <div>
-                    <p className="text-white/70 text-[9px] font-black uppercase tracking-[0.2em]">Total a pagar</p>
+                    <p className="text-white/80 text-[9px] font-black uppercase tracking-[0.2em]">Total a pagar</p>
                     <p className="text-white font-black leading-none mt-1" style={{ fontSize: 32, letterSpacing: '-1px' }}>
                       {fmtMoney(subtotalFactura)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-white/50 text-[9px] font-bold uppercase">Efectivo</p>
-                    <p className="text-white/30 text-[9px] mt-0.5">Sin IVA</p>
+                    <p className="text-white/70 text-[9px] font-bold uppercase">Efectivo / Transf.</p>
+                    <p className="text-white/50 text-[9px] mt-0.5">Sin IVA</p>
                   </div>
                 </div>
               </div>

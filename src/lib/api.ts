@@ -92,24 +92,11 @@ api.interceptors.response.use(
       (url.endsWith('/usuarios') && method === 'post'); // registro
 
     if (err.response?.status === 401 && !isAuthPublico) {
-      const token = localStorage.getItem('gm_token');
-      if (token && tokenVencido(token)) {
-        // Token expirado — logout inmediato
-        _consecutivo401 = 0;
-        localStorage.removeItem('gm_token');
-        localStorage.removeItem('gm_user');
-        window.dispatchEvent(new Event('gm:unauthorized'));
-      } else if (token) {
-        // Token aparentemente válido pero servidor dice 401
-        // (posible cambio de JWT_SECRET en Render)
-        _consecutivo401++;
-        if (_consecutivo401 >= 3) {
-          _consecutivo401 = 0;
-          localStorage.removeItem('gm_token');
-          localStorage.removeItem('gm_user');
-          window.dispatchEvent(new Event('gm:unauthorized'));
-        }
-      }
+      // Token expirado o inválido — logout inmediato
+      _consecutivo401 = 0;
+      localStorage.removeItem('gm_token');
+      localStorage.removeItem('gm_user');
+      window.dispatchEvent(new Event('gm:unauthorized'));
     } else {
       _consecutivo401 = 0;
     }
