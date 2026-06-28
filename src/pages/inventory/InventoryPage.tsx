@@ -79,6 +79,8 @@ export default function InventoryPage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoTarget, setPhotoTarget]   = useState<Producto | null>(null);
   const [photoUploading, setPhotoUploading] = useState<Record<number, boolean>>({});
+  const [, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   /* Venta Normal — con cliente registrado, busca por email o placa */
   const [vnTarget,      setVnTarget]      = useState<Producto | null>(null);
@@ -131,6 +133,8 @@ export default function InventoryPage() {
   }, [loading]);
 
   const openCreate = () => {
+    setImageFile(null);
+    setPreviewUrl(null);
     setEditTarget(null);
     reset({
       fecha_registro:     new Date().toISOString().slice(0, 10),
@@ -141,6 +145,8 @@ export default function InventoryPage() {
   };
 
   const openEdit = (p: Producto) => {
+    setImageFile(null);
+    setPreviewUrl(null);
     setEditTarget(p);
     reset({
       nombre: p.nombre, descripcion: p.descripcion,
@@ -165,7 +171,11 @@ export default function InventoryPage() {
       setModalOpen(false);
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }
-    finally { setSaving(false); }
+    finally { 
+      setSaving(false); 
+      setImageFile(null);
+      setPreviewUrl(null);
+    }
   };
 
   const confirmDelete = async () => {

@@ -7,7 +7,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 // AnimatePresence kept for mobile drawer only — main content uses plain motion.div to avoid scroll freeze
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, ChevronDown, Menu, X, KeyRound } from 'lucide-react';
+import { LogOut, ChevronDown, Menu, X, KeyRound, Download } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { initials, parsePermisos, getErrorMsg } from '../../lib/utils';
 import { NotificationBell, NotificationPanel } from '../ui/NotificationCenter';
@@ -38,6 +38,17 @@ export default function AppLayout() {
   const [pw1,       setPw1]       = useState('');
   const [pw2,       setPw2]       = useState('');
   const [pwSaving,  setPwSaving]  = useState(false);
+
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
 
   const resetPw = () => { setPwCurrent(''); setPw1(''); setPw2(''); };
 
@@ -208,7 +219,7 @@ export default function AppLayout() {
                    style={{ borderColor: isDark ? 'rgba(255,255,255,0.07)' : '#E4E7EC' }}>
                 <Link to="/dashboard" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
                   <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0"
-                       style={{ boxShadow: '0 0 0 1.5px rgba(225,20,40,0.4)' }}>
+                       style={{ boxShadow: '0 0 0 1.5px rgba(225,20,40,0.4)', backgroundColor: '#111' }}>
                     <img src="/brand/gorila-logo.png" alt="GM" className="w-full h-full object-cover" />
                   </div>
                   <span className="font-black text-white leading-none"
@@ -329,6 +340,7 @@ export default function AppLayout() {
                 width: 46, height: 46, borderRadius: 12,
                 boxShadow: '0 0 0 2px rgba(225,20,40,0.35), 0 4px 20px rgba(225,20,40,0.2)',
                 transition: 'box-shadow 200ms',
+                backgroundColor: '#111'
               }}
             >
               <img src="/brand/gorila-logo.png" alt="GMotors" className="w-full h-full object-cover" />
@@ -429,6 +441,21 @@ export default function AppLayout() {
 
           {/* Derecha: notif + saludo + avatar */}
           <div className="flex items-center gap-2 ml-auto shrink-0" ref={menuRef}>
+            {/* PWA Install */}
+            {deferredPrompt && (
+                <button
+                  onClick={() => {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
+                  }}
+                  className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs shadow-md transition-all hover:scale-105 active:scale-95"
+                  style={{ background: '#E11428', color: '#FFF' }}
+                  title="Instalar Gorila Motos"
+                >
+                  <Download size={14} />
+                  Instalar
+                </button>
+              )}
             {/* Toggle de tema claro / oscuro */}
             <button
               onClick={toggleTheme}
