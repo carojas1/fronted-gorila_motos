@@ -198,6 +198,10 @@ export default function RegisterPage() {
    */
   const handleGoogle = async () => {
     if (!processGoogleUser) return;
+    if (!termsChecked) {
+      toast.error('Debes aceptar la Política de Privacidad y Términos de Uso para registrarte', 'Términos y Condiciones');
+      return;
+    }
     setGoogleBusy(true);
     try {
       const fbUser = await startGoogleSignIn();

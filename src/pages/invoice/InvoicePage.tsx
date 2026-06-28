@@ -359,25 +359,25 @@ export default function InvoicePage() {
                 <tr>
                   <td colSpan={5} style={{ padding: 0 }}>
                     <div className="flex items-center gap-3 px-4 py-2"
-                         style={{ background: 'linear-gradient(90deg,#EFF6FF,#F8FAFF)', borderLeft: '3px solid #3B82F6' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                         style={{ background: 'linear-gradient(90deg,#FEF2F2,#FFF5F5)', borderLeft: '3px solid #EF4444' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
                       </svg>
-                      <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#1D4ED8' }}>
+                      <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#B91C1C' }}>
                         Mano de obra — {manoItems.length} ítem{manoItems.length !== 1 ? 's' : ''}
                       </span>
-                      <span className="ml-auto text-[11px] font-bold" style={{ color: '#1D4ED8' }}>{fmtMoney(totalMano)}</span>
+                      <span className="ml-auto text-[11px] font-bold" style={{ color: '#B91C1C' }}>{fmtMoney(totalMano)}</span>
                     </div>
                   </td>
                 </tr>
               )}
               {manoItems.map((d, i) => (
-                <tr key={`m${i}`} style={{ borderBottom: '1px solid #F0F1F3', background: i % 2 === 0 ? '#FAFBFF' : '#FFFFFF' }}>
-                  <td style={{ width: 4, background: '#3B82F6', padding: 0 }} />
+                <tr key={`m${i}`} style={{ borderBottom: '1px solid #F0F1F3', background: i % 2 === 0 ? '#FFFDFD' : '#FFFFFF' }}>
+                  <td style={{ width: 4, background: '#EF4444', padding: 0 }} />
                   <td className="px-3 py-3 text-sm text-gray-500 font-mono text-center">{d.cantidad ?? 1}</td>
                   <td className="px-3 py-3">
                     <p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Mano de obra'}</p>
-                    <p className="text-[10px] text-blue-400 mt-0.5 font-semibold">MO-{String(i + 1).padStart(2, '0')}</p>
+                    <p className="text-[10px] text-red-400 mt-0.5 font-semibold">MO-{String(i + 1).padStart(2, '0')}</p>
                   </td>
                   <td className="px-3 py-3 text-sm text-gray-500 text-right">{fmtMoney(Number(d.precioUnitario ?? 0))}</td>
                   <td className="px-3 py-3 text-sm font-black text-gray-800 text-right">{fmtMoney(Number(d.subtotal ?? 0))}</td>
@@ -389,14 +389,14 @@ export default function InvoicePage() {
                 <tr>
                   <td colSpan={5} style={{ padding: 0 }}>
                     <div className="flex items-center gap-3 px-4 py-2"
-                         style={{ background: 'linear-gradient(90deg,#FFFBEB,#FFFDF7)', borderLeft: '3px solid #F59E0B' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                         style={{ background: 'linear-gradient(90deg,#FFF1F2,#FFF7F8)', borderLeft: '3px solid #F43F5E' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#BE123C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
                       </svg>
-                      <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#D97706' }}>
+                      <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#BE123C' }}>
                         Repuestos — {repItems.length} ítem{repItems.length !== 1 ? 's' : ''}
                       </span>
-                      <span className="ml-auto text-[11px] font-bold" style={{ color: '#D97706' }}>{fmtMoney(totalRep)}</span>
+                      <span className="ml-auto text-[11px] font-bold" style={{ color: '#BE123C' }}>{fmtMoney(totalRep)}</span>
                     </div>
                   </td>
                 </tr>
@@ -406,8 +406,8 @@ export default function InvoicePage() {
                 const cat = d.idProducto != null ? 'inventario' : (detalleCategoria(d.descripcion) ?? '');
                 const catLbl = d.idProducto != null ? 'Inventario' : categoriaLabel(cat);
                 return (
-                  <tr key={`r${i}`} style={{ borderBottom: '1px solid #F0F1F3', background: i % 2 === 0 ? '#FFFDF7' : '#FFFFFF' }}>
-                    <td style={{ width: 4, background: '#F59E0B', padding: 0 }} />
+                  <tr key={`r${i}`} style={{ borderBottom: '1px solid #F0F1F3', background: i % 2 === 0 ? '#FFFCFC' : '#FFFFFF' }}>
+                    <td style={{ width: 4, background: '#F43F5E', padding: 0 }} />
                     <td className="px-3 py-3 text-sm text-gray-500 font-mono text-center">{d.cantidad ?? 1}</td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-3">
@@ -422,11 +422,11 @@ export default function InvoicePage() {
                           <p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Repuesto'}</p>
                           {catLbl && (
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5"
-                              style={{ background: '#FEF3C7', color: '#D97706' }}>
+                              style={{ background: '#FFE4E6', color: '#BE123C' }}>
                               {catLbl}
                             </span>
                           )}
-                          <p className="text-[10px] text-amber-400 mt-0.5 font-semibold">RP-{String(i + 1).padStart(2, '0')}</p>
+                          <p className="text-[10px] text-rose-400 mt-0.5 font-semibold">RP-{String(i + 1).padStart(2, '0')}</p>
                         </div>
                       </div>
                     </td>
