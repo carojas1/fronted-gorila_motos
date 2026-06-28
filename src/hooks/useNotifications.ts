@@ -7,7 +7,19 @@ import { useEffect, useState, useCallback } from 'react';
 import { motosApi, productosApi, registrosApi } from '../lib/api';
 import { toIsoStr } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { isNativeApp } from '../lib/platform';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import type { Moto, Producto, RegistroDetalle } from '../types';
+
+function hashCode(str: string) {
+  let hash = 0;
+  for (let i = 0, len = str.length; i < len; i++) {
+    const chr = str.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0;
+  }
+  return hash;
+}
 
 export type NotifPriority = 'high' | 'medium' | 'low';
 export type NotifType     = 'oil_alert' | 'low_stock' | 'pending_order' | 'moto_ready' | 'info';
@@ -194,6 +206,33 @@ export function useNotifications() {
       const finalNotifs = live
         .sort((a, b) => rank[a.priority] - rank[b.priority])
         .slice(0, 60);
+
+      // Capacitor: Notificaciones Locales
+      if (isNativeApp()) {
+        const storedIds = new Set(stored.map(n => n.id));
+        const newNotifs = finalNotifs.filter(n => !storedIds.has(n.id) && !n.read);
+        if (newNotifs.length > 0) {
+          LocalNotifications.checkPermissions().then(status => {
+            const sendLocal = () => {
+              const toSchedule = newNotifs.map((n, idx) => ({
+                title: n.title,
+                body: n.message,
+                id: Math.abs(hashCode(n.id)) + idx,
+                schedule: { at: new Date(Date.now() + 100 * idx) },
+              }));
+              LocalNotifications.schedule({ notifications: toSchedule }).catch(() => {});
+            };
+            if (status.display === 'granted') {
+              sendLocal();
+            } else if (status.display === 'prompt') {
+              LocalNotifications.requestPermissions().then(res => {
+                if (res.display === 'granted') sendLocal();
+              });
+            }
+          }).catch(() => {});
+        }
+      }
+
       saveNotifs(uid, finalNotifs);
       setNotifications(finalNotifs);
     } catch { /* silent */ }

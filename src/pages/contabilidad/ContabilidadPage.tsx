@@ -191,7 +191,8 @@ function buildReportSheet(
   empleados: Usuario[],
   label:     string,
   detallesMap?: Map<number, DetalleFila[]>,
-  productos:  Producto[] = []
+  productos:  Producto[] = [],
+  mode: 'all' | 'resumen' | 'ingresos' | 'gastos' | 'inventario' = 'all'
 ): Record<string, { v: unknown; t: string; s?: CellStyle }> {
   const hoy    = new Date().toISOString().slice(0, 10);
   const nombreEmp = (id: number) => {
@@ -265,24 +266,26 @@ function buildReportSheet(
   R.push({ cells: [`Generado: ${hoy}`], kind: 'subtitle' });
   blank();
 
-  R.push({ cells: ['RESUMEN GENERAL'], kind: 'banner' });
-  R.push({ cells: ['Concepto', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGray] });
-  R.push({ cells: ['Ingresos totales (facturado)', +totalIng.toFixed(2)], kind: 'data', numCols: [1] });
-  R.push({ cells: ['Ganancia bruta', +gananciaBruta.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [1] });
-  R.push({ cells: ['Total gastos', +totalGas.toFixed(2)], kind: 'total', totStyle: XS.totRowRed, numCols: [1] });
-  R.push({ cells: ['GANANCIA NETA', +gananciaNeta.toFixed(2)], kind: 'total', totStyle: gananciaNeta >= 0 ? XS.totRowGreen : XS.totRowRed, numCols: [1] });
-  R.push({ cells: ['Margen sobre ingresos', `${margenPct}%`], kind: 'data' });
-  blank();
+  if (mode === 'all' || mode === 'resumen') {
+    R.push({ cells: ['RESUMEN GENERAL'], kind: 'banner' });
+    R.push({ cells: ['Concepto', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGray] });
+    R.push({ cells: ['Ingresos totales (facturado)', +totalIng.toFixed(2)], kind: 'data', numCols: [1] });
+    R.push({ cells: ['Ganancia bruta', +gananciaBruta.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [1] });
+    R.push({ cells: ['Total gastos', +totalGas.toFixed(2)], kind: 'total', totStyle: XS.totRowRed, numCols: [1] });
+    R.push({ cells: ['GANANCIA NETA', +gananciaNeta.toFixed(2)], kind: 'total', totStyle: gananciaNeta >= 0 ? XS.totRowGreen : XS.totRowRed, numCols: [1] });
+    R.push({ cells: ['Margen sobre ingresos', `${margenPct}%`], kind: 'data' });
+    blank();
 
-  R.push({ cells: ['GANANCIA POR FUENTE'], kind: 'banner' });
-  R.push({ cells: ['Fuente', 'Venta ($)', 'Costo ($)', 'Ganancia ($)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGreen, XS.headerRed, XS.headerGreen] });
-  R.push({ cells: ['Mano de obra', +manoRev.toFixed(2), 0, +manoRev.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
-  R.push({ cells: ['Repuestos inventario', +repInvRev.toFixed(2), +repInvCost.toFixed(2), +repInvProfit.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
-  R.push({ cells: ['Piezas extras (manual)', +piezaExtraRev.toFixed(2), 0, +piezaExtraRev.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
-  R.push({ cells: ['GANANCIA BRUTA', +(manoRev + repInvRev + piezaExtraRev).toFixed(2), +repInvCost.toFixed(2), +gananciaBruta.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [1, 2, 3] });
-  blank();
+    R.push({ cells: ['GANANCIA POR FUENTE'], kind: 'banner' });
+    R.push({ cells: ['Fuente', 'Venta ($)', 'Costo ($)', 'Ganancia ($)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGreen, XS.headerRed, XS.headerGreen] });
+    R.push({ cells: ['Mano de obra', +manoRev.toFixed(2), 0, +manoRev.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
+    R.push({ cells: ['Repuestos inventario', +repInvRev.toFixed(2), +repInvCost.toFixed(2), +repInvProfit.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
+    R.push({ cells: ['Piezas extras (manual)', +piezaExtraRev.toFixed(2), 0, +piezaExtraRev.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
+    R.push({ cells: ['GANANCIA BRUTA', +(manoRev + repInvRev + piezaExtraRev).toFixed(2), +repInvCost.toFixed(2), +gananciaBruta.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [1, 2, 3] });
+    blank();
+  }
 
-  if (gananciaRows.length > 0) {
+  if ((mode === 'all' || mode === 'inventario') && gananciaRows.length > 0) {
     R.push({ cells: ['DETALLE POR SERVICIO'], kind: 'banner' });
     R.push({
       cells: ['Fecha', 'Placa', 'Servicio', 'Mano obra ($)', 'Rep. venta ($)', 'Rep. costo ($)', 'Rep. ganancia ($)', 'Piezas extras ($)', 'Ganancia total ($)'],
@@ -297,29 +300,35 @@ function buildReportSheet(
     blank();
   }
 
-  R.push({ cells: ['INGRESOS'], kind: 'banner', bannerStyle: XS.headerGreen });
-  R.push({ cells: ['Fecha', 'Placa', 'Tipo de servicio', 'Estado', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGreen] });
-  ingresos.forEach(r => R.push({
-    cells: [toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio general', 'Cobrado', +(r.costo_total ?? 0).toFixed(2)],
-    kind: 'data', numCols: [4],
-  }));
-  R.push({ cells: ['', '', '', 'TOTAL', +totalIng.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [4] });
-  blank();
+  if (mode === 'all' || mode === 'ingresos') {
+    R.push({ cells: ['INGRESOS'], kind: 'banner', bannerStyle: XS.headerGreen });
+    R.push({ cells: ['Fecha', 'Placa', 'Tipo de servicio', 'Estado', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGreen] });
+    ingresos.forEach(r => R.push({
+      cells: [toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio general', 'Cobrado', +(r.costo_total ?? 0).toFixed(2)],
+      kind: 'data', numCols: [4],
+    }));
+    R.push({ cells: ['', '', '', 'TOTAL', +totalIng.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [4] });
+    blank();
+  }
 
-  R.push({ cells: ['GASTOS'], kind: 'banner', bannerStyle: XS.headerRed });
-  R.push({ cells: ['Fecha', 'Concepto', 'Empleado / Proveedor', 'Categoría', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerRed, XS.headerGray, XS.headerGray, XS.headerRed] });
-  gastos.forEach(g => R.push({
-    cells: [toIsoStr(g.fecha), g.concepto, nombreEmp(g.id_empleado), g.id_empleado > 0 ? 'Pago empleado' : 'Gasto general', +Number(g.monto).toFixed(2)],
-    kind: 'data', numCols: [4],
-  }));
-  R.push({ cells: ['', '', '', 'TOTAL GASTOS', +totalGas.toFixed(2)], kind: 'total', totStyle: XS.totRowRed, numCols: [4] });
-  R.push({ cells: ['', '', '', 'Empleados', +gasEmpl.toFixed(2)], kind: 'data', numCols: [4] });
-  R.push({ cells: ['', '', '', 'Generales', +gasGen.toFixed(2)], kind: 'data', numCols: [4] });
-  blank();
+  if (mode === 'all' || mode === 'gastos') {
+    R.push({ cells: ['GASTOS'], kind: 'banner', bannerStyle: XS.headerRed });
+    R.push({ cells: ['Fecha', 'Concepto', 'Empleado / Proveedor', 'Categoría', 'Monto (USD)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerRed, XS.headerGray, XS.headerGray, XS.headerRed] });
+    gastos.forEach(g => R.push({
+      cells: [toIsoStr(g.fecha), g.concepto, nombreEmp(g.id_empleado), g.id_empleado > 0 ? 'Pago empleado' : 'Gasto general', +Number(g.monto).toFixed(2)],
+      kind: 'data', numCols: [4],
+    }));
+    R.push({ cells: ['', '', '', 'TOTAL GASTOS', +totalGas.toFixed(2)], kind: 'total', totStyle: XS.totRowRed, numCols: [4] });
+    R.push({ cells: ['', '', '', 'Empleados', +gasEmpl.toFixed(2)], kind: 'data', numCols: [4] });
+    R.push({ cells: ['', '', '', 'Generales', +gasGen.toFixed(2)], kind: 'data', numCols: [4] });
+    blank();
+  }
 
-  R.push({ cells: ['RESULTADO FINAL'], kind: 'banner' });
-  R.push({ cells: ['Balance neto (ingresos − gastos)', +balance.toFixed(2)], kind: 'total', totStyle: balance >= 0 ? XS.totRowGreen : XS.totRowRed, numCols: [1] });
-  R.push({ cells: ['GANANCIA NETA (bruta − gastos)', +gananciaNeta.toFixed(2)], kind: 'total', totStyle: gananciaNeta >= 0 ? XS.totRowGreen : XS.totRowRed, numCols: [1] });
+  if (mode === 'all' || mode === 'resumen') {
+    R.push({ cells: ['RESULTADO FINAL'], kind: 'banner' });
+    R.push({ cells: ['Balance neto (ingresos − gastos)', +balance.toFixed(2)], kind: 'total', totStyle: balance >= 0 ? XS.totRowGreen : XS.totRowRed, numCols: [1] });
+    R.push({ cells: ['GANANCIA NETA (bruta − gastos)', +gananciaNeta.toFixed(2)], kind: 'total', totStyle: gananciaNeta >= 0 ? XS.totRowGreen : XS.totRowRed, numCols: [1] });
+  }
 
   const aoa = R.map(m => { const p = [...m.cells]; while (p.length < COLS) p.push(''); return p; });
   const ws = XLSX.utils.aoa_to_sheet(aoa) as Record<string, { v: unknown; t: string; s?: CellStyle }>;
@@ -364,7 +373,10 @@ function exportarExcel(
   const hoy = new Date().toISOString().slice(0, 10);
   const wb  = XLSX.utils.book_new();
 
-  XLSX.utils.book_append_sheet(wb, buildReportSheet(ingresos, gastos, empleados, label, detallesMap, productos), 'Resumen');
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(ingresos, gastos, empleados, label, detallesMap, productos, 'resumen'), 'Resumen');
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(ingresos, gastos, empleados, label, detallesMap, productos, 'ingresos'), 'Ingresos');
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(ingresos, gastos, empleados, label, detallesMap, productos, 'gastos'), 'Gastos');
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(ingresos, gastos, empleados, label, detallesMap, productos, 'inventario'), 'Inventario');
 
   if (filtroTipo === 'anio') {
     for (let m = 1; m <= 12; m++) {

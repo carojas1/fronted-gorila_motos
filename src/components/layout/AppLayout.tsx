@@ -448,7 +448,7 @@ export default function AppLayout() {
                     deferredPrompt.prompt();
                     deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
                   }}
-                  className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs shadow-md transition-all hover:scale-105 active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs shadow-md transition-all hover:scale-105 active:scale-95"
                   style={{ background: '#E11428', color: '#FFF' }}
                   title="Instalar Gorila Motos"
                 >

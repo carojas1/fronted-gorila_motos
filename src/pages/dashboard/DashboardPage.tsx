@@ -13,10 +13,11 @@ import {
 import {
   AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, CartesianGrid,
+  ComposedChart, Bar, Line, ReferenceLine,
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../lib/theme';
-import { motosApi, registrosApi, productosApi, usuariosApi, combustibleApi } from '../../lib/api';
+import { motosApi, registrosApi, productosApi, usuariosApi, combustibleApi, pagosEmpleadoApi, type PagoEmpleadoAPI } from '../../lib/api';
 import { fmtDate, fmtMoney, parsePermisos } from '../../lib/utils';
 import { usePolling } from '../../hooks/usePolling';
 import { useCountUp } from '../../hooks/useGsap';
@@ -25,46 +26,7 @@ import { isNativeApp } from '../../lib/platform';
 import MobileDashboard from '../../components/mobile/MobileDashboard';
 import TermsModal, { acceptTerms } from '../../components/ui/TermsModal';
 
-/* ── Barras CSS (reemplaza Recharts BarChart: evita label-clip y funciona en light mode) ── */
-function ServiceBar({ data }: { data: { name: string; value: number }[] }) {
-  const [theme] = useTheme();
-  const isDark = theme === 'dark';
-  if (!data.length) return (
-    <div className="flex items-center justify-center h-32">
-      <p className="text-xs" style={{ color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(21,21,27,0.42)' }}>Sin datos de servicios</p>
-    </div>
-  );
-  const max = Math.max(...data.map(d => d.value), 1);
-  return (
-    <div className="space-y-2.5">
-      {data.map((item, i) => (
-        <div key={item.name} className="flex items-center gap-3">
-          <div className="shrink-0 text-right" style={{ width: 130 }}>
-            <span className="text-[11.5px] font-semibold block truncate"
-                  style={{ color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(21,21,27,0.6)' }} title={item.name}>
-              {item.name}
-            </span>
-          </div>
-          <div className="flex-1 h-7 rounded-lg overflow-hidden relative"
-               style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid #E4E7EC' }}>
-            <div className="h-full rounded-lg flex items-center px-2.5 transition-all duration-700"
-                 style={{
-                   width: `${Math.max((item.value / max) * 100, 8)}%`,
-                   background: `rgba(225,20,40,${0.88 - i * 0.09})`,
-                   minWidth: 32,
-                 }}>
-              <span className="text-[11px] font-black text-white tabular-nums">{item.value}</span>
-            </div>
-          </div>
-          <span className="text-[10px] font-semibold shrink-0"
-                style={{ color: `rgba(225,20,40,${0.88 - i * 0.09})`, minWidth: 22 }}>
-            {Math.round((item.value / max) * 100)}%
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
+
 
 /* ── Tooltip para recharts (theme-aware) ── */
 function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
@@ -224,6 +186,7 @@ function WebDashboard() {
   const [productos,   setProductos]   = useState<Producto[]>([]);
   const [usuarios,    setUsuarios]    = useState<unknown[]>([]);
   const [combustible, setCombustible] = useState<{ id:number; fecha:string }[]>([]);
+  const [gastos,      setGastos]      = useState<PagoEmpleadoAPI[]>([]);
   const [loading,     setLoading]     = useState(true);
 
   const hour     = new Date().getHours();
@@ -232,15 +195,16 @@ function WebDashboard() {
   const isOpen   = hour >= 8 && hour < 18;
 
   const load = useCallback(async () => {
-    const [m, r, p, u, c] = await Promise.allSettled([
+    const [m, r, p, u, c, g] = await Promise.allSettled([
       motosApi.list(), registrosApi.list(), productosApi.list(), usuariosApi.list(),
-      combustibleApi.list(),
+      combustibleApi.list(), pagosEmpleadoApi.list(),
     ]);
     if (m.status === 'fulfilled') setMotos(m.value.data);
     if (r.status === 'fulfilled') setRegistros(r.value.data);
     if (p.status === 'fulfilled') setProductos(p.value.data);
     if (u.status === 'fulfilled') setUsuarios(u.value.data);
     if (c.status === 'fulfilled') setCombustible(Array.isArray(c.value.data) ? c.value.data : []);
+    if (g.status === 'fulfilled') setGastos(g.value.data);
     setLoading(false);
   }, []);
 
@@ -290,18 +254,28 @@ function WebDashboard() {
     });
   }, [registros]);
 
-  /* ── BarChart: top tipos de servicio ── */
-  const tiposData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    registros.forEach(r => {
-      const tipo = r.tipo_servicio ?? 'Otro';
-      counts[tipo] = (counts[tipo] ?? 0) + 1;
+  /* ── Datos para Área Contable (últimos 7 días) ── */
+  const contabilidadData = useMemo(() => {
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().slice(0, 10);
     });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([name, value]) => ({ name: name.slice(0, 18), value }));
-  }, [registros]);
+    return days.map(day => {
+      const dayRegs = registros.filter(r => toIsoDate(r.fecha).startsWith(day) && r.estado === 4); // Sólo ingresos facturados
+      const dayGastos = gastos.filter(g => toIsoDate(g.fecha).startsWith(day));
+      
+      const ingresosDia = dayRegs.reduce((s, r) => s + (r.costo_total ?? 0), 0);
+      const gastosDia   = dayGastos.reduce((s, g) => s + (g.monto ?? 0), 0);
+      
+      return {
+        name: day.slice(5),
+        Ingresos: ingresosDia,
+        Gastos: gastosDia,
+        Balance: ingresosDia - gastosDia,
+      };
+    });
+  }, [registros, gastos]);
 
   /* ── PieChart: distribución de estados ── */
   const pieData = useMemo(() =>
@@ -605,16 +579,18 @@ function WebDashboard() {
       {/* ── Row: BarChart + PieChart ── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
 
-        {/* Top servicios — CSS puro, sin Recharts (labels visibles + light mode) */}
+        {/* Resumen Contable */}
         <div className="gm-card-d rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <TrendingUp size={13} className="text-gm-red/60" />
-              <p className="text-[10px] tracking-[0.28em] uppercase text-white/28 font-bold">Top servicios</p>
+              <p className="text-[10px] tracking-[0.28em] uppercase text-white/28 font-bold">Rendimiento (7 días)</p>
             </div>
-            <span className="text-[10px] text-white/20 font-semibold">{tiposData.length} tipos</span>
+            <Link to="/contabilidad" className="text-[10px] text-gm-red hover:text-gm-red-lt font-semibold">
+              Ver finanzas
+            </Link>
           </div>
-          <ServiceBar data={tiposData} />
+          <ContabilidadChart data={contabilidadData} isDark={isDark} />
         </div>
 
         {/* Donut estados */}

@@ -46,7 +46,7 @@ export default function MobileTabBar({ onMore }: { onMore: () => void }) {
   const activo = (to?: string) =>
     !!to && (loc.pathname === to || loc.pathname.startsWith(to + '/'));
 
-  const inactiveColor = isDark ? 'rgba(255,255,255,0.42)' : 'rgba(21,21,27,0.38)';
+  const inactiveColor = isDark ? 'rgba(255,255,255,0.42)' : 'rgba(21,21,27,0.60)';
 
   return (
     <nav className="gm-tabbar" role="navigation" aria-label="Navegación principal">
