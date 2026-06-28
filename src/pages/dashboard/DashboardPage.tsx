@@ -197,7 +197,7 @@ function WebDashboard() {
   const load = useCallback(async () => {
     const [m, r, p, u, c, g] = await Promise.allSettled([
       motosApi.list(), registrosApi.list(), productosApi.list(), usuariosApi.list(),
-      combustibleApi.list(), pagosEmpleadoApi.list(),
+      combustibleApi.list(), pagosEmpleadoApi.listAll(),
     ]);
     if (m.status === 'fulfilled') setMotos(m.value.data);
     if (r.status === 'fulfilled') setRegistros(r.value.data);
