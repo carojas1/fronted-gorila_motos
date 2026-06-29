@@ -96,6 +96,9 @@ export default function InventoryPage() {
   const [sellEmail,     setSellEmail]     = useState('');
   const [vnUsuarios,    setVnUsuarios]    = useState<Usuario[]>([]);
 
+  const [addStockOpen,  setAddStockOpen]  = useState(false);
+  const [addStockVals,  setAddStockVals]  = useState({ cant: 1, costo: 0, pvp: 0 });
+
   const { register, handleSubmit, reset, getValues, setValue, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as Resolver<Form>,
   });
@@ -658,20 +661,12 @@ export default function InventoryPage() {
                 <span>Stock</span>
                 {editTarget && (
                   <button type="button" onClick={() => {
-                    const cantStr = window.prompt("¿Cuánto stock nuevo vas a añadir?");
-                    if (cantStr && !isNaN(Number(cantStr))) {
-                       const cant = Number(cantStr);
-                       if (cant > 0) {
-                         const currentStock = Number(getValues('stock') || 0);
-                         setValue('stock', currentStock + cant);
-                         
-                         const costStr = window.prompt("¿Cuál es el nuevo costo unitario de este lote? (Opcional, dejar vacío para mantener el actual)");
-                         if (costStr && !isNaN(Number(costStr)) && costStr.trim() !== '') {
-                           setValue('costo', Number(costStr));
-                         }
-                         toast.success(`Se sumaron +${cant} al stock. ¡No olvides darle a Guardar cambios!`);
-                       }
-                    }
+                    setAddStockVals({
+                      cant: 1,
+                      costo: Number(getValues('costo') || 0),
+                      pvp: Number(getValues('pvp') || 0)
+                    });
+                    setAddStockOpen(true);
                   }} className="text-[11px] text-gm-red hover:underline font-bold bg-transparent border-none p-0 cursor-pointer transition-transform hover:scale-105">
                     + Añadir
                   </button>
@@ -1104,6 +1099,61 @@ export default function InventoryPage() {
 
           </div>
         )}
+      </Modal>
+
+      {/* ─── Modal Añadir Stock (Custom sin window.prompt) ─── */}
+      <Modal
+        open={addStockOpen}
+        onClose={() => setAddStockOpen(false)}
+        title="➕ Añadir Stock a este lote"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setAddStockOpen(false)}>Cancelar</Button>
+            <Button onClick={() => {
+              const currentStock = Number(getValues('stock') || 0);
+              setValue('stock', currentStock + Number(addStockVals.cant));
+              setValue('costo', Number(addStockVals.costo));
+              setValue('pvp', Number(addStockVals.pvp));
+              toast.success(`Se sumaron +${addStockVals.cant} al stock. ¡No olvides darle a Guardar cambios!`);
+              setAddStockOpen(false);
+            }}>
+              Confirmar adición
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-white/70 block mb-1.5">Cantidad a añadir</label>
+            <input 
+              type="number" min={1} 
+              className="gm-input-d w-full" 
+              value={addStockVals.cant} 
+              onChange={e => setAddStockVals(v => ({ ...v, cant: parseInt(e.target.value || '0', 10) }))} 
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-white/70 block mb-1.5">Nuevo Costo ($)</label>
+              <input 
+                type="number" step="0.01"
+                className="gm-input-d w-full" 
+                value={addStockVals.costo} 
+                onChange={e => setAddStockVals(v => ({ ...v, costo: parseFloat(e.target.value || '0') }))} 
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-white/70 block mb-1.5">Nuevo PVP ($)</label>
+              <input 
+                type="number" step="0.01"
+                className="gm-input-d w-full" 
+                value={addStockVals.pvp} 
+                onChange={e => setAddStockVals(v => ({ ...v, pvp: parseFloat(e.target.value || '0') }))} 
+              />
+            </div>
+          </div>
+        </div>
       </Modal>
     </div>
   );
