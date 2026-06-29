@@ -260,7 +260,6 @@ export default function MiMotoPage() {
       }
       await usuariosApi.update(user.id_usuario, payload);
       const descStr = `CEDULA: ${data.cedula.trim()} | TELEFONO: ${data.telefono.trim()}`;
-      setOverrideDesc(descStr);
       toast.success('Datos personales guardados ✓', 'Perfil');
       setEditingPerfil(false);
       setPerfilLocal({ cedula: data.cedula.trim(), telefono: data.telefono.trim(), direccion: data.direccion ?? '' });
