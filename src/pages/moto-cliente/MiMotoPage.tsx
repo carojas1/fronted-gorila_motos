@@ -52,7 +52,7 @@ const perfilSchema = z.object({
   nombre_completo: z.string().min(3, 'Nombre completo requerido').max(100),
   cedula:    z.string().min(8, 'Cédula/ID mínimo 8 dígitos').max(20),
   telefono:  z.string().min(7, 'Teléfono mínimo 7 dígitos').max(15),
-  direccion: z.string().min(5, 'Ingresa una dirección válida').max(300),
+  direccion: z.string().max(300).optional().or(z.literal('')),
 });
 type PerfilForm = z.infer<typeof perfilSchema>;
 
@@ -100,7 +100,7 @@ export default function MiMotoPage() {
   const telefono  = (perfilLocal?.telefono  ?? parsedTelefono) || null;
   const direccion = (perfilLocal?.direccion ?? parsedDireccion) || null;
 
-  const perfilOk = !!cedula && !!telefono && !!direccion && !!nombreCompleto;
+  const perfilOk = !!cedula && !!telefono && !!nombreCompleto;
 
   const {
     register: regMoto,
@@ -249,18 +249,22 @@ export default function MiMotoPage() {
     if (!user?.id_usuario) return;
     setSavingPerfil(true);
     try {
-      await usuariosApi.update(user.id_usuario, {
+      const payload: Record<string, string> = {
         nombre_completo: data.nombre_completo.trim(),
         descripcion: `CEDULA: ${data.cedula.trim()} | TELEFONO: ${data.telefono.trim()}`,
-        direccion: data.direccion.trim()
-      });
+      };
+      if (data.direccion && data.direccion.trim()) {
+        payload.direccion = data.direccion.trim();
+      }
+      await usuariosApi.update(user.id_usuario, payload);
       setOverrideDesc(`CEDULA: ${data.cedula.trim()} | TELEFONO: ${data.telefono.trim()}`);
       toast.success('Datos personales guardados', 'Perfil');
       setEditingPerfil(false);
-      setPerfilLocal({ cedula: data.cedula, telefono: data.telefono, direccion: data.direccion });
+      setPerfilLocal({ cedula: data.cedula, telefono: data.telefono, direccion: data.direccion ?? '' });
       const storedUser = JSON.parse(localStorage.getItem('gm_user') ?? '{}');
       storedUser.descripcion = `CEDULA: ${data.cedula} | TELEFONO: ${data.telefono}`;
       storedUser.nombre_completo = data.nombre_completo;
+      if (data.direccion && data.direccion.trim()) storedUser.direccion = data.direccion.trim();
       localStorage.setItem('gm_user', JSON.stringify(storedUser));
     } catch (err) {
       toast.error(getErrorMsg(err), 'Error al actualizar');
@@ -393,7 +397,7 @@ export default function MiMotoPage() {
             </div>
             <div style={{ flex: '1 1 100%' }}>
               <Input
-                label="Dirección de casa *"
+                label="Dirección de casa (opcional)"
                 placeholder="Av. Principal y Secundaria"
                 error={errPerfil.direccion?.message}
                 {...regPerfil('direccion')}
