@@ -22,16 +22,16 @@ import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 
 const schema = z.object({
-  nombre:            z.string().min(2),
-  descripcion:       z.string().min(2),
-  codigo_proveedor:  z.string().min(1),
-  codigo_personal:   z.string().min(1),
-  costo:             z.coerce.number().positive(),
-  pvp:               z.coerce.number().positive(),
-  stock:             z.coerce.number().int().nonnegative(),
+  nombre:            z.string().min(1, 'Requerido'),
+  descripcion:       z.string().nullish().transform(v => v || ''),
+  codigo_proveedor:  z.string().nullish().transform(v => v || ''),
+  codigo_personal:   z.string().nullish().transform(v => v || ''),
+  costo:             z.coerce.number().min(0, 'Inválido'),
+  pvp:               z.coerce.number().min(0, 'Inválido'),
+  stock:             z.coerce.number().int().min(0, 'Inválido'),
   id_categoria:      z.coerce.number().positive('Selecciona categoría'),
-  fecha_registro:    z.string().default(() => new Date().toISOString().slice(0, 10)),
-  fecha_modificacion:z.string().default(() => new Date().toISOString().slice(0, 10)),
+  fecha_registro:    z.string().nullish().transform(v => v || new Date().toISOString().slice(0, 10)),
+  fecha_modificacion:z.string().nullish().transform(v => v || new Date().toISOString().slice(0, 10)),
 });
 type Form = z.infer<typeof schema>;
 
@@ -138,6 +138,7 @@ export default function InventoryPage() {
     setPreviewUrl(null);
     setEditTarget(null);
     reset({
+      nombre: '', descripcion: '', codigo_proveedor: '', costo: 0, pvp: 0, stock: 0, id_categoria: undefined,
       fecha_registro:     new Date().toISOString().slice(0, 10),
       fecha_modificacion: new Date().toISOString().slice(0, 10),
       codigo_personal:    nextProductCode(productos.map((p) => p.codigo_personal)),
@@ -150,10 +151,10 @@ export default function InventoryPage() {
     setPreviewUrl(null);
     setEditTarget(p);
     reset({
-      nombre: p.nombre, descripcion: p.descripcion,
-      codigo_proveedor: p.codigo_proveedor, codigo_personal: p.codigo_personal,
-      costo: p.costo, pvp: p.pvp, stock: p.stock, id_categoria: p.id_categoria,
-      fecha_registro: p.fecha_registro,
+      nombre: p.nombre || '', descripcion: p.descripcion || '',
+      codigo_proveedor: p.codigo_proveedor || '', codigo_personal: p.codigo_personal || '',
+      costo: p.costo || 0, pvp: p.pvp || 0, stock: p.stock || 0, id_categoria: p.id_categoria,
+      fecha_registro: p.fecha_registro || new Date().toISOString().slice(0, 10),
       fecha_modificacion: new Date().toISOString().slice(0, 10),
     });
     setModalOpen(true);
