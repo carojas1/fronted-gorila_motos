@@ -26,12 +26,20 @@ const schema = z.object({
   descripcion:       z.string().nullish().transform(v => v || ''),
   codigo_proveedor:  z.string().nullish().transform(v => v || ''),
   codigo_personal:   z.string().nullish().transform(v => v || ''),
-  costo:             z.coerce.number().min(0, 'Inválido'),
-  pvp:               z.coerce.number().min(0, 'Inválido'),
-  stock:             z.coerce.number().int().min(0, 'Inválido'),
-  id_categoria:      z.coerce.number().positive('Selecciona categoría'),
-  fecha_registro:    z.string().nullish().transform(v => v || new Date().toISOString().slice(0, 10)),
-  fecha_modificacion:z.string().nullish().transform(v => v || new Date().toISOString().slice(0, 10)),
+  costo:             z.coerce.number({ invalid_type_error: 'El costo debe ser un número válido' }).min(0, 'Inválido'),
+  pvp:               z.coerce.number({ invalid_type_error: 'El PVP debe ser un número válido' }).min(0, 'Inválido'),
+  stock:             z.coerce.number({ invalid_type_error: 'El stock debe ser un número válido' }).int('El stock debe ser entero').min(0, 'Inválido'),
+  id_categoria:      z.coerce.number({ invalid_type_error: 'Selecciona una categoría válida' }).min(1, 'Selecciona categoría'),
+  fecha_registro:    z.any().transform(v => {
+    if (typeof v === 'string' && v.length >= 10) return v.slice(0, 10);
+    if (Array.isArray(v) && v.length >= 3) return `${v[0]}-${String(v[1]).padStart(2, '0')}-${String(v[2]).padStart(2, '0')}`;
+    return new Date().toISOString().slice(0, 10);
+  }),
+  fecha_modificacion:z.any().transform(v => {
+    if (typeof v === 'string' && v.length >= 10) return v.slice(0, 10);
+    if (Array.isArray(v) && v.length >= 3) return `${v[0]}-${String(v[1]).padStart(2, '0')}-${String(v[2]).padStart(2, '0')}`;
+    return new Date().toISOString().slice(0, 10);
+  }),
 });
 type Form = z.infer<typeof schema>;
 
@@ -397,7 +405,10 @@ export default function InventoryPage() {
       const fd = new FormData();
       fd.append('file', compFile);
       const { data: uploadRes } = await productosApi.upload(fd);
-      await productosApi.update(id, { ruta_imagenproductos: uploadRes.url } as unknown as Record<string, unknown>);
+      await productosApi.update(id, { 
+        ...photoTarget,
+        ruta_imagenproductos: uploadRes.url 
+      } as unknown as Record<string, unknown>);
       toast.success('Foto de producto actualizada');
       fetchData();
     } catch (err) {
@@ -640,9 +651,10 @@ export default function InventoryPage() {
       >
         <form id="product-form" onSubmit={handleSubmit(onSubmit, (errs) => {
           console.error("Errores de validación Zod:", errs);
-          const firstError = Object.values(errs)[0];
-          if (firstError && firstError.message) {
-            toast.error(`Error de validación: ${firstError.message}`);
+          const entries = Object.entries(errs);
+          if (entries.length > 0) {
+            const [field, error] = entries[0];
+            toast.error(`Error en ${field}: ${error.message}`);
           } else {
             toast.error('Revisa los campos del formulario');
           }

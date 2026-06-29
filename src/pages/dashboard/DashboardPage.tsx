@@ -25,7 +25,7 @@ import { useCountUp } from '../../hooks/useGsap';
 import type { RegistroDetalle, Moto, Producto } from '../../types';
 import { isNativeApp } from '../../lib/platform';
 import MobileDashboard from '../../components/mobile/MobileDashboard';
-import TermsModal, { acceptTerms } from '../../components/ui/TermsModal';
+import TermsModal from '../../components/ui/TermsModal';
 
 
 
@@ -168,11 +168,27 @@ const ESTADO_LABELS = ['Pendiente', 'En proceso', 'Completado', 'Entregado', 'Fa
 /* En el APK se usa el dashboard móvil premium; en web, el dashboard completo.
    Se separa en dos componentes para no llamar hooks tras un return condicional. */
 export default function DashboardPage() {
-  const [termsOk, setTermsOk] = useState(() => localStorage.getItem('gm_terms_v1') === 'accepted');
+  const { user, isAdmin } = useAuth();
+  const [showTerms, setShowTerms] = useState(false);
+
+  useEffect(() => {
+    if (user && !isAdmin) {
+      const accepted = localStorage.getItem(`terms_accepted_${user.id_usuario}`);
+      if (!accepted) setShowTerms(true);
+    }
+  }, [user, isAdmin]);
+
+  const handleAcceptTerms = () => {
+    if (user) {
+      localStorage.setItem(`terms_accepted_${user.id_usuario}`, 'true');
+    }
+    setShowTerms(false);
+  };
+
   return (
     <>
-      {!termsOk && <TermsModal onAccept={() => { acceptTerms(); setTermsOk(true); }} />}
       {isNativeApp ? <MobileDashboard /> : <WebDashboard />}
+      {showTerms && <TermsModal onAccept={handleAcceptTerms} />}
     </>
   );
 }
