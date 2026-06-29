@@ -119,8 +119,13 @@ export const usuariosApi = {
   get:     (id: number)  => api.get(`/usuarios/${id}`),
   update:  (id: number, data: Record<string, unknown>) => api.put(`/usuarios/${id}`, data),
   remove:  (id: number)  => api.delete(`/usuarios/${id}`),
-  upload:  (form: FormData) =>
-    api.post('/usuarios/upload', form, { headers: { 'Content-Type': undefined as unknown as string } }),
+  upload:  (form: FormData) => {
+    const token = localStorage.getItem('gm_token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(`${BASE_URL}/usuarios/upload`, { method: 'POST', headers, body: form })
+      .then(res => res.json()).then(data => ({ data }));
+  },
   usarReferido: (id: number, codigo: string) =>
     api.post(`/usuarios/${id}/usar-referido`, { codigo }),
 };
@@ -133,9 +138,13 @@ export const motosApi = {
   create:    (data: Record<string, unknown>) => api.post('/motos', data),
   update:    (id: number, data: Record<string, unknown>) => api.put(`/motos/${id}`, data),
   remove:    (id: number)  => api.delete(`/motos/${id}`),
-  /** Sube foto al storage Supabase → devuelve { url } */
-  upload: (form: FormData) =>
-    api.post('/motos/upload', form, { headers: { 'Content-Type': undefined as unknown as string } }),
+  upload: (form: FormData) => {
+    const token = localStorage.getItem('gm_token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(`${BASE_URL}/motos/upload`, { method: 'POST', headers, body: form })
+      .then(res => res.json()).then(data => ({ data }));
+  },
 };
 
 /* ── Registros ── */
@@ -157,8 +166,16 @@ export const productosApi = {
   create: (data: Record<string, unknown>) => api.post('/productos', data),
   update: (id: number, data: Record<string, unknown>) => api.put(`/productos/${id}`, data),
   remove: (id: number)  => api.delete(`/productos/${id}`),
-  upload: (form: FormData) =>
-    api.post('/productos/upload', form, { headers: { 'Content-Type': undefined as unknown as string } }),
+  upload: (form: FormData) => {
+    const token = localStorage.getItem('gm_token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(`${BASE_URL}/productos/upload`, { method: 'POST', headers, body: form })
+      .then(async (res) => {
+         if (!res.ok) throw new Error('Upload falló con status: ' + res.status);
+         return res.json();
+      }).then(data => ({ data }));
+  },
   enviarComprobante: (data: Record<string, unknown>) =>
     api.post('/productos/venta-comprobante', data),
 };
@@ -315,11 +332,20 @@ export async function uploadWithRetry(
       }
 
       onProgress?.('Subiendo imagen…');
-      const { data } = await api.post(endpoint, fd, {
-        timeout: 90_000,
-        headers: { 'Content-Type': undefined as unknown as string },
+      const token = localStorage.getItem('gm_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: fd
       });
-      return (data as { url: string }).url;
+      if (!res.ok) {
+        throw new Error(`Upload falló con status: ${res.status}`);
+      }
+      const data = await res.json();
+      return data.url;
 
     } catch (err) {
       if (attempt === 3) throw err;
