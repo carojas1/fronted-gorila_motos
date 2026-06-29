@@ -90,7 +90,7 @@ export default function MiMotoPage() {
   const [uploadMsg,    setUploadMsg]    = useState<string | null>(null);
   const [serviciosMap, setServiciosMap] = useState<Record<number, Record<string, number>>>({});
 
-  const desc = overrideDesc ?? user?.descripcion ?? '';
+  const desc = user?.descripcion ?? '';
   const parsedCedula   = desc.match(/CEDULA:\s*([^\s|]+)/)?.[1]?.replace('N/A', '') || '';
   const parsedTelefono = desc.match(/TELEFONO:\s*([^\s|]+)/)?.[1]?.replace('N/A', '') || '';
   const parsedDireccion = user?.direccion || '';
