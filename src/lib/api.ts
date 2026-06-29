@@ -123,7 +123,7 @@ export const usuariosApi = {
   update:  (id: number, data: Record<string, unknown>) => api.put(`/usuarios/${id}`, data),
   remove:  (id: number)  => api.delete(`/usuarios/${id}`),
   upload:  (form: FormData) =>
-    api.post(`/usuarios/upload?token=${localStorage.getItem('gm_token') || ''}`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post(`/usuarios/upload?token=${localStorage.getItem('gm_token') || ''}`, form),
   usarReferido: (id: number, codigo: string) =>
     api.post(`/usuarios/${id}/usar-referido`, { codigo }),
 };
@@ -138,7 +138,7 @@ export const motosApi = {
   remove:    (id: number)  => api.delete(`/motos/${id}`),
   /** Sube foto al storage Supabase → devuelve { url } */
   upload: (form: FormData) =>
-    api.post(`/motos/upload?token=${localStorage.getItem('gm_token') || ''}`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post(`/motos/upload?token=${localStorage.getItem('gm_token') || ''}`, form),
 };
 
 /* ── Registros ── */
@@ -161,7 +161,7 @@ export const productosApi = {
   update: (id: number, data: Record<string, unknown>) => api.put(`/productos/${id}`, data),
   remove: (id: number)  => api.delete(`/productos/${id}`),
   upload: (form: FormData) =>
-    api.post(`/productos/upload?token=${localStorage.getItem('gm_token') || ''}`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post(`/productos/upload?token=${localStorage.getItem('gm_token') || ''}`, form),
   enviarComprobante: (data: Record<string, unknown>) =>
     api.post('/productos/venta-comprobante', data),
 };
