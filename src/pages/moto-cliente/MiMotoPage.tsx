@@ -496,21 +496,23 @@ export default function MiMotoPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderRadius: 10, border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC', marginBottom: 14 }}>
-                  <Gauge size={14} color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.45)'} />
-                  <span style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(21,21,27,0.6)', flexShrink: 0 }}>Odómetro actual:</span>
-                  <input
-                    type="number" min="0"
-                    value={kmMoto[moto.id_moto] ?? ''}
-                    onChange={e => setKmMoto(prev => ({ ...prev, [moto.id_moto]: e.target.value }))}
-                    style={{ flex: 1, height: 34, borderRadius: 8, padding: '0 10px', background: isDark ? '#1A1A22' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC', color: isDark ? '#EBEBEB' : '#15151B', fontSize: 13, outline: 'none' }}
-                  />
-                  <span style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.45)', flexShrink: 0 }}>km</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 14px', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', borderRadius: 10, border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+                    <Gauge size={14} color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.45)'} />
+                    <span style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(21,21,27,0.6)', flexShrink: 0 }}>Odómetro:</span>
+                    <input
+                      type="number" min="0"
+                      value={kmMoto[moto.id_moto] ?? ''}
+                      onChange={e => setKmMoto(prev => ({ ...prev, [moto.id_moto]: e.target.value }))}
+                      style={{ flex: 1, height: 34, borderRadius: 8, padding: '0 10px', background: isDark ? '#1A1A22' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC', color: isDark ? '#EBEBEB' : '#15151B', fontSize: 13, outline: 'none', minWidth: 0 }}
+                    />
+                    <span style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.45)', flexShrink: 0 }}>km</span>
+                  </div>
                   <button
                     onClick={() => actualizarKm(moto)}
                     disabled={savingKm === moto.id_moto}
-                    style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#fff', background: savingKm === moto.id_moto ? 'rgba(225,20,40,0.4)' : '#E11428', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: savingKm === moto.id_moto ? 'not-allowed' : 'pointer', flexShrink: 0 }}>
-                    <Save size={12} /> {savingKm === moto.id_moto ? 'Guardando…' : 'Actualizar'}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: '#fff', background: savingKm === moto.id_moto ? 'rgba(225,20,40,0.4)' : '#E11428', border: 'none', borderRadius: 8, padding: '9px 14px', cursor: savingKm === moto.id_moto ? 'not-allowed' : 'pointer', width: '100%' }}>
+                    <Save size={14} /> {savingKm === moto.id_moto ? 'Guardando…' : 'Actualizar Odómetro'}
                   </button>
                 </div>
 
