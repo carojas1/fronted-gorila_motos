@@ -87,9 +87,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async res => {
+        if (cancelled) return; // respuesta tardía: el contexto ya cambió
+        // Si el usuario ya no existe en BD (fue borrado) → cerrar sesión automáticamente
+        if (res.status === 404) {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
+          setState({ user: null, token: null, loading: false });
+          return;
+        }
         if (!res.ok) return; // token expirado / servidor dormido → mantener datos guardados
         const data = await res.json() as Record<string, unknown>;
-        if (cancelled) return; // respuesta tardía: el contexto ya cambió
         // Solo aplicar si la sesión vigente sigue siendo la misma cuenta
         const tokenVigente = localStorage.getItem(TOKEN_KEY);
         if (!tokenVigente || tokenVigente !== token) return;
