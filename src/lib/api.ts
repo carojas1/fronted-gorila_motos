@@ -72,33 +72,30 @@ export function tokenVencido(token: string | null): boolean {
 
 /* ── Response interceptor: manejo global de errores ──
    LÓGICA DE LOGOUT:
-   1) Si el token está vencido según exp → logout inmediato
-   2) Si hay 3+ errores 401 consecutivos con token "válido" →
-      significa que Render tiene diferente JWT_SECRET (redeploy, etc.)
-      → logout para forzar re-login y obtener token nuevo
-   Así el usuario nunca queda en un loop infinito de 401 sin solución. */
-let _consecutivo401 = 0;
-
+   Solo cierra sesión si el token está REALMENTE vencido (verificado por exp).
+   Un 401 de un upload o endpoint protegido NO cierra sesión si el token
+   aún es válido — podría ser un error de permisos, multipart mal formado, etc.
+   ──────────────────────────────────────────────────────────────────────────── */
 api.interceptors.response.use(
-  (res) => { _consecutivo401 = 0; return res; },  // reset contador en éxito
+  (res) => res,
   (err: AxiosError) => {
-    // Endpoints públicos de auth: un 401 aquí (credenciales malas) NO debe disparar
-    // un logout global aunque haya quedado un token vencido residual en localStorage.
     const url = err.config?.url ?? '';
     const method = (err.config?.method ?? '').toLowerCase();
     const isAuthPublico =
       url.includes('/usuarios/login') ||
       url.includes('/usuarios/recuperacion') ||
-      (url.endsWith('/usuarios') && method === 'post'); // registro
+      (url.endsWith('/usuarios') && method === 'post');
 
     if (err.response?.status === 401 && !isAuthPublico) {
-      // Token expirado o inválido — logout inmediato
-      _consecutivo401 = 0;
-      localStorage.removeItem('gm_token');
-      localStorage.removeItem('gm_user');
-      window.dispatchEvent(new Event('gm:unauthorized'));
-    } else {
-      _consecutivo401 = 0;
+      // SOLO cerrar sesión si el JWT está realmente vencido
+      const token = localStorage.getItem('gm_token');
+      if (tokenVencido(token)) {
+        localStorage.removeItem('gm_token');
+        localStorage.removeItem('gm_user');
+        window.dispatchEvent(new Event('gm:unauthorized'));
+      }
+      // Si el token NO está vencido, el 401 es por otra razón
+      // (permisos, multipart, etc.) — NO cerrar sesión
     }
     return Promise.reject(err);
   }
@@ -123,7 +120,7 @@ export const usuariosApi = {
   update:  (id: number, data: Record<string, unknown>) => api.put(`/usuarios/${id}`, data),
   remove:  (id: number)  => api.delete(`/usuarios/${id}`),
   upload:  (form: FormData) =>
-    api.post('/usuarios/upload', form),
+    api.post('/usuarios/upload', form, { headers: { 'Content-Type': undefined as unknown as string } }),
   usarReferido: (id: number, codigo: string) =>
     api.post(`/usuarios/${id}/usar-referido`, { codigo }),
 };
@@ -138,7 +135,7 @@ export const motosApi = {
   remove:    (id: number)  => api.delete(`/motos/${id}`),
   /** Sube foto al storage Supabase → devuelve { url } */
   upload: (form: FormData) =>
-    api.post('/motos/upload', form),
+    api.post('/motos/upload', form, { headers: { 'Content-Type': undefined as unknown as string } }),
 };
 
 /* ── Registros ── */
@@ -161,7 +158,7 @@ export const productosApi = {
   update: (id: number, data: Record<string, unknown>) => api.put(`/productos/${id}`, data),
   remove: (id: number)  => api.delete(`/productos/${id}`),
   upload: (form: FormData) =>
-    api.post('/productos/upload', form),
+    api.post('/productos/upload', form, { headers: { 'Content-Type': undefined as unknown as string } }),
   enviarComprobante: (data: Record<string, unknown>) =>
     api.post('/productos/venta-comprobante', data),
 };
@@ -320,6 +317,7 @@ export async function uploadWithRetry(
       onProgress?.('Subiendo imagen…');
       const { data } = await api.post(endpoint, fd, {
         timeout: 90_000,
+        headers: { 'Content-Type': undefined as unknown as string },
       });
       return (data as { url: string }).url;
 
