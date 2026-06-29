@@ -635,7 +635,15 @@ export default function InventoryPage() {
           </>
         }
       >
-        <form id="product-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+        <form id="product-form" onSubmit={handleSubmit(onSubmit, (errs) => {
+          console.error("Errores de validación Zod:", errs);
+          const firstError = Object.values(errs)[0];
+          if (firstError && firstError.message) {
+            toast.error(`Error de validación: ${firstError.message}`);
+          } else {
+            toast.error('Revisa los campos del formulario');
+          }
+        })} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input label="Nombre" placeholder="Nombre del producto" error={errors.nombre?.message} {...register('nombre')} />
             <Input label="Código personal" placeholder="COD-001" error={errors.codigo_personal?.message} {...register('codigo_personal')} />
