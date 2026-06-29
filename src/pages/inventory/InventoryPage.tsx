@@ -96,7 +96,7 @@ export default function InventoryPage() {
   const [sellEmail,     setSellEmail]     = useState('');
   const [vnUsuarios,    setVnUsuarios]    = useState<Usuario[]>([]);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<Form>({
+  const { register, handleSubmit, reset, getValues, setValue, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as Resolver<Form>,
   });
 
@@ -651,9 +651,40 @@ export default function InventoryPage() {
           <Input label="Código proveedor" placeholder="PROV-001" error={errors.codigo_proveedor?.message} {...register('codigo_proveedor')} />
           <Input label="Descripción" placeholder="Describe el producto" error={errors.descripcion?.message} {...register('descripcion')} />
           <div className="grid grid-cols-3 gap-4">
-            <Input label="Costo ($)" type="number" placeholder="0.00" error={errors.costo?.message} {...register('costo')} />
-            <Input label="PVP ($)" type="number" placeholder="0.00" error={errors.pvp?.message} {...register('pvp')} />
-            <Input label="Stock" type="number" placeholder="0" error={errors.stock?.message} {...register('stock')} />
+            <Input label="Costo ($)" type="number" step="0.01" placeholder="0.00" error={errors.costo?.message} {...register('costo')} />
+            <Input label="PVP ($)" type="number" step="0.01" placeholder="0.00" error={errors.pvp?.message} {...register('pvp')} />
+            <div>
+              <label className="text-sm font-medium text-white/70 block mb-1.5 flex justify-between items-center">
+                <span>Stock</span>
+                {editTarget && (
+                  <button type="button" onClick={() => {
+                    const cantStr = window.prompt("¿Cuánto stock nuevo vas a añadir?");
+                    if (cantStr && !isNaN(Number(cantStr))) {
+                       const cant = Number(cantStr);
+                       if (cant > 0) {
+                         const currentStock = Number(getValues('stock') || 0);
+                         setValue('stock', currentStock + cant);
+                         
+                         const costStr = window.prompt("¿Cuál es el nuevo costo unitario de este lote? (Opcional, dejar vacío para mantener el actual)");
+                         if (costStr && !isNaN(Number(costStr)) && costStr.trim() !== '') {
+                           setValue('costo', Number(costStr));
+                         }
+                         toast.success(`Se sumaron +${cant} al stock. ¡No olvides darle a Guardar cambios!`);
+                       }
+                    }
+                  }} className="text-[11px] text-gm-red hover:underline font-bold bg-transparent border-none p-0 cursor-pointer transition-transform hover:scale-105">
+                    + Añadir
+                  </button>
+                )}
+              </label>
+              <input 
+                type="number" 
+                placeholder="0"
+                className="gm-input-d w-full"
+                {...register('stock')} 
+              />
+              {errors.stock && <p className="text-xs text-gm-red mt-1">{errors.stock.message}</p>}
+            </div>
           </div>
           <div>
             <label className="text-sm font-medium block mb-1.5" style={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(21,21,27,0.6)' }}>Foto del producto (opcional)</label>
