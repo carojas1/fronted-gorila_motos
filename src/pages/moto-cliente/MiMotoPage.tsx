@@ -272,8 +272,15 @@ export default function MiMotoPage() {
       storedUser.telefono        = data.telefono.trim();
       if (data.direccion && data.direccion.trim()) storedUser.direccion = data.direccion.trim();
       localStorage.setItem('gm_user', JSON.stringify(storedUser));
-    } catch (err) {
-      toast.error(getErrorMsg(err), 'Error al actualizar');
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        toast.error('Sesión inválida o usuario eliminado. Por favor inicia sesión nuevamente.', 'Error de sesión');
+        localStorage.removeItem('gm_token');
+        localStorage.removeItem('gm_user');
+        window.dispatchEvent(new Event('gm:unauthorized'));
+      } else {
+        toast.error(getErrorMsg(err), 'Error al actualizar');
+      }
     } finally {
       setSavingPerfil(false);
     }

@@ -93,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(USER_KEY);
           setState({ user: null, token: null, loading: false });
+          window.location.href = '/login';
           return;
         }
         if (!res.ok) return; // servidor dormido / error temporal → mantener datos guardados
@@ -206,6 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setState({ user: null, token: null, loading: false });
+    window.location.href = '/login';
     if (firebaseEnabled) firebaseSignOut().catch(() => {});
   }, []);
 
