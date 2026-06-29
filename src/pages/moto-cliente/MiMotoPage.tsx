@@ -91,8 +91,8 @@ export default function MiMotoPage() {
   const [serviciosMap, setServiciosMap] = useState<Record<number, Record<string, number>>>({});
 
   const desc = user?.descripcion ?? '';
-  const parsedCedula   = desc.match(/CEDULA:\s*([^\s|]+)/)?.[1]?.replace('N/A', '') || '';
-  const parsedTelefono = desc.match(/TELEFONO:\s*([^\s|]+)/)?.[1]?.replace('N/A', '') || '';
+  const parsedCedula   = user?.cedula || desc.match(/CEDULA:\s*([^\s|]+)/)?.[1]?.replace('N/A', '') || '';
+  const parsedTelefono = user?.telefono || desc.match(/TELEFONO:\s*([^\s|]+)/)?.[1]?.replace('N/A', '') || '';
   const parsedDireccion = user?.direccion || '';
   const nombreCompleto = user?.nombre_completo || '';
 
@@ -251,19 +251,25 @@ export default function MiMotoPage() {
     try {
       const payload: Record<string, string> = {
         nombre_completo: data.nombre_completo.trim(),
+        cedula:    data.cedula.trim(),
+        telefono:  data.telefono.trim(),
         descripcion: `CEDULA: ${data.cedula.trim()} | TELEFONO: ${data.telefono.trim()}`,
       };
       if (data.direccion && data.direccion.trim()) {
         payload.direccion = data.direccion.trim();
       }
       await usuariosApi.update(user.id_usuario, payload);
-      setOverrideDesc(`CEDULA: ${data.cedula.trim()} | TELEFONO: ${data.telefono.trim()}`);
-      toast.success('Datos personales guardados', 'Perfil');
+      const descStr = `CEDULA: ${data.cedula.trim()} | TELEFONO: ${data.telefono.trim()}`;
+      setOverrideDesc(descStr);
+      toast.success('Datos personales guardados ✓', 'Perfil');
       setEditingPerfil(false);
-      setPerfilLocal({ cedula: data.cedula, telefono: data.telefono, direccion: data.direccion ?? '' });
+      setPerfilLocal({ cedula: data.cedula.trim(), telefono: data.telefono.trim(), direccion: data.direccion ?? '' });
+      // Actualizar localStorage para que perfilOk sea true sin recargar
       const storedUser = JSON.parse(localStorage.getItem('gm_user') ?? '{}');
-      storedUser.descripcion = `CEDULA: ${data.cedula} | TELEFONO: ${data.telefono}`;
-      storedUser.nombre_completo = data.nombre_completo;
+      storedUser.descripcion    = descStr;
+      storedUser.nombre_completo = data.nombre_completo.trim();
+      storedUser.cedula          = data.cedula.trim();
+      storedUser.telefono        = data.telefono.trim();
       if (data.direccion && data.direccion.trim()) storedUser.direccion = data.direccion.trim();
       localStorage.setItem('gm_user', JSON.stringify(storedUser));
     } catch (err) {
