@@ -191,7 +191,10 @@ export default function RecordsPage() {
   const [clientHistory, setClientHistory] = useState<RegistroDetalle[]>([]);
 
   /* ─── Estado de impresión (evita doble clic y muestra feedback) ─── */
-  const [printingId, setPrintingId] = useState<number | null>(null);
+  const [printingId,     setPrintingId]     = useState<number | null>(null);
+
+  /* ─── Expandir info de cliente ─── */
+  const [expandedRecords, setExpandedRecords] = useState<number[]>([]);
 
   /* ─── Carga de datos ─── */
   const fetchData = useCallback(async (silent = false) => {
@@ -845,36 +848,46 @@ export default function RecordsPage() {
                         <td className="text-white/35 text-xs whitespace-nowrap">{fmtDate(r.fecha)}</td>
                         <td>
                           <button
-                            className="font-semibold text-white/85 hover:text-gm-red transition-colors flex items-center gap-1 group"
-                            onClick={() => openHistory(r.nombre_cliente)}
-                            title="Ver historial del cliente"
+                            onClick={() => {
+                              setExpandedRecords(prev => 
+                                prev.includes(r.id_registro) ? prev.filter(id => id !== r.id_registro) : [...prev, r.id_registro]
+                              );
+                            }}
+                            className="group flex items-center gap-1.5 font-semibold text-white/90 hover:text-white transition-colors outline-none max-w-[150px] truncate"
+                            title="Desplegar información"
                           >
                             {r.nombre_cliente}
-                            <History size={11} className="text-white/20 group-hover:text-gm-red/60" />
+                            <ChevronRight size={11} className={`text-white/40 transition-transform ${expandedRecords.includes(r.id_registro) ? 'rotate-90' : ''}`} />
                           </button>
-                          {(() => {
+                          {expandedRecords.includes(r.id_registro) && (() => {
                             const cli = usuarios.find(u => u.nombre_completo === r.nombre_cliente);
                             const tel = cli?.telefono || (cli ? extractPhone(cli.descripcion) : null);
                             const cedId = cli ? extractCedula(cli.descripcion) : null;
                             return (
-                              <div className="flex flex-col gap-0.5 mt-0.5">
+                              <div className="flex flex-col gap-0.5 mt-1 bg-white/[0.02] p-1.5 rounded border border-white/[0.05]">
                                 {tel && (
                                   <a href={`tel:${tel}`}
-                                    className="flex items-center gap-1 text-[10px] text-emerald-400/70 hover:text-emerald-400"
+                                    className="flex items-center gap-1 text-[10px] text-emerald-400/80 hover:text-emerald-400"
                                     onClick={e => e.stopPropagation()}>
                                     <Phone size={9}/> {tel}
                                   </a>
                                 )}
                                 {cedId && (
-                                  <span className="flex items-center gap-1 text-[10px] text-white/30">
+                                  <span className="flex items-center gap-1 text-[10px] text-white/40">
                                     <CreditCard size={9}/> {cedId}
                                   </span>
                                 )}
                                 {cli?.direccion && (
-                                  <span className="flex items-center gap-1 text-[10px] text-white/30">
+                                  <span className="flex items-center gap-1 text-[10px] text-white/40">
                                     <MapPin size={9}/> {cli.direccion}
                                   </span>
                                 )}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openHistory(r.nombre_cliente!); }}
+                                  className="flex items-center gap-1 text-[10px] text-gm-red/80 hover:text-gm-red mt-1"
+                                >
+                                  <History size={9}/> Ver historial
+                                </button>
                               </div>
                             );
                           })()}
