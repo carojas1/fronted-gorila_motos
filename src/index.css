@@ -1557,9 +1557,13 @@ html[data-theme="light"] .m-hero { background: linear-gradient(140deg,#FFFFFF,#F
 html[data-theme="light"] .m-hero-name,
 html[data-theme="light"] .m-hs-num,
 html[data-theme="light"] .m-kpi-val,
-html[data-theme="light"] .m-hero-income-val { color: #15151B !important; }
+html[data-theme="light"] .m-hero-income-val,
+html[data-theme="light"] .m-alert-t { color: #15151B !important; }
 html[data-theme="light"] .m-hs-lbl,
-html[data-theme="light"] .m-hero-income-lbl { color: rgba(21,21,27,0.5) !important; }
+html[data-theme="light"] .m-kpi-lbl,
+html[data-theme="light"] .m-section-t,
+html[data-theme="light"] .m-alert-sub,
+html[data-theme="light"] .m-hero-income-lbl { color: rgba(21,21,27,0.6) !important; }
 html[data-theme="light"] .m-kpi,
 html[data-theme="light"] .m-card,
 html[data-theme="light"] .m-mod { background: #FFFFFF !important; border-color: #E4E7EC !important; }
@@ -1568,6 +1572,7 @@ html[data-theme="light"] .m-mod-lbl,
 html[data-theme="light"] .m-act-t { color: #15151B !important; }
 html[data-theme="light"] .m-act { border-color: #F0F1F4 !important; }
 html[data-theme="light"] .m-hs-sep { background: #E4E7EC !important; }
+html[data-theme="light"] .m-alert { background: rgba(245,158,11,0.08) !important; border-color: rgba(245,158,11,0.3) !important; }
 
 /* Menú "Más" en claro */
 html[data-theme="light"] .m-more-overlay { background: #EEF0F3 !important; }
