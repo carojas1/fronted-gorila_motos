@@ -458,15 +458,16 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                               ))}
                             </div>
                           ) : detalles && detalles.length > 0 ? (
-                            <table className="w-full text-[12px]">
-                              <thead>
-                                <tr className="text-[10px] text-white/25 uppercase tracking-wider">
-                                  <th className="text-left pb-2 font-black">Producto</th>
-                                  <th className="text-center pb-2 font-black w-16">Cant.</th>
-                                  <th className="text-right pb-2 font-black">Subtotal</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-white/[0.04]">
+                            <div className="overflow-x-auto dark-scroll">
+                              <table className="w-full text-[12px] min-w-[300px]">
+                                <thead>
+                                  <tr className="text-[10px] text-white/25 uppercase tracking-wider">
+                                    <th className="text-left pb-2 font-black">Producto</th>
+                                    <th className="text-center pb-2 font-black w-16">Cant.</th>
+                                    <th className="text-right pb-2 font-black">Subtotal</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/[0.04]">
                                 {detalles.map(d => (
                                   <tr key={d.id_detalle}>
                                     <td className="py-1.5 text-white/70">
@@ -486,6 +487,7 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                                 </tr>
                               </tfoot>
                             </table>
+                            </div>
                           ) : (
                             <p className="text-[11px] text-white/25 italic">Sin detalles disponibles</p>
                           )}
