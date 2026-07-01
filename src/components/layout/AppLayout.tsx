@@ -585,7 +585,7 @@ export default function AppLayout() {
       </header>
 
       {/* ══ CONTENIDO ═══════════════════════════════════════════════ */}
-      <main className="flex-1">
+      <main className="flex-1" style={{ paddingTop: isNativeApp ? 'calc(env(safe-area-inset-top, 0px) + 12px)' : undefined }}>
         <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 8 }}

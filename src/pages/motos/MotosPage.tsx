@@ -422,16 +422,14 @@ export default function MotosPage() {
             }
           </h1>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto mt-3 sm:mt-0">
           {canManage && (
             <Link
               to="/metodologia"
               title="Cómo calculamos el mantenimiento"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'rgba(59,130,246,0.85)', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.22)', borderRadius: 10, padding: '8px 14px', textDecoration: 'none' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.16)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.08)')}
+              className="flex items-center justify-center gap-1.5 text-xs font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-2 hover:bg-blue-500/20 transition-colors"
             >
-              <BookOpen size={13} /> Metodología
+              <BookOpen size={14} /> <span className="sm:inline">Metodología</span>
             </Link>
           )}
           <Button icon={<Plus size={14} />} onClick={openCreate}>

@@ -18,7 +18,7 @@ import {
 import ContabilidadChart from '../../components/charts/ContabilidadChart';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../lib/theme';
-import { motosApi, registrosApi, productosApi, usuariosApi, combustibleApi, pagosEmpleadoApi, type PagoEmpleadoAPI } from '../../lib/api';
+import { motosApi, registrosApi, productosApi, usuariosApi, combustibleApi, pagosEmpleadoApi, facturasApi, type PagoEmpleadoAPI } from '../../lib/api';
 import { fmtDate, fmtMoney, parsePermisos } from '../../lib/utils';
 import { usePolling } from '../../hooks/usePolling';
 import { useCountUp } from '../../hooks/useGsap';
@@ -204,6 +204,7 @@ function WebDashboard() {
   const [usuarios,    setUsuarios]    = useState<unknown[]>([]);
   const [combustible, setCombustible] = useState<{ id_carga:number; fecha:string; costo_total:number }[]>([]);
   const [gastos,      setGastos]      = useState<PagoEmpleadoAPI[]>([]);
+  const [facturas,    setFacturas]    = useState<any[]>([]);
   const [loading,     setLoading]     = useState(true);
 
   const hour     = new Date().getHours();
@@ -212,18 +213,27 @@ function WebDashboard() {
   const isOpen   = hour >= 8 && hour < 18;
 
   const load = useCallback(async () => {
-    const [m, r, p, u, c, g] = await Promise.allSettled([
-      motosApi.list(), registrosApi.list(), productosApi.list(), usuariosApi.list(),
-      combustibleApi.list(), pagosEmpleadoApi.listAll(),
-    ]);
+    const promises = [
+      motosApi.list(), 
+      registrosApi.list(), 
+      productosApi.list(), 
+      combustibleApi.list(),
+      isAdmin ? usuariosApi.list() : Promise.resolve({ data: [] }),
+      isAdmin ? pagosEmpleadoApi.listAll() : Promise.resolve({ data: [] }),
+      isAdmin ? facturasApi.list() : Promise.resolve({ data: [] })
+    ];
+    const [m, r, p, c, u, g, f] = await Promise.allSettled(promises);
+    
     if (m.status === 'fulfilled') setMotos(m.value.data);
     if (r.status === 'fulfilled') setRegistros(r.value.data);
     if (p.status === 'fulfilled') setProductos(p.value.data);
-    if (u.status === 'fulfilled') setUsuarios(u.value.data);
     if (c.status === 'fulfilled') setCombustible(Array.isArray(c.value.data) ? c.value.data : []);
+    if (u.status === 'fulfilled') setUsuarios(u.value.data);
     if (g.status === 'fulfilled') setGastos(g.value.data);
+    if (f.status === 'fulfilled') setFacturas(f.value.data);
+    
     setLoading(false);
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -232,8 +242,8 @@ function WebDashboard() {
 
   /* ── Métricas derivadas ── */
   const ingresosTotal = useMemo(() =>
-    registros.filter(r => r.estado === 4).reduce((s, r) => s + (r.costo_total ?? 0), 0)
-  , [registros]);
+    facturas.reduce((s, f) => s + (f.costo_total ?? 0), 0)
+  , [facturas]);
 
   const stockCritico = useMemo(() =>
     productos.filter(p => p.stock <= 3).length

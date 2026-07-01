@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, Tooltip } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
-import { motosApi, registrosApi, productosApi, usuariosApi } from '../../lib/api';
+import { motosApi, registrosApi, productosApi, usuariosApi, facturasApi } from '../../lib/api';
 import { fmtMoney, fmtDate, toIsoStr } from '../../lib/utils';
 import { usePolling } from '../../hooks/usePolling';
 import { useTheme } from '../../lib/theme';
@@ -100,6 +100,7 @@ export default function MobileDashboard() {
   const [registros, setRegistros] = useState<RegistroDetalle[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [usuarios,  setUsuarios]  = useState<unknown[]>([]);
+  const [facturas,  setFacturas]  = useState<any[]>([]);
   const [loading,   setLoading]   = useState(true);
 
   const hour      = new Date().getHours();
@@ -108,20 +109,27 @@ export default function MobileDashboard() {
   const isOpen    = hour >= 8 && hour < 18;
 
   const load = useCallback(async () => {
-    const [m, r, p, u] = await Promise.allSettled([
-      motosApi.list(), registrosApi.list(), productosApi.list(), usuariosApi.list(),
-    ]);
+    const promises = [
+      motosApi.list(),
+      registrosApi.list(),
+      productosApi.list(),
+      isAdmin ? usuariosApi.list() : Promise.resolve({ data: [] }),
+      isAdmin ? facturasApi.list() : Promise.resolve({ data: [] })
+    ];
+    const [m, r, p, u, f] = await Promise.allSettled(promises);
     if (m.status === 'fulfilled') setMotos(m.value.data);
     if (r.status === 'fulfilled') setRegistros(r.value.data);
     if (p.status === 'fulfilled') setProductos(p.value.data);
     if (u.status === 'fulfilled') setUsuarios(u.value.data);
+    if (f.status === 'fulfilled') setFacturas(f.value.data);
     setLoading(false);
-  }, []);
+  }, [isAdmin]);
   useEffect(() => { load(); }, [load]);
   usePolling(load, { intervalMs: 25_000 });
 
   const ingresosTotal = useMemo(() =>
-    registros.filter(r => r.estado === 4).reduce((s, r) => s + (r.costo_total ?? 0), 0), [registros]);
+    facturas.reduce((s, f) => s + (f.costo_total ?? 0), 0)
+  , [facturas]);
   const stockCritico  = useMemo(() => productos.filter(p => p.stock <= 3).length, [productos]);
   const activas       = useMemo(() => registros.filter(r => r.estado < 3).length, [registros]);
 
@@ -132,9 +140,14 @@ export default function MobileDashboard() {
     });
     return days.map(day => {
       const dr = registros.filter(r => toIsoStr(r.fecha).startsWith(day));
-      return { day: day.slice(5), ordenes: dr.length, ingresos: dr.reduce((s, r) => s + (r.costo_total ?? 0), 0) };
+      const df = facturas.filter(f => toIsoStr(f.fecha_emision || f.fecha).startsWith(day));
+      return { 
+        day: day.slice(5), 
+        ordenes: dr.length, 
+        ingresos: df.reduce((s, f) => s + (f.costo_total ?? 0), 0) 
+      };
     });
-  }, [registros]);
+  }, [registros, facturas]);
 
   const recientes = registros.slice(0, 6);
 
@@ -160,24 +173,30 @@ export default function MobileDashboard() {
         <div className="m-hero">
           <p className="m-hero-greet">{greeting}</p>
           <h1 className="m-hero-name">{firstName}</h1>
-          <div className="m-hero-stats">
-            <div><p className="m-hs-num">{myMotos.length}</p><p className="m-hs-lbl">Motos</p></div>
-            <span className="m-hs-sep" />
-            <div><p className="m-hs-num">{myRegs.length}</p><p className="m-hs-lbl">Servicios</p></div>
-            <span className="m-hs-sep" />
-            <div><p className="m-hs-num" style={{ color: '#FBBF24' }}>{myPuntos}</p><p className="m-hs-lbl">Puntos</p></div>
+          <div className="grid grid-cols-3 gap-2 mt-4 bg-white/5 rounded-xl p-3 border border-white/10 dark:bg-black/10">
+            <div className="flex flex-col items-center justify-center">
+              <p className="m-hs-num">{myMotos.length}</p>
+              <p className="m-hs-lbl">Motos</p>
+            </div>
+            <div className="flex flex-col items-center justify-center border-x border-white/10">
+              <p className="m-hs-num">{myRegs.length}</p>
+              <p className="m-hs-lbl">Servicios</p>
+            </div>
+            <div className="flex flex-col items-center justify-center">
+              <p className="m-hs-num" style={{ color: '#FBBF24' }}>{myPuntos}</p>
+              <p className="m-hs-lbl">Puntos</p>
+            </div>
           </div>
         </div>
 
-        <div className="m-section-t">Accesos</div>
+        <div className="m-section-t mt-4">Accesos Rápidos</div>
         <div className="m-mods">
           {[
             { label: 'Mi Moto',     desc: 'Estado y mantenimiento', to: '/mi-moto',     color: '#3B82F6', icon: Bike  },
             { label: 'Combustible', desc: 'Cargas y rendimiento',   to: '/combustible', color: '#8B5CF6', icon: Zap   },
             { label: 'Mis Puntos',  desc: 'Recompensas',            to: '/puntos',      color: '#F59E0B', icon: Star  },
-            { label: 'Alertas',     desc: 'Avisos de servicio',     to: '/alertas',     color: '#E11428', icon: Bell  },
           ].map(({ label, desc, to, color, icon: Icon }) => (
-            <Link key={to} to={to} className="m-mod">
+            <Link key={to} to={to} className="m-mod gm-card-d hover:-translate-y-1 transition-transform">
               <div className="m-mod-ico" style={{ background: `${color}1c`, border: `1px solid ${color}33` }}>
                 <Icon size={18} style={{ color }} />
               </div>

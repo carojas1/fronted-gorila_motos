@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft, AlertCircle, CheckCircle, Clock, Package, FileText } from 'lucide-react';
-import { registrosApi, usuariosApi, productosApi, detallesFacturaApi } from '../../lib/api';
+import { registrosApi, usuariosApi, productosApi, detallesFacturaApi, facturasApi } from '../../lib/api';
 import { fmtDate, fmtMoney, extractCedula, extractPhone, ordenNumero } from '../../lib/utils';
 import { WORKSHOP_CONTACT, whatsappCitaLink } from '../../lib/constants';
 import { useTheme } from '../../lib/theme';
@@ -54,6 +54,9 @@ export default function InvoicePage() {
     if (!id) return;
     async function load() {
       try {
+        const isDirectSale = id.startsWith('f_');
+        const realId = isDirectSale ? id.replace('f_', '') : id;
+
         const [rr, ur, pr] = await Promise.allSettled([
           registrosApi.list(),
           usuariosApi.list(),
@@ -64,28 +67,59 @@ export default function InvoicePage() {
         const usuarios:  Usuario[]         = ur.status === 'fulfilled' ? ur.value.data : [];
         if (pr.status === 'fulfilled') setProductos(pr.value.data as Producto[]);
 
-        const found = registros.find(r => r.id_registro === Number(id));
-        if (!found) { setError('Registro no encontrado'); setLoading(false); return; }
-
-        // Intentar enriquecer con detalle (tiene nombre_encargado)
-        try {
-          const det = await registrosApi.get(Number(id));
-          const d = det.data as Record<string, unknown>;
-          if (d.nombreEncargado || d.nombre_encargado) {
-            (found as Record<string, unknown>).nombre_encargado =
-              (d.nombreEncargado ?? d.nombre_encargado) as string;
+        if (isDirectSale) {
+          // VENTA DIRECTA (Sin registro)
+          try {
+            const facReq = await facturasApi.get(Number(realId));
+            const factura = facReq.data as any;
+            const cli = usuarios.find(u => u.id_usuario === factura.id_usuario) ?? null;
+            
+            // Creamos un "pseudo-registro" para que la UI no se rompa
+            setReg({
+              id_registro: 0,
+              id_usuario: factura.id_usuario,
+              id_moto: 0,
+              id_factura: factura.id_factura,
+              fecha: factura.fecha_emision || factura.fecha,
+              estado: 4, // Facturado
+              costo_total: factura.costo_total,
+              nombre_cliente: cli?.nombre_completo || 'Cliente',
+              placa: 'VENTA DIRECTA',
+              marca: 'Gorila Motos',
+              modelo: 'Inventario',
+              sintomas: 'Venta de mostrador',
+              nombre_encargado: 'Administración'
+            } as any);
+            setCliente(cli);
+            
+            const { data } = await detallesFacturaApi.byFactura(factura.id_factura);
+            setDetalles((data as DetalleFila[]) ?? []);
+          } catch {
+            setError('Factura no encontrada');
           }
-        } catch { /* fallback: sin nombre encargado */ }
+        } else {
+          // NOTA DE SERVICIO (Con registro)
+          const found = registros.find(r => r.id_registro === Number(realId));
+          if (!found) { setError('Registro no encontrado'); setLoading(false); return; }
 
-        const cli = usuarios.find(u => u.nombre_completo === found.nombre_cliente) ?? null;
-        setReg(found);
-        setCliente(cli);
+          try {
+            const det = await registrosApi.get(Number(realId));
+            const d = det.data as Record<string, unknown>;
+            if (d.nombreEncargado || d.nombre_encargado) {
+              (found as Record<string, unknown>).nombre_encargado =
+                (d.nombreEncargado ?? d.nombre_encargado) as string;
+            }
+          } catch { /* fallback */ }
 
-        // Cargar los detalles reales de la factura (mano de obra + repuestos)
-        try {
-          const { data } = await detallesFacturaApi.byFactura(found.id_factura);
-          setDetalles((data as DetalleFila[]) ?? []);
-        } catch { setDetalles([]); }
+          const cli = usuarios.find(u => u.nombre_completo === found.nombre_cliente) ?? null;
+          setReg(found);
+          setCliente(cli);
+
+          try {
+            const { data } = await detallesFacturaApi.byFactura(found.id_factura);
+            setDetalles((data as DetalleFila[]) ?? []);
+          } catch { setDetalles([]); }
+        }
       } catch {
         setError('Error al cargar el comprobante');
       } finally {

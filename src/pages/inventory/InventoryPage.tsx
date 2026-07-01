@@ -5,6 +5,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, ShoppingCart, Tags, FolderPlus, Minus, UserCheck, Mail, Camera, ImagePlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -60,7 +61,9 @@ export default function InventoryPage() {
   const toast   = useToast();
   const [theme] = useTheme();
   const isDark  = theme === 'dark';
+  const navigate = useNavigate();
 
+  // Estados principales
   const [productos,    setProductos]    = useState<Producto[]>([]);
   const [categorias,   setCategorias]   = useState<Categoria[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -383,6 +386,9 @@ export default function InventoryPage() {
       toast.success(`Venta registrada · ${qty} u. de ${vnTarget.nombre} → ${vnCliente.nombre}`);
       setVnTarget(null); setVnStep('search'); setVnQuery(''); setVnCliente(null); setVnQty('1');
       fetchData();
+      if (facturaId) {
+        navigate(`/invoice/f_${facturaId}`);
+      }
     } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setVnSending(false); }
   };

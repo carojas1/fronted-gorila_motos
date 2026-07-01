@@ -532,7 +532,7 @@ export default function PortalClientePage() {
           <Wrench size={13} className="text-gm-red/60" />
           <p className="text-[10px] tracking-[0.3em] uppercase text-white/28 font-bold">Contáctanos</p>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { icon: Phone,  label: 'Teléfono',   val: TALLER.telefono,  href: `tel:${TALLER.telefono}` },
             { icon: Phone,  label: 'WhatsApp',   val: 'Enviar mensaje', href: `https://wa.me/${TALLER.whatsapp}` },
