@@ -476,8 +476,11 @@ export default function RecordsPage() {
       <style>
         *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
         body{font-family:'Inter',sans-serif;background:#fff;color:#0F172A;max-width:800px;margin:0 auto;padding:28px 32px}
+        /* ── BOTON CERRAR MÓVIL ── */
+        .close-btn { position:fixed; top:16px; left:16px; background:rgba(12,12,16,0.9); color:#fff; border:none; padding:10px 16px; border-radius:12px; font-weight:800; font-size:13px; z-index:9999; display:flex; align-items:center; gap:6px; font-family:'Inter',sans-serif; cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,0.3); }
+        .close-btn:active { transform:scale(0.95); }
         /* ── HEADER ── */
-        .header{background:linear-gradient(135deg,#0C0C10 0%,#1A1A22 100%);border-radius:18px;padding:22px 28px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+        .header{background:linear-gradient(135deg,#0C0C10 0%,#1A1A22 100%);border-radius:18px;padding:22px 28px;display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:20px;}
         .logo-wrap{display:flex;align-items:center;gap:16px}
         .logo-wrap img{width:70px;height:70px;object-fit:contain;filter:brightness(1.15) drop-shadow(0 0 12px rgba(225,20,40,0.5))}
         .brand-text{}
@@ -545,8 +548,13 @@ export default function RecordsPage() {
         .thanks-sub{font-size:11px;color:rgba(255,255,255,.4);margin-top:4px}
         /* ── FOOTER ── */
         .foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid #EEF1F5;font-size:10px;color:#CBD5E1}
-        @media print{body{padding:12px}@page{margin:.5cm;size:A4}}
+      @media print{ body{padding:12px;margin-top:0} @page{margin:.5cm;size:A4} .no-print{display:none !important} .header{margin-top:0} }
       </style></head><body>
+
+      <!-- BOTON CERRAR PARA APK -->
+      <button class="close-btn no-print" onclick="window.close(); if(window.history.length>1) window.history.back();">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Volver
+      </button>
 
       <!-- HEADER -->
       <div class="header">
