@@ -317,7 +317,11 @@ export default function AppLayout() {
       {/* ══ TOPBAR ══════════════════════════════════════════════════ */}
       <header
         className="gm-topbar sticky top-0 z-50 flex-none"
-        style={{ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
+        style={{ 
+          backdropFilter: 'blur(16px)', 
+          WebkitBackdropFilter: 'blur(16px)',
+          paddingTop: isNativeApp ? 'env(safe-area-inset-top, 34px)' : undefined
+        }}
       >
         <div className="flex items-center gap-3 px-4 lg:px-10 h-[62px] max-w-screen-2xl mx-auto">
 
@@ -585,7 +589,7 @@ export default function AppLayout() {
       </header>
 
       {/* ══ CONTENIDO ═══════════════════════════════════════════════ */}
-      <main className="flex-1" style={{ paddingTop: isNativeApp ? 'calc(env(safe-area-inset-top, 0px) + 12px)' : undefined }}>
+      <main className="flex-1">
         <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 8 }}
