@@ -10,6 +10,7 @@ import { Bell, CheckCircle, Bike, Search, RefreshCw } from 'lucide-react';
 import { motosApi, registrosApi, usuariosApi } from '../../lib/api';
 import { usePolling } from '../../hooks/usePolling';
 import type { Moto, RegistroDetalle, Usuario, MotoAlerta } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
 import { fmtDate } from '../../lib/utils';
 
 /* ── Lógica de alertas ─────────────────────── */
@@ -36,6 +37,10 @@ const ORDER: Record<MotoAlerta['urgency'], number> = { overdue: 0, due: 1, soon:
 
 /* ── Componente ─────────────────────────────── */
 export default function AlertasPage() {
+  const { user, isAdmin, isMecanico } = useAuth();
+  const canManage = isAdmin || isMecanico;
+  const uid = user?.id_usuario ?? 0;
+
   const [alertas,     setAlertas]     = useState<MotoAlerta[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -43,10 +48,12 @@ export default function AlertasPage() {
   const [filter,      setFilter]      = useState<'all' | MotoAlerta['urgency']>('all');
 
   const load = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     try {
+      const motosReq = !canManage ? motosApi.byUser(uid) : motosApi.list();
       const [mr, rr, ur] = await Promise.allSettled([
-        motosApi.list(), registrosApi.list(), usuariosApi.list(),
+        motosReq, registrosApi.list(), canManage ? usuariosApi.list() : Promise.reject(),
       ]);
       const motos: Moto[]               = mr.status === 'fulfilled' ? mr.value.data  : [];
       const records: RegistroDetalle[]  = rr.status === 'fulfilled' ? rr.value.data  : [];

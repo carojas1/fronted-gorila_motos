@@ -178,9 +178,11 @@ export function NotificationPanel({
           <button onClick={onClose} className="icon-btn w-6 h-6"><X size={12} /></button>
         </div>
       </div>
-
-      {loading && (
-        <div className="px-4 py-8 text-center text-sm" style={{ color: textMuted }}>Cargando…</div>
+      {/* Contenido */}
+      {loading && notifications.length === 0 && (
+        <div className="px-4 py-8 flex justify-center items-center">
+          <div className="w-5 h-5 rounded-full border-2 border-gm-red border-t-transparent animate-spin" />
+        </div>
       )}
 
       {!loading && notifications.length === 0 && (

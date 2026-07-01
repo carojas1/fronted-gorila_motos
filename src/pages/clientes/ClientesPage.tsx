@@ -820,12 +820,12 @@ export default function ClientesPage() {
   const [selected,    setSelected]         = useState<Usuario | null>(null);
   const [pendingSelect, setPendingSelect]  = useState<Usuario | null>(null);
 
-  /* Re-auth */
+  // Re-auth modal state for the entire page
+  const [pageUnlocked, setPageUnlocked] = useState(false);
   const [reAuthOpen,    setReAuthOpen]    = useState(false);
-  const [reAuthTarget,  setReAuthTarget]  = useState<Usuario | null>(null);
   const [reAuthPwd,     setReAuthPwd]     = useState('');
   const [reAuthLoading, setReAuthLoading] = useState(false);
-  const [unlocked, setUnlocked] = useState<Set<number>>(new Set());
+  const [reAuthTarget,  setReAuthTarget]  = useState<Usuario | null>(null);
 
   /* Ofertas / email masivo */
   const [ofertaOpen,    setOfertaOpen]    = useState(false);
@@ -881,6 +881,8 @@ export default function ClientesPage() {
   };
 
   const fetchData = useCallback(async () => {
+    // Solo carga datos si la página está desbloqueada
+    if (!pageUnlocked) return;
     setLoading(true);
     try {
       const [uRes, rRes, mRes, cRes, fRes] = await Promise.allSettled([
@@ -907,9 +909,20 @@ export default function ClientesPage() {
       if (fRes.status === 'fulfilled') setFacturas(fRes.value.data as Factura[]);
     } catch { toast.error('Error cargando datos'); }
     finally { setLoading(false); }
-  }, [toast]);
+  }, [pageUnlocked, toast]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    if (pageUnlocked) {
+      fetchData();
+    }
+  }, [fetchData, pageUnlocked]);
+
+  // Al montar, pedimos la contraseña si no está desbloqueado
+  useEffect(() => {
+    if (!pageUnlocked) {
+      setReAuthOpen(true);
+    }
+  }, [pageUnlocked]);
 
   /* GSAP entrada */
   useEffect(() => {
@@ -966,35 +979,29 @@ export default function ClientesPage() {
 
   /* Seleccionar cliente */
   const handleSelectClient = (client: Usuario) => {
-    if (unlocked.has(client.id_usuario)) {
-      setSelected(client);
-    } else {
-      setPendingSelect(client);
-      setReAuthTarget(client);
-      setReAuthPwd('');
-      setReAuthOpen(true);
-    }
+    setSelected(client);
   };
 
-  const openReAuth = (client: Usuario, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (unlocked.has(client.id_usuario)) return;
-    setReAuthTarget(client);
+  const openReAuth = (client: Usuario | null, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (client) setReAuthTarget(client);
+    else setReAuthTarget(null);
     setReAuthPwd('');
     setReAuthOpen(true);
   };
 
   const verifyPassword = async () => {
-    if (!reAuthTarget || !me) return;
+    if (!me) return;
     setReAuthLoading(true);
     try {
       await authApi.login(me.correo, reAuthPwd);
-      const newUnlocked = new Set([...unlocked, reAuthTarget.id_usuario]);
-      setUnlocked(newUnlocked);
       toast.success('Identidad verificada');
       setReAuthOpen(false);
       setReAuthPwd('');
-      if (pendingSelect) {
+      
+      if (!pageUnlocked) {
+        setPageUnlocked(true);
+      } else if (pendingSelect) {
         setSelected(pendingSelect);
         setPendingSelect(null);
       }
@@ -1014,7 +1021,7 @@ export default function ClientesPage() {
           motos={motosOf(selected.id_usuario)}
           combustible={combustibleOf(selected.id_usuario)}
           facturas={facturasOf(selected.id_usuario)}
-          unlocked={unlocked.has(selected.id_usuario)}
+          unlocked={true}
           onBack={() => setSelected(null)}
           onUnlock={(e) => openReAuth(selected, e)}
         />
@@ -1106,7 +1113,7 @@ export default function ClientesPage() {
                   <ClienteCard
                     client={client}
                     regs={regsOf(client.nombre_completo)}
-                    unlocked={unlocked.has(client.id_usuario)}
+                    unlocked={true}
                     onSelect={() => handleSelectClient(client)}
                     onUnlock={(e) => openReAuth(client, e)}
                   />
@@ -1120,14 +1127,16 @@ export default function ClientesPage() {
       {/* Modal re-autenticación */}
       <Modal
         open={reAuthOpen}
-        onClose={() => { setReAuthOpen(false); setReAuthPwd(''); }}
+        onClose={() => { if (pageUnlocked) { setReAuthOpen(false); setReAuthPwd(''); } }}
         title="Verificación de identidad"
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => { setReAuthOpen(false); setReAuthPwd(''); }}>
-              Cancelar
-            </Button>
+            {pageUnlocked && (
+              <Button variant="secondary" onClick={() => { setReAuthOpen(false); setReAuthPwd(''); }}>
+                Cancelar
+              </Button>
+            )}
             <Button onClick={verifyPassword} loading={reAuthLoading} disabled={!reAuthPwd.trim()}>
               <Shield size={14} /> Confirmar identidad
             </Button>
@@ -1142,9 +1151,8 @@ export default function ClientesPage() {
                 Datos protegidos
               </p>
               <p className="text-[12px] text-white/45 leading-relaxed">
-                Para ver el perfil completo de{' '}
-                <strong className="text-white/82">{reAuthTarget?.nombre_completo}</strong>{' '}
-                confirma tu contraseña de administrador. La sesión no se cierra.
+                Para ingresar al panel de gestión de clientes,{' '}
+                confirma tu contraseña de administrador.
               </p>
             </div>
           </div>
@@ -1273,11 +1281,11 @@ export default function ClientesPage() {
 
           <div>
             <label className="block text-[11px] font-black uppercase tracking-[0.15em] text-white/35 mb-2">
-              Mensaje (HTML permitido)
+              Mensaje
             </label>
             <textarea
               rows={6}
-              placeholder="Escribe el cuerpo del correo. Puedes usar HTML para dar formato: <b>negrita</b>, <br> para saltos de línea, etc."
+              placeholder="Escribe el mensaje que deseas enviar a tus clientes..."
               value={ofertaMensaje}
               onChange={e => setOfertaMensaje(e.target.value)}
               className="w-full rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-1"
