@@ -139,8 +139,8 @@ export default function PagosPage() {
         )}
       </div>
 
-      {/* ─── KPI Tabs cards ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* ─── KPI Tabs cards (Solo Desktop) ─── */}
+      <div className="hidden sm:grid grid-cols-3 gap-4">
         {TABS.map(t => {
           const s      = sums[t.key];
           const active = activeTab === t.key;
@@ -175,8 +175,8 @@ export default function PagosPage() {
         })}
       </div>
 
-      {/* ─── Tabs bar ─── */}
-      <div className="flex gap-1 bg-white/[0.03] rounded-xl p-1 border border-white/[0.05]">
+      {/* ─── Tabs bar (Solo Mobile) ─── */}
+      <div className="flex sm:hidden gap-1 bg-white/[0.03] rounded-xl p-1 border border-white/[0.05] overflow-x-auto snap-x">
         {TABS.map(t => (
           <button
             key={t.key}
@@ -220,11 +220,11 @@ export default function PagosPage() {
               <tr>
                 <th>#</th>
                 <th>Placa</th>
-                <th>Cliente</th>
-                <th>Servicio</th>
+                <th className="hidden sm:table-cell">Cliente</th>
+                <th className="hidden md:table-cell">Servicio</th>
                 <th>Estado</th>
                 {isAdmin && <th>Total</th>}
-                <th>Fecha</th>
+                <th className="hidden lg:table-cell">Fecha</th>
                 <th>Acción</th>
               </tr>
             </thead>
@@ -253,10 +253,10 @@ export default function PagosPage() {
                       <td>
                         <span className="font-black text-white/85 tracking-wide">{r.placa}</span>
                       </td>
-                      <td>
+                      <td className="hidden sm:table-cell">
                         <span className="text-white/60 text-[12px]">{r.nombre_cliente}</span>
                       </td>
-                      <td>
+                      <td className="hidden md:table-cell">
                         <span className="text-white/50 text-[12px] truncate max-w-[150px] block">{r.tipo_servicio}</span>
                       </td>
                       <td>
@@ -272,7 +272,7 @@ export default function PagosPage() {
                           {fmtMoney(r.costo_total ?? 0)}
                         </td>
                       )}
-                      <td className="text-white/30 text-[11px] tabular-nums whitespace-nowrap">
+                      <td className="hidden lg:table-cell text-white/30 text-[11px] tabular-nums whitespace-nowrap">
                         {fmtDate(r.fecha as unknown as string)}
                       </td>
                       <td>

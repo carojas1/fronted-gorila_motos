@@ -1529,6 +1529,11 @@ html[data-theme="light"] .text-white\/70,
 html[data-theme="light"] .text-white\/65,
 html[data-theme="light"] .text-white\/60 { color: rgba(21,21,27,0.78) !important; }
 
+/* MotosPage KPI strip light mode fixes */
+html[data-theme="light"] .mp-kpi-num { color: #15151B !important; }
+html[data-theme="light"] .mp-kpi-lbl { color: rgba(21,21,27,0.5) !important; }
+html[data-theme="light"] .mp-kpi-sep { background: rgba(21,21,27,0.15) !important; }
+
 /* Fondos sutiles y bordes blancos → equivalentes oscuros tenues */
 html[data-theme="light"] [class*="bg-white/"] { background-color: rgba(21,21,27,0.035) !important; }
 html[data-theme="light"] [class*="border-white/"] { border-color: rgba(21,21,27,0.1) !important; }
