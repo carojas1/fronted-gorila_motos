@@ -7,7 +7,7 @@ import {
   createContext, useContext, useState,
   useEffect, useCallback, type ReactNode,
 } from 'react';
-import { authApi } from '../lib/api';
+import { authApi, tokenVencido } from '../lib/api';
 import type { Usuario } from '../types';
 import {
   firebaseEnabled,
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(async res => {
         if (cancelled) return; // respuesta tardía: el contexto ya cambió
         // Si el usuario ya no existe en BD (fue borrado) → cerrar sesión automáticamente
-        if (res.status === 404 || res.status === 401) {
+        if (res.status === 404 || (res.status === 401 && tokenVencido(token))) {
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(USER_KEY);
           setState({ user: null, token: null, loading: false });

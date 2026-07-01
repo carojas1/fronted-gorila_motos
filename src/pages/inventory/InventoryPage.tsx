@@ -263,20 +263,29 @@ export default function InventoryPage() {
         stock:              sellTarget.stock - qty,
         fecha_modificacion: new Date().toISOString().slice(0, 10),
       });
+      let emailOk: boolean | null = null;
       if (sellEmail.trim()) {
         const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        productosApi.enviarComprobante({
-          correo:         sellEmail.trim(),
-          nombreCliente:  'Cliente',
-          nombreProducto: sellTarget.nombre,
-          codigoProducto: sellTarget.codigo_personal,
-          cantidad:       qty,
-          pvp:            sellTarget.pvp,
-          total:          qty * sellTarget.pvp,
-          fecha,
-        }).catch(() => {});
+        try {
+          const comprobante = await productosApi.enviarComprobante({
+            correo:         sellEmail.trim(),
+            nombreCliente:  'Cliente',
+            nombreProducto: sellTarget.nombre,
+            codigoProducto: sellTarget.codigo_personal,
+            cantidad:       qty,
+            pvp:            sellTarget.pvp,
+            total:          qty * sellTarget.pvp,
+            fecha,
+          });
+          emailOk = Boolean((comprobante.data as { sent?: boolean })?.sent);
+        } catch {
+          emailOk = false;
+        }
       }
       toast.success(`Venta registrada · ${qty} u. de ${sellTarget.nombre} (quedan ${sellTarget.stock - qty})`);
+      if (emailOk === false) {
+        toast.warning('La venta quedó registrada, pero el comprobante no se pudo enviar. Revisa la configuración de correo.');
+      }
       setSellTarget(null); setSellQty('1'); setSellEmail('');
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }
@@ -355,7 +364,8 @@ export default function InventoryPage() {
           id_usuario:    vnCliente.id_usuario,
           costo_total:   total,
         });
-        facturaId = (facRes.data as { id_factura?: number }).id_factura ?? null;
+        const factura = facRes.data as { id_factura?: number; idFactura?: number };
+        facturaId = factura.id_factura ?? factura.idFactura ?? null;
         if (facturaId) {
           await detallesFacturaApi.create({
             id_factura:  facturaId,
@@ -368,22 +378,34 @@ export default function InventoryPage() {
       } catch { /* factura opcional — no bloquea la venta */ }
 
       /* 3. Enviar comprobante por email (siempre, si el cliente tiene correo) */
+      let emailOk: boolean | null = null;
       if (vnCliente.correo) {
         const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        productosApi.enviarComprobante({
-          correo:         vnCliente.correo,
-          nombreCliente:  vnCliente.nombre,
-          nombreProducto: vnTarget.nombre,
-          codigoProducto: vnTarget.codigo_personal,
-          cantidad:       qty,
-          pvp:            vnTarget.pvp,
-          total,
-          fecha,
-          referencia:     facturaId ? `FAC-${String(facturaId).padStart(5, '0')}` : undefined,
-        }).catch(() => { /* no bloquear si email falla */ });
+        try {
+          const comprobante = await productosApi.enviarComprobante({
+            correo:         vnCliente.correo,
+            nombreCliente:  vnCliente.nombre,
+            nombreProducto: vnTarget.nombre,
+            codigoProducto: vnTarget.codigo_personal,
+            cantidad:       qty,
+            pvp:            vnTarget.pvp,
+            total,
+            fecha,
+            referencia:     facturaId ? `FAC-${String(facturaId).padStart(5, '0')}` : undefined,
+          });
+          emailOk = Boolean((comprobante.data as { sent?: boolean })?.sent);
+        } catch {
+          emailOk = false;
+        }
       }
 
       toast.success(`Venta registrada · ${qty} u. de ${vnTarget.nombre} → ${vnCliente.nombre}`);
+      if (emailOk === false) {
+        toast.warning('La venta quedó registrada, pero el comprobante no se pudo enviar. Revisa la configuración de correo.');
+      }
+      if (!facturaId) {
+        toast.warning('La venta se registró, pero no se pudo abrir el comprobante porque no se creó la factura.');
+      }
       setVnTarget(null); setVnStep('search'); setVnQuery(''); setVnCliente(null); setVnQty('1');
       fetchData();
       if (facturaId) {

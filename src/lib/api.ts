@@ -87,11 +87,12 @@ api.interceptors.response.use(
       (url.endsWith('/usuarios') && method === 'post');
 
     if (err.response?.status === 401 && !isAuthPublico) {
-      // Siempre cerrar sesión al recibir 401 en endpoints protegidos.
-      // Puede ser token expirado, usuario eliminado, o secret cambiado.
-      localStorage.removeItem('gm_token');
-      localStorage.removeItem('gm_user');
-      window.dispatchEvent(new Event('gm:unauthorized'));
+      const token = localStorage.getItem('gm_token');
+      if (tokenVencido(token)) {
+        localStorage.removeItem('gm_token');
+        localStorage.removeItem('gm_user');
+        window.dispatchEvent(new Event('gm:unauthorized'));
+      }
     }
     return Promise.reject(err);
   }
