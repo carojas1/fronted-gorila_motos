@@ -94,7 +94,14 @@ export default function InvoicePage() {
             
             const { data } = await detallesFacturaApi.byFactura(factura.id_factura);
             setDetalles((data as DetalleFila[]) ?? []);
-          } catch {
+          } catch (err) {
+            const status = (err as { response?: { status?: number } })?.response?.status;
+            if (status === 401) {
+              localStorage.removeItem('gm_token');
+              localStorage.removeItem('gm_user');
+              window.dispatchEvent(new Event('gm:unauthorized'));
+              return;
+            }
             setError('Factura no encontrada');
           }
         } else {
