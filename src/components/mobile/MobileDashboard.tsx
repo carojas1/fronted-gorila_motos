@@ -198,19 +198,19 @@ export default function MobileDashboard() {
     <div className="m-dash">
       {/* Hero */}
       <div className="m-hero">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="m-hero-greet">{greeting}, {firstName}</p>
+        <div className="flex flex-col gap-1">
+          <p className="m-hero-greet">{greeting}, {firstName}</p>
+          <div className="flex items-center justify-between">
             <h1 className="m-hero-name">Panel</h1>
+            <span className="m-chip" style={{
+              background: isOpen ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+              borderColor: isOpen ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)',
+              color: isOpen ? '#10B981' : '#EF4444',
+            }}>
+              <span className="m-dot" style={{ background: isOpen ? '#10B981' : '#EF4444' }} />
+              {isOpen ? 'Abierto' : 'Cerrado'}
+            </span>
           </div>
-          <span className="m-chip" style={{
-            background: isOpen ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
-            borderColor: isOpen ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)',
-            color: isOpen ? '#10B981' : '#EF4444',
-          }}>
-            <span className="m-dot" style={{ background: isOpen ? '#10B981' : '#EF4444' }} />
-            {isOpen ? 'Abierto' : 'Cerrado'}
-          </span>
         </div>
         {isAdmin && (
           <div className="m-hero-income">

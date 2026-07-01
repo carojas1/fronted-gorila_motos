@@ -156,14 +156,15 @@ export default function InvoicePage() {
     <div className="space-y-6 pb-8" style={{ background: sc.pageBg }}>
 
       {/* ── Barra de acciones (solo pantalla) ── */}
-      <div className="no-print flex items-center justify-between flex-wrap gap-3">
+      <div className="no-print flex items-center justify-between flex-wrap gap-3 px-2">
         <div className="flex items-center gap-3">
           <Link to="/registros"
-                className="flex items-center gap-2 text-white/40 hover:text-white/80 text-sm font-semibold transition-colors">
-            <ArrowLeft size={15} /> Volver a Registros
+                className="flex items-center gap-2 text-sm font-semibold transition-colors"
+                style={{ color: sc.btnBackTxt }}>
+            <ArrowLeft size={15} /> Volver
           </Link>
-          <span className="text-white/20">·</span>
-          <span className="text-white/35 text-sm font-mono">{numComp}</span>
+          <span style={{ color: sc.btnBackBord }}>·</span>
+          <span className="text-sm font-mono" style={{ color: sc.btnBackTxt, opacity: 0.7 }}>{numComp}</span>
         </div>
         <button
           onClick={() => window.print()}

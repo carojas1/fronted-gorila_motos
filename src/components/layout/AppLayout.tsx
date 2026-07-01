@@ -592,7 +592,7 @@ export default function AppLayout() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
             className="p-4 md:p-6 lg:p-8 max-w-screen-2xl mx-auto"
-            style={{ paddingBottom: isNativeApp ? 92 : undefined }}
+            style={{ paddingBottom: isNativeApp ? 120 : undefined }}
           >
             {/* Boundary por página: si una pantalla falla, el menú sigue vivo
                 y al navegar a otra ruta (resetKey) se recupera sola. */}
