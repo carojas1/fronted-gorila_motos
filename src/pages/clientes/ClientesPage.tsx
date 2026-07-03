@@ -23,6 +23,7 @@ import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { fmtDate, fmtMoney, ESTADO_REGISTRO, extractPhone, extractCedula, initials, toIsoStr } from '../../lib/utils';
 import { imagenMoto } from '../../lib/fotos';
+import { cleanDescripcion, detalleKind } from '../../lib/detalles';
 import type { Usuario, Moto, CargaCombustible, Factura, DetalleFactura } from '../../types';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -67,6 +68,7 @@ interface Reg {
   fecha: string;
   descripcion: string;
   kilometraje?: number | null;
+  detalles?: DetalleFactura[];
 }
 
 type BV = 'warning'|'info'|'success'|'purple'|'teal'|'default';
@@ -85,6 +87,7 @@ function normalizeReg(r: Record<string,unknown>): Reg {
     fecha:          String(r.fecha ?? ''),
     descripcion:    String(r.descripcion ?? ''),
     kilometraje:    r.kilometraje != null ? Number(r.kilometraje) : null,
+    detalles:       Array.isArray(r.detalles) ? r.detalles as DetalleFactura[] : [],
   };
 }
 
@@ -338,6 +341,24 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                         {r.kilometraje ? <span className="flex items-center gap-1"><Bike size={9} />{r.kilometraje.toLocaleString('es-EC')} km</span> : null}
                         {r.descripcion ? <span className="italic truncate max-w-[160px]">{r.descripcion}</span> : null}
                       </div>
+                      {r.descripcion ? (
+                        <p className="text-[11px] text-white/35 mt-1 leading-relaxed">{r.descripcion}</p>
+                      ) : null}
+                      {r.detalles && r.detalles.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {r.detalles.map((d, idx) => {
+                            const kind = detalleKind(d);
+                            const color = kind === 'descuento' ? 'text-emerald-400' : kind === 'repuesto' ? 'text-amber-400' : 'text-blue-400';
+                            return (
+                              <div key={d.idDetalleFactura ?? d.id_detalle ?? idx} className="flex items-center gap-2 text-[11px] text-white/45">
+                                <span className={`font-black uppercase ${color}`}>{kind === 'descuento' ? 'Cupón' : kind === 'repuesto' ? 'Rep.' : 'MO'}</span>
+                                <span className="flex-1 min-w-0 truncate">{cleanDescripcion(d.descripcion) || 'Detalle'}</span>
+                                <span className="tabular-nums text-white/55">{fmtMoney(Number(d.subtotal ?? 0))}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <Badge variant={v} dot>{est.label}</Badge>

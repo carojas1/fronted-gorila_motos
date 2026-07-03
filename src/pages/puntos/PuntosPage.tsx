@@ -10,6 +10,7 @@ import { registrosApi, motosApi, usuariosApi, combustibleApi } from '../../lib/a
 import { useAuth } from '../../contexts/AuthContext';
 import type { RegistroDetalle, Moto, Usuario } from '../../types';
 import { fmtDate, fmtMoney, toIsoStr } from '../../lib/utils';
+import { puntosCanjeadosEnRegistros } from '../../lib/puntos';
 
 /* ── Tabla de puntos por cilindraje ── */
 const POINTS_TABLE: { max: number; pts: number; label: string; color: string }[] = [
@@ -95,8 +96,11 @@ export default function PuntosPage() {
         const userMotos = motos.filter(m => m.id_usuario === u.id_usuario);
         const userPlacas = new Set(userMotos.map(m => m.placa));
 
-        const historia: HistItem[] = records
-          .filter(r => userPlacas.has(r.placa))
+        const userRecords = records.filter(r =>
+          (r.id_cliente != null && r.id_cliente === u.id_usuario) || userPlacas.has(r.placa)
+        );
+
+        const historia: HistItem[] = userRecords
           .map(r => {
             const moto   = motoMap.get(r.placa);
             const cc     = moto?.cilindraje ?? 125;
@@ -121,11 +125,13 @@ export default function PuntosPage() {
         const cargasUser = cargasAll.filter(c => placasSet.has(c.placa));
         const diasUnicos = new Set(cargasUser.map(c => String(c.fecha).slice(0, 10)));
         const ptsCombustible = diasUnicos.size * 2;
-        const totales = totalesServicio + ptsCombustible;
-        return { usuario: u, motos: userMotos, historia, totales, canjeados: 0, ptsCombustible };
+        const bonus = Number(u.puntosBonus ?? 0);
+        const totales = totalesServicio + ptsCombustible + bonus;
+        const canjeados = puntosCanjeadosEnRegistros(userRecords);
+        return { usuario: u, motos: userMotos, historia, totales, canjeados, ptsCombustible };
       });
 
-      userPoints.sort((a, b) => b.totales - a.totales);
+      userPoints.sort((a, b) => (b.totales - b.canjeados) - (a.totales - a.canjeados));
       setData(userPoints);
       if (userPoints.length > 0) setSelUser(userPoints[0].usuario.id_usuario);
       setLoading(false);
@@ -176,7 +182,7 @@ export default function PuntosPage() {
               onClick={() => setSelUser(d.usuario.id_usuario)}
               className={`filter-chip ${selUser === d.usuario.id_usuario ? 'active' : ''}`}
             >
-              {d.usuario.nombre_completo.split(' ')[0]} · {d.totales} pts
+              {d.usuario.nombre_completo.split(' ')[0]} · {Math.max(0, d.totales - d.canjeados)} pts
             </button>
           ))}
         </div>
@@ -263,9 +269,10 @@ export default function PuntosPage() {
 
           {/* ── Tab: Resumen ── */}
           {tab === 'resumen' && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               {[
-                { icon: Zap,       label: 'Puntos por servicios', value: selected.totales - selected.ptsCombustible, color: '#F59E0B', unit: 'pts'  },
+                { icon: Zap,       label: 'Puntos ganados',       value: selected.totales,            color: '#F59E0B', unit: 'pts'  },
+                { icon: Gift,      label: 'Puntos canjeados',     value: selected.canjeados,         color: '#EF4444', unit: 'pts' },
                 { icon: Fuel,      label: 'Puntos por combustible', value: selected.ptsCombustible, color: '#3B82F6', unit: 'pts' },
                 { icon: Award,     label: 'Cashback disponible',  value: cashback,                  color: '#10B981', unit: 'USD' },
               ].map(({ icon: Icon, label, value, color, unit }) => (
@@ -283,7 +290,7 @@ export default function PuntosPage() {
               ))}
 
               {/* Motos del cliente */}
-              <div className="sm:col-span-3 gm-card-d rounded-2xl p-5">
+              <div className="sm:col-span-4 gm-card-d rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <Trophy size={13} className="text-gm-red/60" />
                   <p className="text-[10px] tracking-[0.3em] uppercase text-white/28 font-bold">Motos registradas</p>
@@ -319,7 +326,11 @@ export default function PuntosPage() {
                 <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
                   Historial de puntos ({selected.historia.length})
                 </p>
-                <p className="text-[11px] text-white/35">Total: <span className="text-white/70 font-bold">{selected.totales} pts</span></p>
+                <p className="text-[11px] text-white/35">
+                  Ganados: <span className="text-white/70 font-bold">{selected.totales} pts</span>
+                  {' '}· Canjeados: <span className="text-white/70 font-bold">{selected.canjeados} pts</span>
+                  {' '}· Disponibles: <span className="text-white/70 font-bold">{disponibles} pts</span>
+                </p>
               </div>
               {selected.historia.length === 0 ? (
                 <div className="py-14 text-center text-white/25 text-sm">Sin servicios registrados aún</div>
@@ -370,7 +381,7 @@ export default function PuntosPage() {
                   </p>
                 </div>
                 <p className="text-[11px] text-white/35">
-                  Total puntos en circulación: <span className="text-white/70 font-bold">{data.reduce((s, d) => s + d.totales, 0)}</span>
+                  Total puntos disponibles: <span className="text-white/70 font-bold">{data.reduce((s, d) => s + Math.max(0, d.totales - d.canjeados), 0)}</span>
                 </p>
               </div>
               {data.length === 0 ? (
@@ -390,8 +401,9 @@ export default function PuntosPage() {
                     </thead>
                     <tbody>
                       {data.map((d, i) => {
-                        const lvl      = getLevel(d.totales);
-                        const cb       = Math.floor(d.totales / 100) * 5;
+                        const disp     = Math.max(0, d.totales - d.canjeados);
+                        const lvl      = getLevel(disp);
+                        const cb       = Math.floor(disp / 100) * 5;
                         const isActive = d.usuario.id_usuario === selUser;
                         return (
                           <tr
@@ -426,7 +438,7 @@ export default function PuntosPage() {
                               </span>
                             </td>
                             <td className="text-right">
-                              <span className="text-base font-black text-white">{d.totales}</span>
+                              <span className="text-base font-black text-white">{disp}</span>
                               <span className="text-[11px] text-white/30 ml-1">pts</span>
                             </td>
                             <td className="text-right text-white/55 font-semibold">{d.historia.length}</td>

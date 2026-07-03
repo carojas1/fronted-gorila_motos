@@ -181,7 +181,8 @@ export default function InvoicePage() {
   /* Separar los detalles en mano de obra y repuestos para la factura */
   const manoItems = detalles.filter(d => detalleKind(d) === 'mano');
   const repItems  = detalles.filter(d => detalleKind(d) === 'repuesto');
-  const { mano: totalMano, repuestos: totalRep, total: totalDetalles } = splitTotales(detalles);
+  const descItems = detalles.filter(d => detalleKind(d) === 'descuento');
+  const { mano: totalMano, repuestos: totalRep, descuentos: totalDesc, total: totalDetalles } = splitTotales(detalles);
   /* Si no hay detalles cargados (orden vieja), usar el costo_total como mano de obra */
   const hayDetalles = detalles.length > 0;
   const subtotalFactura = hayDetalles ? totalDetalles : (reg.costo_total ?? 0);
@@ -356,6 +357,19 @@ export default function InvoicePage() {
 
         {/* ── Detalle del servicio ── */}
         <div className="border-b border-gray-200">
+          {(reg.descripcion || reg.observaciones) && (
+            <div className="px-6 pt-4 pb-3" style={{ background: '#FFFDFD', borderBottom: '1px solid #F3F4F6' }}>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-2">
+                Ingreso y observaciones
+              </h2>
+              {reg.descripcion && (
+                <p className="text-[12px] text-gray-700 leading-relaxed">{reg.descripcion}</p>
+              )}
+              {reg.observaciones && reg.observaciones !== reg.descripcion && (
+                <p className="text-[12px] text-gray-700 leading-relaxed mt-1">{reg.observaciones}</p>
+              )}
+            </div>
+          )}
           <div className="px-6 pt-5 pb-2 flex items-center gap-2">
             <h2 className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
               Detalle del Servicio
@@ -476,6 +490,32 @@ export default function InvoicePage() {
                   </tr>
                 );
               })}
+
+              {descItems.length > 0 && (
+                <tr>
+                  <td colSpan={5} style={{ padding: 0 }}>
+                    <div className="flex items-center gap-3 px-4 py-2"
+                         style={{ background: 'linear-gradient(90deg,#ECFDF5,#F7FEFA)', borderLeft: '3px solid #10B981' }}>
+                      <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#047857' }}>
+                        Descuento por puntos
+                      </span>
+                      <span className="ml-auto text-[11px] font-bold" style={{ color: '#047857' }}>{fmtMoney(totalDesc)}</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {descItems.map((d, i) => (
+                <tr key={`d${i}`} style={{ borderBottom: '1px solid #F0F1F3', background: '#F7FEFA' }}>
+                  <td style={{ width: 4, background: '#10B981', padding: 0 }} />
+                  <td className="px-3 py-3 text-sm text-gray-500 font-mono text-center">{d.cantidad ?? 1}</td>
+                  <td className="px-3 py-3">
+                    <p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Descuento por puntos'}</p>
+                    <p className="text-[10px] text-emerald-500 mt-0.5 font-semibold">CP-{String(i + 1).padStart(2, '0')}</p>
+                  </td>
+                  <td className="px-3 py-3 text-sm text-gray-500 text-right">{fmtMoney(Number(d.precioUnitario ?? 0))}</td>
+                  <td className="px-3 py-3 text-sm font-black text-emerald-700 text-right">{fmtMoney(Number(d.subtotal ?? 0))}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -534,6 +574,16 @@ export default function InvoicePage() {
                     </span>
                     <span className="font-black text-amber-800 text-sm">{fmtMoney(totalRep)}</span>
                   </div>
+                  {totalDesc !== 0 && (
+                    <div className="flex justify-between items-center py-2 px-3 rounded-lg"
+                         style={{ background: '#ECFDF5', border: '1px solid #BBF7D0' }}>
+                      <span className="text-xs text-emerald-700 font-semibold flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#10B981', flexShrink: 0 }} />
+                        Descuento puntos
+                      </span>
+                      <span className="font-black text-emerald-800 text-sm">{fmtMoney(totalDesc)}</span>
+                    </div>
+                  )}
                   <div className="border-t border-dashed border-gray-200 my-2" />
                 </>
               )}

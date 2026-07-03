@@ -9,7 +9,7 @@
    como mano de obra para no contar de más en repuestos.
    ───────────────────────────────────────────── */
 
-export type DetalleKind = 'mano' | 'repuesto';
+export type DetalleKind = 'mano' | 'repuesto' | 'descuento';
 
 /* Categorías de repuesto que pidió el dueño */
 export const CATEGORIAS_REPUESTO = [
@@ -24,6 +24,7 @@ export const CATEGORIAS_REPUESTO = [
 export type CategoriaRepuesto = typeof CATEGORIAS_REPUESTO[number]['key'];
 
 const MANO_TAG = '[MANO]';
+const DESC_PUNTOS_RE = /^\s*\[DESC\|PUNTOS:(\d+)\]/i;
 
 export function categoriaLabel(key?: string | null): string {
   return CATEGORIAS_REPUESTO.find(c => c.key === key)?.label ?? '';
@@ -35,6 +36,16 @@ export function buildManoDescripcion(desc: string): string {
 }
 export function buildRepuestoDescripcion(desc: string, cat?: string | null): string {
   return `[REP${cat ? '|' + cat : ''}] ${desc.trim()}`.trim();
+}
+export function buildDescuentoPuntosDescripcion(puntos: number): string {
+  return `[DESC|PUNTOS:${Math.max(0, Math.floor(puntos))}] Descuento por puntos`;
+}
+export function parseDescuentoPuntos(desc?: string | null): number {
+  const m = (desc ?? '').match(DESC_PUNTOS_RE);
+  return m ? Math.max(0, Number(m[1]) || 0) : 0;
+}
+export function isDescuentoPuntos(desc?: string | null): boolean {
+  return parseDescuentoPuntos(desc) > 0;
 }
 
 /* Forma flexible: acepta tanto el DTO del backend (idProducto) como
@@ -57,6 +68,7 @@ function idProductoDe(d: DetalleLike): number | null {
 export function detalleKind(d: DetalleLike): DetalleKind {
   if (idProductoDe(d) != null) return 'repuesto';           // inventario
   const desc = (d.descripcion ?? '').trimStart();
+  if (DESC_PUNTOS_RE.test(desc)) return 'descuento';
   if (desc.toUpperCase().startsWith('[REP')) return 'repuesto'; // manual/externo
   return 'mano';                                             // [MANO] o legado sin etiqueta
 }
@@ -64,7 +76,7 @@ export function detalleKind(d: DetalleLike): DetalleKind {
 /* Quitar la etiqueta [MANO] / [REP|cat] para mostrar al usuario */
 export function cleanDescripcion(desc?: string | null): string {
   if (!desc) return '';
-  return desc.replace(/^\s*\[(MANO|REP[^\]]*)\]\s*/i, '').trim();
+  return desc.replace(/^\s*\[(MANO|REP[^\]]*|DESC[^\]]*)\]\s*/i, '').trim();
 }
 
 /* Extraer la categoría de un repuesto manual ([REP|economica] → "economica") */
@@ -79,11 +91,14 @@ function num(v: number | string | null | undefined): number {
 }
 
 /* Sumar por tipo: { mano, repuestos, total } */
-export function splitTotales(detalles: DetalleLike[]): { mano: number; repuestos: number; total: number } {
-  let mano = 0, repuestos = 0;
+export function splitTotales(detalles: DetalleLike[]): { mano: number; repuestos: number; descuentos: number; total: number } {
+  let mano = 0, repuestos = 0, descuentos = 0;
   for (const d of detalles) {
     const sub = num(d.subtotal);
-    if (detalleKind(d) === 'mano') mano += sub; else repuestos += sub;
+    const kind = detalleKind(d);
+    if (kind === 'mano') mano += sub;
+    else if (kind === 'descuento') descuentos += sub;
+    else repuestos += sub;
   }
-  return { mano, repuestos, total: mano + repuestos };
+  return { mano, repuestos, descuentos, total: mano + repuestos + descuentos };
 }

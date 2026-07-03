@@ -222,7 +222,9 @@ function buildReportSheet(
       for (const d of items) {
         const sub = num(d.subtotal);
         const idProd = d.idProducto ?? null;
-        if (detalleKind(d) === 'mano') { rMano += sub; continue; }
+        const kind = detalleKind(d);
+        if (kind === 'mano') { rMano += sub; continue; }
+        if (kind === 'descuento') { continue; }
         if (idProd != null) {
           const c = costoProducto(idProd);
           rInvRev += sub;

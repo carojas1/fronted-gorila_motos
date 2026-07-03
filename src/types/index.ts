@@ -90,12 +90,15 @@ export interface Factura {
 }
 
 export interface DetalleFactura {
-  id_detalle:  number;
-  cantidad:    number;
-  id_factura:  number;
-  id_producto: number | null;
-  subtotal:    number;
-  descripcion: string | null;
+  id_detalle?:        number;
+  idDetalleFactura?:  number;
+  cantidad:           number;
+  id_factura?:        number;
+  id_producto?:       number | null;
+  idProducto?:        number | null;
+  precioUnitario?:    number | null;
+  subtotal:           number;
+  descripcion:        string | null;
 }
 
 export interface Registro {
@@ -114,6 +117,7 @@ export interface Registro {
 export interface RegistroDetalle {
   id_registro:      number;
   id_moto?:         number;
+  id_cliente?:      number;
   id_encargado?:    number;
   nombre_cliente:   string;
   nombre_encargado?: string;
@@ -128,6 +132,8 @@ export interface RegistroDetalle {
   id_factura:       number;
   estado:           number;
   kilometraje:      number | null;
+  observaciones?:   string | null;
+  detalles?:        DetalleFactura[];
 }
 
 export interface Ruta {

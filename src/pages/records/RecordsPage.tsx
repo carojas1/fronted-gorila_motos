@@ -21,6 +21,7 @@ import {
 import { calcularEstadoLocal } from '../../lib/mantenimiento';
 import { WORKSHOP_CONTACT } from '../../lib/constants';
 import { usePolling } from '../../hooks/usePolling';
+import { cleanDescripcion, detalleKind } from '../../lib/detalles';
 import type { RegistroDetalle, Usuario, Moto, Tipo, Producto } from '../../types';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -435,13 +436,16 @@ export default function RecordsPage() {
     let detalles: Array<{descripcion:string|null;subtotal:number;idProducto?:number|null;cantidad?:number}> = [];
     try { const res = await registrosApi.detalles(r.id_factura); detalles = (res.data as typeof detalles) ?? []; } catch { /* sin desglose */ }
 
-    let manoRows = '', repRows = '', manoTotal = 0, repTotal = 0;
+    let manoRows = '', repRows = '', descRows = '', manoTotal = 0, repTotal = 0, descTotal = 0;
     for (const d of detalles) {
       const sub = Number(d.subtotal ?? 0);
-      const desc = (d.descripcion ?? '').replace(/^\[MANO\]\s*/i,'').replace(/^\[REP\|?[^\]]*\]\s*/i,'');
+      const desc = cleanDescripcion(d.descripcion) || 'Detalle';
       const cant = Number(d.cantidad ?? 1);
-      const isRep = d.idProducto != null || /^\[REP/i.test(d.descripcion ?? '');
-      if (isRep) {
+      const kind = detalleKind(d);
+      if (kind === 'descuento') {
+        descTotal += sub;
+        descRows += `<tr><td>${desc}</td><td class="num">${cant}</td><td class="num">${fmtMoney(sub/cant)}</td><td class="num"><b>${fmtMoney(sub)}</b></td></tr>`;
+      } else if (kind === 'repuesto') {
         repTotal += sub;
         repRows += `<tr><td>${desc}</td><td class="num">${cant}</td><td class="num">${fmtMoney(sub/cant)}</td><td class="num"><b>${fmtMoney(sub)}</b></td></tr>`;
       } else {
@@ -466,7 +470,7 @@ export default function RecordsPage() {
       }
     } catch { /* keep URL fallback */ }
     const estLabel = ESTADO_REGISTRO[r.estado]?.label ?? '—';
-    const hasDesglose = manoRows || repRows;
+    const hasDesglose = manoRows || repRows || descRows;
 
     w.document.write(`<!DOCTYPE html><html lang="es"><head>
       <meta charset="UTF-8">
@@ -506,15 +510,19 @@ export default function RecordsPage() {
         .sec-header{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px 8px 0 0;margin-top:14px}
         .sec-header.mo{background:linear-gradient(90deg,rgba(59,130,246,.15),rgba(59,130,246,.04))}
         .sec-header.rep{background:linear-gradient(90deg,rgba(245,158,11,.15),rgba(245,158,11,.04))}
+        .sec-header.desc{background:linear-gradient(90deg,rgba(16,185,129,.15),rgba(16,185,129,.04))}
         .sec-icon{width:8px;height:20px;border-radius:3px}
         .sec-icon.mo{background:#3B82F6}
         .sec-icon.rep{background:#F59E0B}
+        .sec-icon.desc{background:#10B981}
         .sec-label{font-size:10px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
         .sec-label.mo{color:#3B82F6}
         .sec-label.rep{color:#F59E0B}
+        .sec-label.desc{color:#059669}
         .sec-sub{font-size:11px;font-weight:700;margin-left:auto}
         .sec-sub.mo{color:#3B82F6}
         .sec-sub.rep{color:#F59E0B}
+        .sec-sub.desc{color:#059669}
         table{width:100%;border-collapse:collapse;font-size:12px}
         thead th{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#94A3B8;padding:6px 10px;text-align:left;border-bottom:1px solid #EEF1F5}
         thead th.num{text-align:right}
@@ -523,6 +531,7 @@ export default function RecordsPage() {
         .num{text-align:right}
         tbody tr.mo-row td:first-child{border-left:3px solid #3B82F6;padding-left:9px}
         tbody tr.rep-row td:first-child{border-left:3px solid #F59E0B;padding-left:9px}
+        tbody tr.desc-row td:first-child{border-left:3px solid #10B981;padding-left:9px}
         /* ── TOTALES ── */
         .totals-wrap{margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px}
         .total-box{border-radius:12px;padding:14px 16px}
@@ -599,6 +608,7 @@ export default function RecordsPage() {
         ${telCli ? `<div class="info-field"><label>Teléfono</label><span>${telCli}</span></div>` : ''}
         ${r.kilometraje ? `<div class="info-field"><label>Kilometraje</label><span>${r.kilometraje.toLocaleString('es-EC')} km</span></div>` : ''}
         ${r.descripcion ? `<div class="info-field full"><label>Fallas reportadas</label><span style="font-weight:500;font-size:12px;line-height:1.5">${r.descripcion}</span></div>` : ''}
+        ${r.observaciones && r.observaciones !== r.descripcion ? `<div class="info-field full"><label>Observaciones generales</label><span style="font-weight:500;font-size:12px;line-height:1.5">${r.observaciones}</span></div>` : ''}
       </div>
 
       <!-- DETALLE DE SERVICIOS -->
@@ -620,6 +630,14 @@ export default function RecordsPage() {
       </div>
       <table><thead><tr><th>Descripción</th><th class="num">Cant.</th><th class="num">P. Unit.</th><th class="num">Subtotal</th></tr></thead>
       <tbody>${repRows.replace(/<tr>/g,'<tr class="rep-row">')}</tbody></table>` : ''}
+      ${descRows ? `
+      <div class="sec-header desc">
+        <div class="sec-icon desc"></div>
+        <span class="sec-label desc">Descuento por puntos</span>
+        <span class="sec-sub desc">${fmtMoney(descTotal)}</span>
+      </div>
+      <table><thead><tr><th>DescripciÃ³n</th><th class="num">Cant.</th><th class="num">Valor</th><th class="num">Subtotal</th></tr></thead>
+      <tbody>${descRows.replace(/<tr>/g,'<tr class="desc-row">')}</tbody></table>` : ''}
       <div class="totals-wrap">
         ${manoRows ? `<div class="total-box mo"><div class="tlabel">Mano de obra</div><div class="tval">${fmtMoney(manoTotal)}</div></div>` : '<div></div>'}
         ${repRows  ? `<div class="total-box rep"><div class="tlabel">Repuestos</div><div class="tval">${fmtMoney(repTotal)}</div></div>` : '<div></div>'}
@@ -1220,6 +1238,9 @@ export default function RecordsPage() {
         open={!!facturaTarget}
         registro={facturaTarget}
         productos={productos}
+        usuarios={usuarios}
+        registros={registros}
+        motos={todasMotos}
         completarAlGuardar={facturaCompletar}
         onClose={() => { setFacturaTarget(null); setFacturaCompletar(false); }}
         onSaved={onFacturaGuardada}
@@ -1295,6 +1316,24 @@ export default function RecordsPage() {
                       <span className="plate-tag text-[10px] py-0.5 px-1.5 mr-1">{r.placa}</span>
                       {r.descripcion}
                     </p>
+                    {r.observaciones && r.observaciones !== r.descripcion && (
+                      <p className="text-[11px] text-white/35 mt-1 leading-relaxed">{r.observaciones}</p>
+                    )}
+                    {r.detalles && r.detalles.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {r.detalles.map((d, idx) => {
+                          const kind = detalleKind(d);
+                          const color = kind === 'descuento' ? 'text-emerald-400' : kind === 'repuesto' ? 'text-amber-400' : 'text-blue-400';
+                          return (
+                            <div key={d.idDetalleFactura ?? d.id_detalle ?? idx} className="flex items-center gap-2 text-[11px] text-white/45">
+                              <span className={`font-black uppercase ${color}`}>{kind === 'descuento' ? 'Cupón' : kind === 'repuesto' ? 'Rep.' : 'MO'}</span>
+                              <span className="flex-1 min-w-0 truncate">{cleanDescripcion(d.descripcion) || 'Detalle'}</span>
+                              <span className="tabular-nums text-white/55">{fmtMoney(Number(d.subtotal ?? 0))}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-black text-white/80 tabular-nums">{fmtMoney(r.costo_total ?? 0)}</p>
