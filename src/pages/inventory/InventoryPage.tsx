@@ -48,7 +48,7 @@ type Form = z.infer<typeof schema>;
 function SkeletonRow() {
   return (
     <tr>
-      {[140, 60, 80, 55, 60, 60, 50].map((w, i) => (
+      {[140, 60, 80, 80, 55, 60, 60, 50].map((w, i) => (
         <td key={i} className="px-4 py-3.5">
           <div className="skeleton-d h-3.5 rounded-md" style={{ width: w }} />
         </td>
@@ -617,7 +617,7 @@ export default function InventoryPage() {
           <table className="gm-table-d">
             <thead>
               <tr>
-                {['Producto','Código','Categoría','Stock','Costo','PVP','Acciones'].map((h) => (
+                {['Producto','Código','Proveedor','Categoría','Stock','Costo','PVP','Acciones'].map((h) => (
                   <th key={h}>{h}</th>
                 ))}
               </tr>
@@ -628,7 +628,7 @@ export default function InventoryPage() {
                 : filtered.length === 0
                   ? (
                     <tr>
-                      <td colSpan={7}>
+                      <td colSpan={8}>
                         <div className="py-20 text-center flex flex-col items-center gap-4">
                           <div className="w-16 h-16 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-center">
                             <Package size={28} className="text-white/20" />
@@ -668,6 +668,18 @@ export default function InventoryPage() {
                         <span className="font-mono text-[11px] text-white/45 bg-white/[0.04] px-2 py-1 rounded-md border border-white/[0.06]">
                           {p.codigo_personal}
                         </span>
+                      </td>
+                      <td>
+                        {p.codigo_proveedor ? (
+                          <div className="flex flex-col">
+                            <span className="text-[11.5px] font-semibold text-white/75">
+                              {proveedores.find(pr => pr.codigo === p.codigo_proveedor)?.nombre || p.codigo_proveedor}
+                            </span>
+                            <span className="text-[9px] text-white/30 font-mono">Cód: {p.codigo_proveedor}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-white/20">—</span>
+                        )}
                       </td>
                       <td>
                         <Badge>{catName(p.id_categoria)}</Badge>

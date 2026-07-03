@@ -7,10 +7,12 @@
 import { useState } from 'react';
 import {
   BookOpen, Droplet, Wind, Zap, Link2, Circle, Disc,
-  ClipboardCheck, Gauge, Bell, CheckCircle, type LucideIcon,
+  ClipboardCheck, Gauge, Bell, CheckCircle, Settings, type LucideIcon,
 } from 'lucide-react';
 import { INTERVALOS, RANGOS_CC, TIPO_LABEL } from '../../lib/mantenimiento';
 import { useTheme } from '../../lib/theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const ICON_BY_TIPO: Record<string, LucideIcon> = {
   ACEITE: Droplet, FILTRO_AIRE: Wind, BUJIA: Zap, CADENA: Link2,
@@ -22,6 +24,8 @@ const TIPOS_ORDEN = ['ACEITE', 'FILTRO_AIRE', 'BUJIA', 'CADENA', 'LLANTA_TRASERA
 export default function MetodologiaPage() {
   const [theme] = useTheme();
   const isDark = theme === 'dark';
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [rangoSel, setRangoSel] = useState(0);
   const intervalosSel = INTERVALOS[rangoSel];
 
@@ -34,18 +38,32 @@ export default function MetodologiaPage() {
 
       {/* ── Encabezado ── */}
       <div style={{ marginBottom: 26 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(59,130,246,0.14)', border: '1px solid rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <BookOpen size={21} color="#3B82F6" />
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(59,130,246,0.14)', border: '1px solid rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <BookOpen size={21} color="#3B82F6" />
+            </div>
+            <div>
+              <h1 style={{ color: isDark ? '#EBEBEB' : '#15151B', fontWeight: 800, fontSize: 23, margin: 0, letterSpacing: '-0.03em' }}>
+                Metodología de mantenimiento
+              </h1>
+              <p style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.42)', fontSize: 13, margin: 0 }}>
+                Cómo el sistema calcula cuándo cada moto necesita servicio
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 style={{ color: isDark ? '#EBEBEB' : '#15151B', fontWeight: 800, fontSize: 23, margin: 0, letterSpacing: '-0.03em' }}>
-              Metodología de mantenimiento
-            </h1>
-            <p style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(21,21,27,0.42)', fontSize: 13, margin: 0 }}>
-              Cómo el sistema calcula cuándo cada moto necesita servicio
-            </p>
-          </div>
+          {(user?.id_rol === 1 || user?.id_rol === 2) && (
+            <button
+              onClick={() => navigate('/ajustes/intervalos')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px',
+                background: '#E11428', color: '#fff', borderRadius: 12, fontWeight: 800,
+                fontSize: 13, cursor: 'pointer', border: 'none', boxShadow: '0 4px 14px rgba(225,20,40,0.3)'
+              }}
+            >
+              <Settings size={16} /> Configurar intervalos
+            </button>
+          )}
         </div>
       </div>
 
