@@ -665,11 +665,16 @@ export default function ContabilidadPage() {
   const movimientos = useMemo(() => {
     const ing = filtrar(registros.filter(r => r.estado === 4))
       .map(r => ({ tipo:'ingreso' as const, fecha:toIsoStr(r.fecha), desc:`Servicio · ${r.placa}`, monto:r.costo_total??0, id:r.id_registro }));
+    
+    const facturasDirectas = filtrar(facturas.filter(f => !registros.some(r => r.id_factura === f.id_factura))
+      .map(f => ({ ...f, fecha: f.fecha_emision || f.fecha })));
+    const ingDir = facturasDirectas.map(f => ({ tipo:'ingreso' as const, fecha:toIsoStr(f.fecha_emision || f.fecha), desc:`Venta mostrador (Ref: ${f.id_factura})`, monto:f.costo_total??0, id: -f.id_factura }));
+    
     const gas = filtrar(gastos)
       .map(g => ({ tipo:'gasto' as const, fecha:toIsoStr(g.fecha), desc:`${g.concepto} — ${nombreEmpleado(g.id_empleado)}`, monto:Number(g.monto), id:g.id_pago, id_pago:g.id_pago }));
-    return [...ing, ...gas].sort((a,b) => b.fecha.localeCompare(a.fecha)).slice(0, 30);
+    return [...ing, ...ingDir, ...gas].sort((a,b) => b.fecha.localeCompare(a.fecha)).slice(0, 30);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registros, gastos, empleados, filtrar]);
+  }, [registros, facturas, gastos, empleados, filtrar]);
 
   /* ── KPIs de negocio ampliados ── */
   const serviciosPeriodo = useMemo(
@@ -796,20 +801,40 @@ export default function ContabilidadPage() {
               disabled={exportLoading}
               onClick={async () => {
                 const ordered = filtrar(registros.filter(r => r.estado === 4));
+                const facturasDirectas = filtrar(facturas.filter(f => !registros.some(r => r.id_factura === f.id_factura)).map(f => ({ ...f, fecha: f.fecha_emision || f.fecha })));
                 setExportLoading(true);
                 let detallesMap: Map<number, DetalleFila[]> | undefined;
                 try {
-                  const results = await Promise.allSettled(
-                    ordered.map(r => r.id_factura
+                  const results = await Promise.allSettled([
+                    ...ordered.map(r => r.id_factura
                       ? detallesFacturaApi.byFactura(r.id_factura).then(res => ({ id: r.id_registro, d: res.data as DetalleFila[] }))
                       : Promise.resolve({ id: r.id_registro, d: [] as DetalleFila[] })
-                    )
-                  );
+                    ),
+                    ...facturasDirectas.map(f => detallesFacturaApi.byFactura(f.id_factura).then(res => ({ id: -f.id_factura, d: res.data as DetalleFila[] })))
+                  ]);
                   detallesMap = new Map(
                     results.flatMap(res => res.status === 'fulfilled' ? [[res.value.id, res.value.d]] : [])
                   );
                 } catch { /* skip breakdown on error */ }
-                exportarExcel(filtrar(registros), filtrar(gastos), empleados,
+                
+                const mockRegistros = facturasDirectas.map(f => ({
+                  id_registro: -f.id_factura,
+                  id_cliente: 0,
+                  id_moto: 0,
+                  id_encargado: 0,
+                  id_factura: f.id_factura,
+                  fecha: f.fecha,
+                  estado: 4,
+                  tipo: 0,
+                  observaciones: 'Venta de mostrador (Directa)',
+                  kilometraje: 0,
+                  nivel_gasolina: '',
+                  costo_total: f.costo_total,
+                  placa: 'Venta Directa',
+                  tipo_servicio: 'Venta Inventario'
+                } as RegistroDetalle));
+
+                exportarExcel([...filtrar(registros), ...mockRegistros], filtrar(gastos), empleados,
                   filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio), detallesMap, productos,
                   filtroTipo, filtroAnio, filtroFecha);
                 setExportLoading(false);
@@ -979,14 +1004,16 @@ export default function ContabilidadPage() {
           disabled={desgloseLoading}
           onClick={async () => {
             const ordered = filtrar(registros.filter(r => r.estado === 4));
+            const facturasDirectas = filtrar(facturas.filter(f => !registros.some(r => r.id_factura === f.id_factura)).map(f => ({ ...f, fecha: f.fecha_emision || f.fecha })));
             setDesgloseLoading(true);
             try {
-              const results = await Promise.allSettled(
-                ordered.map(r => r.id_factura
+              const results = await Promise.allSettled([
+                ...ordered.map(r => r.id_factura
                   ? detallesFacturaApi.byFactura(r.id_factura).then(res => res.data as DetalleFila[])
                   : Promise.resolve([] as DetalleFila[])
-                )
-              );
+                ),
+                ...facturasDirectas.map(f => detallesFacturaApi.byFactura(f.id_factura).then(res => res.data as DetalleFila[]))
+              ]);
               let mano = 0, rep = 0;
               for (const r of results) {
                 if (r.status === 'fulfilled') {
