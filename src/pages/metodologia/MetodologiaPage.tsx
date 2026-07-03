@@ -24,7 +24,7 @@ const TIPOS_ORDEN = ['ACEITE', 'FILTRO_AIRE', 'BUJIA', 'CADENA', 'LLANTA_TRASERA
 export default function MetodologiaPage() {
   const [theme] = useTheme();
   const isDark = theme === 'dark';
-  const { user } = useAuth();
+  const { isAdmin, isMecanico } = useAuth();
   const navigate = useNavigate();
   const [rangoSel, setRangoSel] = useState(0);
   const intervalosSel = INTERVALOS[rangoSel];
@@ -52,7 +52,7 @@ export default function MetodologiaPage() {
               </p>
             </div>
           </div>
-          {(user?.id_rol === 1 || user?.id_rol === 2) && (
+          {(isAdmin || isMecanico) && (
             <button
               onClick={() => navigate('/ajustes/intervalos')}
               style={{
