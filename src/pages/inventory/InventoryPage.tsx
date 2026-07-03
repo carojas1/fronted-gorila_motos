@@ -10,7 +10,7 @@ import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import gsap from 'gsap';
-import { productosApi, categoriasApi, usuariosApi, motosApi, facturasApi, detallesFacturaApi } from '../../lib/api';
+import { productosApi, categoriasApi, usuariosApi, motosApi, facturasApi, detallesFacturaApi, proveedorContactosApi } from '../../lib/api';
 import { isNativeApp } from '../../lib/platform';
 import { useTheme } from '../../lib/theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -68,6 +68,7 @@ export default function InventoryPage() {
   // Estados principales
   const [productos,    setProductos]    = useState<Producto[]>([]);
   const [categorias,   setCategorias]   = useState<Categoria[]>([]);
+  const [proveedores,  setProveedores]  = useState<{codigo: string, nombre: string}[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [saving,       setSaving]       = useState(false);
   const [search,       setSearch]       = useState('');
@@ -77,12 +78,17 @@ export default function InventoryPage() {
   const [deleteTarget,   setDeleteTarget]   = useState<Producto | null>(null);
   const [stockView,      setStockView]      = useState<'all' | 'ok' | 'low' | 'out'>('all');
 
-  /* Categorías (CRUD por el admin) */
   const [catModalOpen,  setCatModalOpen]  = useState(false);
   const [newCatName,    setNewCatName]    = useState('');
   const [newCatDesc,    setNewCatDesc]    = useState('');
   const [editingCat,    setEditingCat]    = useState<Categoria | null>(null);
   const [savingCat,     setSavingCat]     = useState(false);
+
+  /* Proveedor Modal (Crear rápido) */
+  const [provModalOpen, setProvModalOpen] = useState(false);
+  const [newProvCodigo, setNewProvCodigo] = useState('');
+  const [newProvNombre, setNewProvNombre] = useState('');
+  const [savingProv,    setSavingProv]    = useState(false);
 
   /* Venta directa (consumidor final — solo baja stock, sin orden) */
   const [sellTarget,    setSellTarget]    = useState<Producto | null>(null);
@@ -118,9 +124,14 @@ export default function InventoryPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [p, c] = await Promise.allSettled([productosApi.list(), categoriasApi.list()]);
+    const [p, c, pr] = await Promise.allSettled([
+      productosApi.list(), 
+      categoriasApi.list(),
+      proveedorContactosApi.list()
+    ]);
     if (p.status === 'fulfilled') setProductos(p.value.data as Producto[]);
     if (c.status === 'fulfilled') setCategorias(c.value.data as Categoria[]);
+    if (pr.status === 'fulfilled') setProveedores(pr.value.data as any[]);
     setLoading(false);
   }, []);
 
@@ -250,6 +261,27 @@ export default function InventoryPage() {
       if (editingCat?.id_categoria === c.id_categoria) { setEditingCat(null); setNewCatName(''); setNewCatDesc(''); }
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }
+  };
+
+  /* ─── Proveedor Rápido ─── */
+  const saveProveedor = async () => {
+    if (!newProvCodigo.trim() || !newProvNombre.trim()) { 
+      toast.error('Llena código y nombre'); 
+      return; 
+    }
+    setSavingProv(true);
+    try {
+      await proveedorContactosApi.guardar(newProvCodigo.trim().toUpperCase(), {
+        nombre: newProvNombre.trim(),
+        telefono: '', email: '', producto: ''
+      });
+      toast.success('Proveedor creado');
+      setValue('codigo_proveedor', newProvCodigo.trim().toUpperCase());
+      setProvModalOpen(false);
+      setNewProvCodigo(''); setNewProvNombre('');
+      fetchData();
+    } catch (err) { toast.error(getErrorMsg(err)); }
+    finally { setSavingProv(false); }
   };
 
   /* ─── Venta directa: baja stock sin crear orden ─── */
@@ -705,7 +737,25 @@ export default function InventoryPage() {
             <Input label="Nombre" placeholder="Nombre del producto" error={errors.nombre?.message} {...register('nombre')} />
             <Input label="Código personal" placeholder="COD-001" error={errors.codigo_personal?.message} {...register('codigo_personal')} />
           </div>
-          <Input label="Código proveedor" placeholder="PROV-001" error={errors.codigo_proveedor?.message} {...register('codigo_proveedor')} />
+          <div>
+            <label className="text-sm font-medium text-white/70 block mb-1.5 flex justify-between items-center">
+              <span>Proveedor</span>
+              <button type="button" onClick={() => setProvModalOpen(true)} className="text-[11px] text-gm-red hover:underline font-bold bg-transparent border-none p-0 cursor-pointer transition-transform hover:scale-105">
+                + Crear proveedor
+              </button>
+            </label>
+            <select
+              className="gm-input-d w-full"
+              {...register('codigo_proveedor')}
+            >
+              <option value="">-- Sin proveedor --</option>
+              {proveedores.map(pr => (
+                <option key={pr.codigo} value={pr.codigo}>
+                  {pr.nombre} (Cód. {pr.codigo})
+                </option>
+              ))}
+            </select>
+          </div>
           <Input label="Descripción" placeholder="Describe el producto" error={errors.descripcion?.message} {...register('descripcion')} />
           <div className="grid grid-cols-3 gap-4">
             <Input label="Costo ($)" type="number" step="0.01" placeholder="0.00" error={errors.costo?.message} {...register('costo')} />
@@ -1209,8 +1259,48 @@ export default function InventoryPage() {
               />
             </div>
           </div>
+          <div>
+            <label className="text-sm font-medium text-white/70 block mb-1.5">Proveedor</label>
+            <div className="flex gap-2">
+              <select className="gm-input-d flex-1" value={addStockVals.id_proveedor || ''} onChange={e => setAddStockVals(v => ({ ...v, id_proveedor: e.target.value }))}>
+                <option value="">Seleccionar proveedor...</option>
+                {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </select>
+              <Button variant="secondary" onClick={() => setProvModalOpen(true)}>+</Button>
+            </div>
+          </div>
         </div>
       </Modal>
+
+      {/* ══ MODAL CREAR PROVEEDOR RÁPIDO ══ */}
+      <Modal
+        open={provModalOpen}
+        onClose={() => setProvModalOpen(false)}
+        title="Crear Proveedor"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setProvModalOpen(false)}>Cancelar</Button>
+            <Button onClick={saveProveedor} loading={savingProv}>Guardar</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input 
+            label="Código (Único)" 
+            placeholder="Ej. IMMER, MOTUL" 
+            value={newProvCodigo} 
+            onChange={e => setNewProvCodigo(e.target.value.toUpperCase())} 
+          />
+          <Input 
+            label="Nombre" 
+            placeholder="Distribuidora XYZ" 
+            value={newProvNombre} 
+            onChange={e => setNewProvNombre(e.target.value)} 
+          />
+        </div>
+      </Modal>
+
     </div>
   );
 }

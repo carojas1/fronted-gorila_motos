@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import {
   User, Phone, Sun, Moon, Bell, BellOff, MessageCircle,
   Lock, Shield, Info, ChevronRight, Check, Save,
-  ExternalLink, RefreshCw, LogOut, HelpCircle,
+  ExternalLink, RefreshCw, LogOut, HelpCircle, Wrench
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../lib/theme';
@@ -111,7 +111,7 @@ function Row({
 }
 
 export default function AjustesPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin, isMecanico } = useAuth();
   const [theme, toggleTheme] = useTheme();
   const isDark = theme === 'dark';
   const [notif, toggleNotif] = useNotifPref();
@@ -254,6 +254,20 @@ export default function AjustesPage() {
           last
         />
       </Section>
+
+      {/* ─── Configuración de Taller (Solo Mecánicos) ─── */}
+      {(isAdmin || isMecanico) && (
+        <Section title="Taller y Mantenimiento">
+          <Row
+            icon={<Wrench size={18} />}
+            color='#E11428'
+            label="Intervalos de mantenimiento"
+            sub="Configura a los cuántos km se desgastan las piezas por cilindraje"
+            onClick={() => navigate('/ajustes/intervalos')}
+            last
+          />
+        </Section>
+      )}
 
       {/* ─── Soporte ─── */}
       <Section title="Soporte">

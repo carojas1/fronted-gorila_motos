@@ -36,9 +36,10 @@ interface ProveedorCardProps {
   productos: Producto[];
   contacto:  Contacto | null;
   onEdit:    (codigo: string) => void;
+  onView:    (codigo: string) => void;
 }
 
-function ProveedorCard({ codigo, productos, contacto, onEdit }: ProveedorCardProps) {
+function ProveedorCard({ codigo, productos, contacto, onEdit, onView }: ProveedorCardProps) {
   const [theme] = useTheme();
   const isDark = theme === 'dark';
   const tieneAlerta = productos.some(p => p.stock <= 5);
@@ -163,26 +164,15 @@ function ProveedorCard({ codigo, productos, contacto, onEdit }: ProveedorCardPro
         </div>
       )}
 
-      {/* Lista de productos */}
-      <div className="px-4 py-3 space-y-1.5 max-h-52 overflow-y-auto dark-scroll">
-        {productos.map(p => {
-          const lvl = stockLevel(p.stock);
-          const st  = LEVEL_STYLE[lvl];
-          return (
-            <div key={p.id_producto}
-                 className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl"
-                 style={{ background: st.bg, border: `1px solid ${st.border}` }}>
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-semibold text-white/75 truncate">{p.nombre}</p>
-                <p className="text-[10px] text-white/30 font-mono mt-0.5">{p.codigo_personal}</p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-[13px] font-black" style={{ color: st.color }}>{p.stock} u.</p>
-                <p className="text-[9px] font-bold" style={{ color: `${st.color}80` }}>{st.label}</p>
-              </div>
-            </div>
-          );
-        })}
+      {/* Ver productos */}
+      <div className="px-4 py-3 bg-white/5 border-t border-white/[0.04]">
+        <button
+          onClick={() => onView(codigo)}
+          className="w-full py-2 rounded-xl text-[12px] font-bold transition-all hover:bg-white/10"
+          style={{ border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E4E7EC'}` }}
+        >
+          Ver {productos.length} producto{productos.length !== 1 ? 's' : ''}
+        </button>
       </div>
 
       {/* Footer */}
@@ -313,6 +303,7 @@ export default function ProveedoresPage() {
   const [loading,     setLoading]     = useState(true);
   const [contactos,   setContactos]   = useState<Record<string, Contacto>>({});
   const [editCodigo,  setEditCodigo]  = useState<string | null>(null);
+  const [viewCodigo,  setViewCodigo]  = useState<string | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
   const [search,      setSearch]      = useState('');
   const [filterAlert, setFilterAlert] = useState(false);
@@ -561,6 +552,7 @@ export default function ProveedoresPage() {
               productos={ps}
               contacto={contactos[codigo] ?? null}
               onEdit={setEditCodigo}
+              onView={setViewCodigo}
             />
           ))}
         </div>
@@ -587,6 +579,68 @@ export default function ProveedoresPage() {
           onSave={handleSave}
           onClose={() => setCreatingNew(false)}
         />
+      )}
+
+      {/* ─── Modal de productos del proveedor ─── */}
+      {viewCodigo !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
+          <div className="w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden"
+               style={{ background: '#131318', border: '1px solid rgba(255,255,255,0.1)' }}>
+            
+            {/* Header del modal */}
+            <div className="px-6 py-4 flex items-center justify-between border-b border-white/[0.05]">
+              <div>
+                <h2 className="text-lg font-black text-white flex items-center gap-2">
+                  <Package size={20} className="text-gm-red" />
+                  Productos de {contactos[viewCodigo]?.nombre || viewCodigo}
+                </h2>
+                <p className="text-[12px] text-white/40 mt-1 font-mono">
+                  {productos.filter(p => p.codigo_proveedor === viewCodigo).length} productos asociados
+                </p>
+              </div>
+              <button onClick={() => setViewCodigo(null)} className="text-white/30 hover:text-white/70 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Contenido scrolleable */}
+            <div className="p-6 overflow-y-auto flex-1 dark-scroll bg-[#0D0D12]">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {productos.filter(p => p.codigo_proveedor === viewCodigo).map(p => {
+                  const lvl = stockLevel(p.stock);
+                  const st  = LEVEL_STYLE[lvl];
+                  return (
+                    <div key={p.id_producto} className="rounded-xl overflow-hidden" style={{ background: '#17171E', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div className="p-4 border-b border-white/[0.05]">
+                        <h3 className="text-sm font-bold text-white truncate mb-1">{p.nombre}</h3>
+                        <div className="flex gap-2 text-[10px] text-white/30 font-mono">
+                          <span>{p.codigo_personal || 'SIN CÓD.'}</span>
+                          <span>|</span>
+                          <span>Reg: {p.fecha_registro.split('T')[0]}</span>
+                        </div>
+                      </div>
+                      <div className="p-4 grid grid-cols-3 gap-2">
+                        <div>
+                          <p className="text-[10px] text-white/40 mb-0.5 uppercase">Costo</p>
+                          <p className="text-[12px] font-bold text-white/80">{fmtMoney(p.costo)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-white/40 mb-0.5 uppercase">PVP</p>
+                          <p className="text-[12px] font-bold text-white">{fmtMoney(p.pvp)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] mb-0.5 uppercase" style={{ color: `${st.color}80` }}>{st.label}</p>
+                          <p className="text-[13px] font-black" style={{ color: st.color }}>{p.stock} u.</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

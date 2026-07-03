@@ -287,6 +287,13 @@ export const proveedorContactosApi = {
     api.delete(`/proveedores-contactos/${encodeURIComponent(codigo)}`),
 };
 
+/* ── Parámetros de Mantenimiento (Intervalos configurables) ── */
+export const mantenimientoParametrosApi = {
+  list:   () => api.get('/mantenimiento-parametros'),
+  update: (id: number, intervaloKm: number) => 
+    api.put(`/mantenimiento-parametros/${id}`, { intervaloKm }),
+};
+
 /* ── Health check (keep-alive para Render) ──────────────────────────────────
    GET /tipos es un endpoint liviano con CORS. El actuator (/actuator/health)
    está fuera del filtro CORS de Spring Security → CORS error en el navegador.

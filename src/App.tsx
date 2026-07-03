@@ -8,6 +8,8 @@ import { AuthProvider, useAuth }  from './contexts/AuthContext';
 import { ToastProvider }          from './components/ui/Toast';
 import ProtectedRoute             from './components/layout/ProtectedRoute';
 import AppLayout                  from './components/layout/AppLayout';
+import { useEffect }              from 'react';
+import { useIntervalosStore }     from './lib/intervalosStore';
 
 /* Auth pages */
 import LoginPage               from './pages/auth/LoginPage';
@@ -40,6 +42,7 @@ import ContabilidadPage  from './pages/contabilidad/ContabilidadPage';
 import ProveedoresPage   from './pages/proveedores/ProveedoresPage';
 import MetodologiaPage   from './pages/metodologia/MetodologiaPage';
 import AjustesPage       from './pages/settings/AjustesPage';
+import IntervalosMantenimientoPage from './pages/settings/IntervalosMantenimientoPage';
 
 /* ─── Guarda de roles ─────────────────────────────────────────────────────────
    Redirige a /dashboard si el usuario no tiene ninguno de los roles indicados.
@@ -55,6 +58,13 @@ function RequireRole({ roles }: { roles: Array<'admin' | 'mecanico' | 'cliente'>
 }
 
 export default function App() {
+  const fetchParametros = useIntervalosStore(s => s.fetchParametros);
+
+  useEffect(() => {
+    // Carga los parámetros dinámicos de mantenimiento (ajustables por el mecánico)
+    fetchParametros();
+  }, [fetchParametros]);
+
   return (
     <AuthProvider>
       <ToastProvider>
@@ -94,6 +104,7 @@ export default function App() {
                   <Route path="/alertas"      element={<AlertasPage />}      />
                   <Route path="/diagnostico"  element={<DiagnosticoPage />}  />
                   <Route path="/proveedores"  element={<ProveedoresPage />}  />
+                  <Route path="/ajustes/intervalos" element={<IntervalosMantenimientoPage />} />
                 </Route>
 
                 {/* ADMIN + MECÁNICO: contabilidad (mecánico ve solo sus datos) */}
