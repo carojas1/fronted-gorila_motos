@@ -43,7 +43,7 @@ function BarChart({ data }: { data: { mes: number; total: number }[] }) {
                 boxShadow: total > 0 ? '0 0 8px rgba(225,20,40,0.3)' : undefined,
               }}
             />
-            <span className="text-[9px] text-white/20 group-hover:text-white/50 transition-colors">
+            <span className="text-[9px] dark:text-white/20 text-slate-900/20 group-hover:dark:text-white/50 text-slate-900/50 transition-colors">
               {MES_LABELS[mes].slice(0, 1)}
             </span>
           </div>
@@ -102,8 +102,8 @@ function TabResumen({ idEmpleado }: { idEmpleado: number }) {
         {KPIs.map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="gm-card-d rounded-2xl p-5">
             <Icon size={16} className={`${color} mb-3`} />
-            <p className="text-xl font-black text-white/90 tabular-nums">{value}</p>
-            <p className="text-[11px] text-white/35 mt-0.5">{label}</p>
+            <p className="text-xl font-black dark:text-white/90 text-slate-900/90 tabular-nums">{value}</p>
+            <p className="text-[11px] dark:text-white/35 text-slate-900/35 mt-0.5">{label}</p>
           </div>
         ))}
       </div>
@@ -111,10 +111,10 @@ function TabResumen({ idEmpleado }: { idEmpleado: number }) {
       <div className="gm-card-d rounded-2xl p-5">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="text-sm font-bold text-white/85">Distribución {anio}</p>
-            <p className="text-[11px] text-white/30 mt-0.5">Total pagado por mes</p>
+            <p className="text-sm font-bold dark:text-white/85 text-slate-900/85">Distribución {anio}</p>
+            <p className="text-[11px] dark:text-white/30 text-slate-900/30 mt-0.5">Total pagado por mes</p>
           </div>
-          <span className="text-[10px] tracking-[0.25em] uppercase text-white/25 font-semibold">12 meses</span>
+          <span className="text-[10px] tracking-[0.25em] uppercase dark:text-white/25 text-slate-900/25 font-semibold">12 meses</span>
         </div>
         <BarChart data={porMes} />
       </div>
@@ -125,11 +125,11 @@ function TabResumen({ idEmpleado }: { idEmpleado: number }) {
             <DollarSign size={16} className="text-gm-red" />
           </div>
           <div className="flex-1">
-            <p className="text-[11px] text-white/30 mb-0.5">Último pago registrado</p>
-            <p className="text-sm font-bold text-white/85">
+            <p className="text-[11px] dark:text-white/30 text-slate-900/30 mb-0.5">Último pago registrado</p>
+            <p className="text-sm font-bold dark:text-white/85 text-slate-900/85">
               {fmtMoney(Number(ultimo.monto))} — {ultimo.concepto}
             </p>
-            <p className="text-[11px] text-white/35">{fmtDate(ultimo.fecha)}</p>
+            <p className="text-[11px] dark:text-white/35 text-slate-900/35">{fmtDate(ultimo.fecha)}</p>
           </div>
         </div>
       )}
@@ -195,7 +195,7 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
     Bono:     'text-amber-400',
     Comisión: 'text-blue-400',
     Anticipo: 'text-violet-400',
-    Otro:     'text-white/45',
+    Otro:     'dark:text-white/45 text-slate-900/45',
   };
 
   return (
@@ -223,21 +223,21 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
                 <tr>
                   <td colSpan={5}>
                     <div className="py-14 text-center flex flex-col items-center gap-3">
-                      <DollarSign size={28} className="text-white/12" />
-                      <p className="text-sm text-white/25">Sin pagos registrados</p>
+                      <DollarSign size={28} className="dark:text-white/12 text-slate-900/12" />
+                      <p className="text-sm dark:text-white/25 text-slate-900/25">Sin pagos registrados</p>
                     </div>
                   </td>
                 </tr>
               ) : pagos.map((p) => (
                 <tr key={p.id_pago}>
-                  <td className="text-white/35 text-xs whitespace-nowrap">{fmtDate(p.fecha)}</td>
+                  <td className="dark:text-white/35 text-slate-900/35 text-xs whitespace-nowrap">{fmtDate(p.fecha)}</td>
                   <td>
-                    <span className={`text-sm font-semibold ${VARIANT_CONCEPTO[p.concepto] ?? 'text-white/45'}`}>
+                    <span className={`text-sm font-semibold ${VARIANT_CONCEPTO[p.concepto] ?? 'dark:text-white/45 text-slate-900/45'}`}>
                       {p.concepto}
                     </span>
                   </td>
-                  <td className="font-black text-white/85 tabular-nums">{fmtMoney(Number(p.monto))}</td>
-                  <td className="text-white/35 text-xs max-w-[180px] truncate">{p.notas ?? '—'}</td>
+                  <td className="font-black dark:text-white/85 text-slate-900/85 tabular-nums">{fmtMoney(Number(p.monto))}</td>
+                  <td className="dark:text-white/35 text-slate-900/35 text-xs max-w-[180px] truncate">{p.notas ?? '—'}</td>
                   <td>
                     <button
                       onClick={() => handleEliminar(p.id_pago)}
@@ -268,7 +268,7 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
       >
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Concepto</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Concepto</label>
             <select
               className="gm-select-d w-full"
               value={form.concepto}
@@ -278,7 +278,7 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Fecha</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Fecha</label>
             <input
               type="date"
               className="gm-input-d"
@@ -287,7 +287,7 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Monto ($)</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Monto ($)</label>
             <input
               type="number"
               className="gm-input-d"
@@ -298,7 +298,7 @@ function TabPagos({ idEmpleado }: { idEmpleado: number }) {
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Notas (opcional)</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Notas (opcional)</label>
             <input
               type="text"
               className="gm-input-d"
@@ -358,7 +358,7 @@ function TabPermisos({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-white/40">
+        <p className="text-sm dark:text-white/40 text-slate-900/40">
           Activa o desactiva el acceso a cada módulo del sistema para este empleado.
         </p>
         <div className="flex gap-2 shrink-0">
@@ -368,7 +368,7 @@ function TabPermisos({
               MODULOS.forEach(({ key }) => { all[key as ModuloKey] = true; });
               setPermisoState(all);
             }}
-            className="flex items-center gap-1.5 text-[11px] font-bold text-white/40 hover:text-white/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.18]"
+            className="flex items-center gap-1.5 text-[11px] font-bold dark:text-white/40 text-slate-900/40 hover:dark:text-white/70 text-slate-900/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.18]"
           >
             <CheckSquare size={12} /> Seleccionar todo
           </button>
@@ -378,7 +378,7 @@ function TabPermisos({
               MODULOS.forEach(({ key }) => { none[key as ModuloKey] = false; });
               setPermisoState(none);
             }}
-            className="flex items-center gap-1.5 text-[11px] font-bold text-white/40 hover:text-white/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.18]"
+            className="flex items-center gap-1.5 text-[11px] font-bold dark:text-white/40 text-slate-900/40 hover:dark:text-white/70 text-slate-900/70 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.18]"
           >
             <Square size={12} /> Quitar todo
           </button>
@@ -404,8 +404,8 @@ function TabPermisos({
                 }`} />
               </div>
               <div>
-                <p className={`text-sm font-bold ${enabled ? 'text-white/90' : 'text-white/40'}`}>{label}</p>
-                <p className="text-[11px] text-white/25">{enabled ? 'Con acceso' : 'Sin acceso'}</p>
+                <p className={`text-sm font-bold ${enabled ? 'dark:text-white/90 text-slate-900/90' : 'dark:text-white/40 text-slate-900/40'}`}>{label}</p>
+                <p className="text-[11px] dark:text-white/25 text-slate-900/25">{enabled ? 'Con acceso' : 'Sin acceso'}</p>
               </div>
             </button>
           );
@@ -466,7 +466,7 @@ export default function EmpleadoDetailPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
           <Wrench size={28} className="mx-auto text-gm-red animate-spin" />
-          <p className="text-white/30 text-sm">Cargando ficha...</p>
+          <p className="dark:text-white/30 text-slate-900/30 text-sm">Cargando ficha...</p>
         </div>
       </div>
     );
@@ -487,7 +487,7 @@ export default function EmpleadoDetailPage() {
       <div className="header-enter">
         <Link
           to="/perfiles"
-          className="inline-flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 transition-colors font-semibold tracking-wide mb-4"
+          className="inline-flex items-center gap-1.5 text-[11px] dark:text-white/30 text-slate-900/30 hover:dark:text-white/60 text-slate-900/60 transition-colors font-semibold tracking-wide mb-4"
         >
           <ChevronLeft size={13} /> Volver a Perfiles
         </Link>
@@ -506,9 +506,9 @@ export default function EmpleadoDetailPage() {
           </div>
 
           <div>
-            <p className="text-[10px] tracking-[0.3em] uppercase text-white/25 font-semibold mb-1">Ficha de empleado</p>
-            <h1 className="text-2xl font-black text-white leading-tight">{empleado.nombre_completo}</h1>
-            <p className="text-white/40 text-sm mt-0.5 flex items-center gap-2">
+            <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/25 text-slate-900/25 font-semibold mb-1">Ficha de empleado</p>
+            <h1 className="text-2xl font-black dark:text-white text-slate-900 leading-tight">{empleado.nombre_completo}</h1>
+            <p className="dark:text-white/40 text-slate-900/40 text-sm mt-0.5 flex items-center gap-2">
               <Wrench size={11} className="text-gm-red" /> Mecánico · {empleado.correo}
             </p>
           </div>

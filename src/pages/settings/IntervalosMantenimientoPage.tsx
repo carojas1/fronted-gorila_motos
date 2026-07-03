@@ -53,7 +53,7 @@ export default function IntervalosMantenimientoPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-white/50">Cargando parámetros...</div>;
+    return <div className="p-8 text-center dark:text-white/50 text-slate-900/50">Cargando parámetros...</div>;
   }
 
   return (
@@ -68,8 +68,8 @@ export default function IntervalosMantenimientoPage() {
           <ChevronLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-black text-white">Intervalos de Mantenimiento</h1>
-          <p className="text-xs text-white/50">Ajusta la vida útil (en km) de las piezas por cilindraje</p>
+          <h1 className="text-xl font-black dark:text-white text-slate-900">Intervalos de Mantenimiento</h1>
+          <p className="text-xs dark:text-white/50 text-slate-900/50">Ajusta la vida útil (en km) de las piezas por cilindraje</p>
         </div>
       </div>
 
@@ -84,7 +84,7 @@ export default function IntervalosMantenimientoPage() {
               <div className="px-4 py-3 border-b flex items-center gap-3"
                    style={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#E4E7EC', background: `${rango.color}15` }}>
                 <span className="w-3 h-3 rounded-full" style={{ background: rango.color }} />
-                <h2 className="text-sm font-bold text-white">{rango.label}</h2>
+                <h2 className="text-sm font-bold dark:text-white text-slate-900">{rango.label}</h2>
                 <span className="text-[10px] opacity-60 ml-auto font-mono">
                   {rango.ccMax ? `${rango.ccMin}-${rango.ccMax} cc` : `${rango.ccMin} cc +`}
                 </span>
@@ -99,8 +99,8 @@ export default function IntervalosMantenimientoPage() {
                     <div key={p.idParametro} className="flex items-center justify-between px-4 py-3 border-b"
                          style={{ borderColor: isLast ? 'transparent' : (isDark ? 'rgba(255,255,255,0.05)' : '#E4E7EC') }}>
                       <div className="flex-1 min-w-0 pr-4">
-                        <p className="text-[13px] font-bold text-white mb-0.5">{p.tipoMantenimiento.replace('_', ' ')}</p>
-                        <p className="text-[10px] text-white/40 leading-snug truncate">{p.descripcion}</p>
+                        <p className="text-[13px] font-bold dark:text-white text-slate-900 mb-0.5">{p.tipoMantenimiento.replace('_', ' ')}</p>
+                        <p className="text-[10px] dark:text-white/40 text-slate-900/40 leading-snug truncate">{p.descripcion}</p>
                       </div>
                       
                       <div className="shrink-0 flex items-center gap-3">
@@ -114,7 +114,7 @@ export default function IntervalosMantenimientoPage() {
                               disabled={saving}
                               autoFocus
                             />
-                            <span className="text-xs text-white/40">km</span>
+                            <span className="text-xs dark:text-white/40 text-slate-900/40">km</span>
                             <button onClick={cancelEdit} disabled={saving} className="p-1.5 text-white/30 hover:text-white/80">
                               <X size={14} />
                             </button>
@@ -124,8 +124,8 @@ export default function IntervalosMantenimientoPage() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-4">
-                            <span className="font-mono text-sm font-black text-white/90">
-                              {p.intervaloKm.toLocaleString('es-EC')} <span className="text-[10px] text-white/30 font-normal">km</span>
+                            <span className="font-mono text-sm font-black dark:text-white/90 text-slate-900/90">
+                              {p.intervaloKm.toLocaleString('es-EC')} <span className="text-[10px] dark:text-white/30 text-slate-900/30 font-normal">km</span>
                             </span>
                             <button onClick={() => startEdit(p)} className="text-white/20 hover:text-white/80 transition-colors p-1">
                               <Edit2 size={13} />

@@ -156,10 +156,10 @@ function UserCard({ u, roleName, onAssign, onDelete, onView, motosCount = 0 }: {
           <div className="flex items-start gap-3">
             <Avatar name={u.nombre_completo} />
             <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-black text-white/92 truncate leading-tight">
+              <p className="text-[14px] font-black dark:text-white/92 text-slate-900/92 truncate leading-tight">
                 {u.nombre_completo}
               </p>
-              <p className="text-[11px] text-white/28 mt-0.5">@{u.nombre_usuario}</p>
+              <p className="text-[11px] dark:text-white/28 text-slate-900/28 mt-0.5">@{u.nombre_usuario}</p>
               {tab && (
                 <div className="mt-1.5 flex items-center gap-1.5">
                   <tab.icon size={9} style={{ color }} />
@@ -173,25 +173,25 @@ function UserCard({ u, roleName, onAssign, onDelete, onView, motosCount = 0 }: {
 
           {/* Info */}
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-[12px] text-white/38">
-              <Mail size={10} className="text-white/20 shrink-0" />
+            <div className="flex items-center gap-2 text-[12px] dark:text-white/38 text-slate-900/38">
+              <Mail size={10} className="dark:text-white/20 text-slate-900/20 shrink-0" />
               <span className="truncate">{u.correo}</span>
             </div>
             {u.ciudad && (
-              <div className="flex items-center gap-2 text-[12px] text-white/38">
-                <MapPin size={10} className="text-white/20 shrink-0" />
+              <div className="flex items-center gap-2 text-[12px] dark:text-white/38 text-slate-900/38">
+                <MapPin size={10} className="dark:text-white/20 text-slate-900/20 shrink-0" />
                 <span>{u.ciudad}</span>
               </div>
             )}
             {cedula && (
-              <div className="flex items-center gap-2 text-[12px] text-white/38">
-                <Shield size={10} className="text-white/20 shrink-0" />
+              <div className="flex items-center gap-2 text-[12px] dark:text-white/38 text-slate-900/38">
+                <Shield size={10} className="dark:text-white/20 text-slate-900/20 shrink-0" />
                 <span className="font-mono tracking-wider">C.I. {cedula}</span>
               </div>
             )}
             {phone && phone !== "N/A" && (
-              <div className="flex items-center gap-2 text-[12px] text-white/38">
-                <Star size={10} className="text-white/20 shrink-0" />
+              <div className="flex items-center gap-2 text-[12px] dark:text-white/38 text-slate-900/38">
+                <Star size={10} className="dark:text-white/20 text-slate-900/20 shrink-0" />
                 <span>{phone}</span>
               </div>
             )}
@@ -240,7 +240,7 @@ function UserCard({ u, roleName, onAssign, onDelete, onView, motosCount = 0 }: {
               {onDelete && !isProtected && (
                 <button
                   onClick={() => onDelete(u)}
-                  className="flex items-center gap-1 text-[11px] font-bold text-white/20 hover:text-red-400 transition-colors duration-150"
+                  className="flex items-center gap-1 text-[11px] font-bold dark:text-white/20 text-slate-900/20 hover:text-red-400 transition-colors duration-150"
                   title="Eliminar cuenta"
                 >
                   <Trash2 size={10} />
@@ -456,14 +456,14 @@ export default function ProfilesPage() {
         className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2"
       >
         <div>
-          <p className="text-[10px] tracking-[0.38em] uppercase text-white/20 font-black mb-2 flex items-center gap-2">
+          <p className="text-[10px] tracking-[0.38em] uppercase dark:text-white/20 text-slate-900/20 font-black mb-2 flex items-center gap-2">
             <Activity size={10} className="text-gm-red" />
             Sistema · Gestión de personal
           </p>
-          <h1 className="text-[2rem] font-black text-white leading-tight tracking-tight">
+          <h1 className="text-[2rem] font-black dark:text-white text-slate-900 leading-tight tracking-tight">
             Usuarios del <span className="text-gradient-red">sistema</span>
           </h1>
-          <p className="text-white/28 text-sm mt-1">
+          <p className="dark:text-white/28 text-slate-900/28 text-sm mt-1">
             {usuarios.length} cuentas registradas · {countFor("SINROL")} sin rol asignado
           </p>
         </div>
@@ -499,7 +499,7 @@ export default function ProfilesPage() {
             </div>
             <div>
               <p className="text-xl font-black leading-none" style={{ color }}>{value}</p>
-              <p className="text-[11px] text-white/32 font-medium mt-0.5 leading-tight">{label}</p>
+              <p className="text-[11px] dark:text-white/32 text-slate-900/32 font-medium mt-0.5 leading-tight">{label}</p>
             </div>
           </motion.div>
         ))}
@@ -567,13 +567,13 @@ export default function ProfilesPage() {
               exit={{ opacity: 0, scale: 0.85 }}
               transition={{ duration: 0.12 }}
               onClick={() => { setSearch(""); setSearchEmail(""); }}
-              className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/70 font-semibold transition-colors"
+              className="flex items-center gap-1.5 text-[11px] dark:text-white/30 text-slate-900/30 hover:dark:text-white/70 text-slate-900/70 font-semibold transition-colors"
             >
               <X size={12} /> Limpiar filtros
             </motion.button>
           )}
         </AnimatePresence>
-        <span className="text-[11px] text-white/20 font-medium">
+        <span className="text-[11px] dark:text-white/20 text-slate-900/20 font-medium">
           {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -592,13 +592,13 @@ export default function ProfilesPage() {
         >
           <div className="w-20 h-20 rounded-3xl flex items-center justify-center"
                style={{ background: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.03)", border: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid #E4E7EC" }}>
-            <Users size={30} className="text-white/12" />
+            <Users size={30} className="dark:text-white/12 text-slate-900/12" />
           </div>
           <div>
-            <p className="text-sm font-black text-white/30">
+            <p className="text-sm font-black dark:text-white/30 text-slate-900/30">
               {search ? "Sin coincidencias" : `No hay ${activeTab_?.label.toLowerCase()}`}
             </p>
-            {search && <p className="text-xs text-white/18 mt-1">Intenta con otro término de búsqueda</p>}
+            {search && <p className="text-xs dark:text-white/18 text-slate-900/18 mt-1">Intenta con otro término de búsqueda</p>}
           </div>
         </motion.div>
       ) : (
@@ -642,8 +642,8 @@ export default function ProfilesPage() {
                  style={{ background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid #E4E7EC" }}>
               <Avatar name={roleModal.user.nombre_completo} size="sm" />
               <div>
-                <p className="text-[13px] font-black text-white/90">{roleModal.user.nombre_completo}</p>
-                <p className="text-[11px] text-white/35">{roleModal.user.correo}</p>
+                <p className="text-[13px] font-black dark:text-white/90 text-slate-900/90">{roleModal.user.nombre_completo}</p>
+                <p className="text-[11px] dark:text-white/35 text-slate-900/35">{roleModal.user.correo}</p>
               </div>
             </div>
           )}
@@ -651,7 +651,7 @@ export default function ProfilesPage() {
           <div className="grid grid-cols-2 gap-4">
             {/* Selector de rol */}
             <div>
-              <p className="text-[10px] tracking-[0.25em] uppercase font-black text-white/25 mb-3">
+              <p className="text-[10px] tracking-[0.25em] uppercase font-black dark:text-white/25 text-slate-900/25 mb-3">
                 Rol del sistema
               </p>
               <div className="space-y-2">
@@ -678,7 +678,7 @@ export default function ProfilesPage() {
                       <p className="text-[12px] font-black" style={{ color: selectedRol === r.id ? r.color : "rgba(255,255,255,0.75)" }}>
                         {r.label}
                       </p>
-                      <p className="text-[10px] text-white/30">{r.desc}</p>
+                      <p className="text-[10px] dark:text-white/30 text-slate-900/30">{r.desc}</p>
                     </div>
                   </label>
                 ))}
@@ -687,7 +687,7 @@ export default function ProfilesPage() {
 
             {/* Módulos accesibles */}
             <div>
-              <p className="text-[10px] tracking-[0.25em] uppercase font-black text-white/25 mb-3">
+              <p className="text-[10px] tracking-[0.25em] uppercase font-black dark:text-white/25 text-slate-900/25 mb-3">
                 Módulos accesibles
               </p>
               {(() => {
@@ -763,7 +763,7 @@ export default function ProfilesPage() {
           <div className="p-3.5 rounded-xl flex items-center gap-3"
                style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)" }}>
             <Zap size={16} className="text-blue-400 shrink-0" />
-            <p className="text-[12px] text-white/50 leading-relaxed">
+            <p className="text-[12px] dark:text-white/50 text-slate-900/50 leading-relaxed">
               El usuario puede iniciar sesión inmediatamente con las credenciales que definas.
             </p>
           </div>
@@ -791,7 +791,7 @@ export default function ProfilesPage() {
               error={errors.direccion?.message} {...register("direccion")} />
           </div>
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Rol *</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Rol *</label>
             <select className="gm-select-d w-full" {...register("rol")}>
               <option value="">Seleccionar rol</option>
               {roles.map(r => <option key={r.id_rol} value={r.nombre}>{r.nombre}</option>)}
@@ -817,14 +817,14 @@ export default function ProfilesPage() {
         <div className="space-y-3">
           <div className="p-3.5 rounded-xl"
                style={{ background: "rgba(225,20,40,0.06)", border: "1px solid rgba(225,20,40,0.18)" }}>
-            <p className="text-[12px] text-white/50 leading-relaxed">
+            <p className="text-[12px] dark:text-white/50 text-slate-900/50 leading-relaxed">
               Vas a eliminar la cuenta de{' '}
-              <strong className="text-white/85">{deleteTarget?.nombre_completo}</strong>
+              <strong className="dark:text-white/85 text-slate-900/85">{deleteTarget?.nombre_completo}</strong>
               {' '}({deleteTarget?.correo}).
               Esta acción no se puede deshacer.
             </p>
           </div>
-          <p className="text-[11px] text-white/30">
+          <p className="text-[11px] dark:text-white/30 text-slate-900/30">
             El usuario perderá acceso inmediatamente.
           </p>
         </div>
@@ -851,8 +851,8 @@ export default function ProfilesPage() {
                    style={{ background: `${color}0D`, border: `1px solid ${color}25` }}>
                 <Avatar name={viewClient.nombre_completo} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-black text-white/92">{viewClient.nombre_completo}</p>
-                  <p className="text-[12px] text-white/40">@{viewClient.nombre_usuario}</p>
+                  <p className="text-[15px] font-black dark:text-white/92 text-slate-900/92">{viewClient.nombre_completo}</p>
+                  <p className="text-[12px] dark:text-white/40 text-slate-900/40">@{viewClient.nombre_usuario}</p>
                   {tab && (
                     <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full"
                           style={{ color, background: `${color}18`, border: `1px solid ${color}30` }}>
@@ -871,22 +871,22 @@ export default function ProfilesPage() {
                   { icon: MapPin,     label: "Ciudad",   val: viewClient.ciudad ?? "—" },
                 ].map(({ icon: Icon, label, val }) => (
                   <div key={label} className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <p className="flex items-center gap-1.5 text-[10px] tracking-wider uppercase font-black text-white/25 mb-1">
+                    <p className="flex items-center gap-1.5 text-[10px] tracking-wider uppercase font-black dark:text-white/25 text-slate-900/25 mb-1">
                       <Icon size={10} /> {label}
                     </p>
-                    <p className="text-[12.5px] text-white/70 font-semibold truncate">{val}</p>
+                    <p className="text-[12.5px] dark:text-white/70 text-slate-900/70 font-semibold truncate">{val}</p>
                   </div>
                 ))}
               </div>
 
               {/* Motos del usuario */}
               <div>
-                <p className="flex items-center gap-2 text-[10px] tracking-[0.2em] uppercase font-black text-white/25 mb-3">
+                <p className="flex items-center gap-2 text-[10px] tracking-[0.2em] uppercase font-black dark:text-white/25 text-slate-900/25 mb-3">
                   <Bike size={11} /> Motos registradas ({sus.length})
                 </p>
                 {sus.length === 0 ? (
                   <div className="py-6 text-center rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}>
-                    <p className="text-[12px] text-white/30">Este usuario no tiene motos registradas</p>
+                    <p className="text-[12px] dark:text-white/30 text-slate-900/30">Este usuario no tiene motos registradas</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -903,18 +903,18 @@ export default function ProfilesPage() {
                           <img src={m.ruta_imagen_motos} alt={m.placa} className="w-11 h-11 rounded-lg object-cover shrink-0" />
                         ) : (
                           <div className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.05)" }}>
-                            <Bike size={18} className="text-white/30" />
+                            <Bike size={18} className="dark:text-white/30 text-slate-900/30" />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-black text-white/90 truncate">{m.marca} {m.modelo}</p>
-                          <p className="flex items-center gap-2 text-[11px] text-white/40 mt-0.5">
+                          <p className="text-[13px] font-black dark:text-white/90 text-slate-900/90 truncate">{m.marca} {m.modelo}</p>
+                          <p className="flex items-center gap-2 text-[11px] dark:text-white/40 text-slate-900/40 mt-0.5">
                             <span className="plate-tag">{m.placa}</span>
                             <span className="flex items-center gap-1"><Gauge size={9} /> {m.kilometraje.toLocaleString("es-EC")} km</span>
                             <span>· {m.cilindraje} cc</span>
                           </p>
                         </div>
-                        <ChevronRight size={15} className="text-white/25 shrink-0" />
+                        <ChevronRight size={15} className="dark:text-white/25 text-slate-900/25 shrink-0" />
                       </button>
                     ))}
                   </div>

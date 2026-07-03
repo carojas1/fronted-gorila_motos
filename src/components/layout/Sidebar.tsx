@@ -55,10 +55,10 @@ export default function Sidebar() {
             <img src="/brand/gorila-logo.png" alt="GMotors" className="w-full h-full object-cover" />
           </div>
           <div>
-            <p className="text-white font-black text-[17px] tracking-tight leading-none">
+            <p className="dark:text-white text-slate-900 font-black text-[17px] tracking-tight leading-none">
               Gorila<span className="text-gm-red"> Motos</span>
             </p>
-            <p className="text-white/25 text-[9px] font-semibold tracking-[0.28em] uppercase mt-0.5">
+            <p className="dark:text-white/25 text-slate-900/25 text-[9px] font-semibold tracking-[0.28em] uppercase mt-0.5">
               Taller · Sistema
             </p>
           </div>
@@ -67,7 +67,7 @@ export default function Sidebar() {
 
       {/* ── Nav ── */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto no-scrollbar">
-        <p className="px-3 mb-2 text-[9px] font-black tracking-[0.3em] text-white/20 uppercase">
+        <p className="px-3 mb-2 text-[9px] font-black tracking-[0.3em] dark:text-white/20 text-slate-900/20 uppercase">
           Navegación
         </p>
         <ul className="space-y-0.5">
@@ -106,7 +106,7 @@ export default function Sidebar() {
             <span className="text-gm-red text-xs font-black">{initials(user?.nombre_completo ?? 'U')}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-[12px] font-bold truncate leading-tight">
+            <p className="dark:text-white text-slate-900 text-[12px] font-bold truncate leading-tight">
               {user?.nombre_completo ?? 'Usuario'}
             </p>
             <p className={`text-[10px] font-bold tracking-[0.1em] uppercase mt-0.5 ${roleColor}`}>

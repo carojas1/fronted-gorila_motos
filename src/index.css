@@ -192,19 +192,29 @@ body {
 
 /* ─── Dark card ─── */
 .gm-card-d {
-  background: linear-gradient(150deg, #17171E 0%, #131318 50%, #111115 100%);
-  border: 1px solid rgba(255,255,255,0.055);
-  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+  background: var(--card-bg, #FFFFFF);
+  border: 1px solid var(--card-border, #E4E7EC);
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease, background-color 200ms ease;
   position: relative;
 }
+.dark .gm-card-d {
+  background: linear-gradient(150deg, #17171E 0%, #131318 50%, #111115 100%);
+  border: 1px solid rgba(255,255,255,0.055);
+}
+
 .gm-card-d::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   background: linear-gradient(135deg, rgba(255,255,255,0.025) 0%, transparent 60%);
   pointer-events: none;
+  opacity: 0;
 }
+.dark .gm-card-d::before {
+  opacity: 1;
+}
+
 .gm-card-d:hover {
   border-color: rgba(225,20,40,0.25);
   box-shadow:
@@ -217,19 +227,24 @@ body {
 
 /* ─── Dark input ─── */
 .gm-input-d {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: #F0EEE8;
+  background: rgba(0,0,0,0.03);
+  border: 1px solid #E4E7EC;
+  color: #15151B;
   border-radius: 12px;
   padding-top: 0;
   padding-bottom: 0;
   padding-right: 14px;
-  /* padding-left: manejado por Tailwind pl-[14px] / !pl-10 en Input.tsx */
   height: 44px;
   font-size: 14px;
   width: 100%;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
+.dark .gm-input-d {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #F0EEE8;
+}
+
 .gm-input-d:focus {
   border-color: #E11428;
   box-shadow: 0 0 0 3px rgba(225,20,40,0.14);
@@ -247,18 +262,23 @@ body {
 
 /* ─── Dark select ─── */
 .gm-select-d {
+  background: rgba(0,0,0,0.03);
+  border: 1px solid #E4E7EC;
+  color: #15151B;
+  border-radius: 12px;
+  height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  width: 100%;
+  appearance: none;
+  outline: none;
+}
+.dark .gm-select-d {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
   color: #F0EEE8;
-  border-radius: 12px;
-  padding: 0 14px;
-  height: 40px;
-  font-size: 14px;
-  -webkit-appearance: none;
-  appearance: none;
-  cursor: pointer;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
+
 .gm-select-d:focus {
   border-color: #E11428;
   box-shadow: 0 0 0 3px rgba(225,20,40,0.14);
@@ -270,7 +290,37 @@ body {
 }
 
 /* ─── Dark table ─── */
-.gm-table-d { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gm-table-d {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.gm-table-d th {
+  background: rgba(0,0,0,0.02);
+  color: rgba(21,21,27,0.6);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #E4E7EC;
+}
+.dark .gm-table-d th {
+  background: rgba(255,255,255,0.02);
+  color: rgba(255,255,255,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.gm-table-d td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #E4E7EC;
+  color: #15151B;
+}
+.dark .gm-table-d td {
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  color: #EBEBEB;
+}
+
 .gm-table-d thead tr { border-bottom: 1px solid rgba(255,255,255,0.05); }
 .gm-table-d th {
   padding: 12px 16px;
@@ -290,14 +340,14 @@ body {
 
 /* ─── Dark skeleton ─── */
 .skeleton-d {
-  background: linear-gradient(90deg,
-    rgba(255,255,255,0.05) 25%,
-    rgba(255,255,255,0.09) 50%,
-    rgba(255,255,255,0.05) 75%);
+  background: linear-gradient(90deg, #E8E5DE 25%, #F2EFEA 50%, #E8E5DE 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.8s linear infinite;
-  border-radius: 8px;
+  animation: shimmer 1.6s linear infinite;
 }
+.dark .skeleton-d {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+}
+
 
 /* ─── Filter chip ─── */
 .filter-chip {

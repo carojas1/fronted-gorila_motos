@@ -204,7 +204,7 @@ export default function MobileDashboard() {
                 <p className="m-mod-lbl">{label}</p>
                 <p className="m-mod-desc">{desc}</p>
               </div>
-              <ChevronRight size={16} className="text-white/25" />
+              <ChevronRight size={16} className="dark:text-white/25 text-slate-900/25" />
             </Link>
           ))}
         </div>
@@ -260,7 +260,7 @@ export default function MobileDashboard() {
             <p className="m-alert-t">{stockCritico} producto{stockCritico > 1 ? 's' : ''} con stock bajo</p>
             <p className="m-alert-s">Toca para reponer inventario</p>
           </div>
-          <ChevronRight size={16} className="text-white/25" />
+          <ChevronRight size={16} className="dark:text-white/25 text-slate-900/25" />
         </Link>
       )}
 
@@ -284,7 +284,7 @@ export default function MobileDashboard() {
         </div>
         <div style={{ marginTop: 4 }}>
           {recientes.length === 0 ? (
-            <p className="text-center text-white/25 text-sm" style={{ padding: '24px 0' }}>Sin actividad</p>
+            <p className="text-center dark:text-white/25 text-slate-900/25 text-sm" style={{ padding: '24px 0' }}>Sin actividad</p>
           ) : recientes.map(r => (
             <div key={r.id_registro} className="m-act">
               <div className="m-act-ico"><Wrench size={14} style={{ color: '#FF3B47' }} /></div>

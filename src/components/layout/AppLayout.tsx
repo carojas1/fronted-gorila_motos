@@ -531,8 +531,8 @@ export default function AppLayout() {
                         {initials(user?.nombre_completo ?? 'U')}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-black text-white/90 truncate">{user?.nombre_completo}</p>
-                        <p className="text-[11px] text-white/35 truncate">{user?.correo}</p>
+                        <p className="text-[13px] font-black dark:text-white/90 text-slate-900/90 truncate">{user?.nombre_completo}</p>
+                        <p className="text-[11px] dark:text-white/35 text-slate-900/35 truncate">{user?.correo}</p>
                       </div>
                     </div>
                     <div className="mt-2 flex items-center gap-2">
@@ -553,7 +553,7 @@ export default function AppLayout() {
                   <div className="p-2 space-y-1">
                     <button
                       onClick={() => { setPwOpen(true); setOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-bold transition-all text-white/70"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-bold transition-all dark:text-white/70 text-slate-900/70"
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; }}
                     >
@@ -648,24 +648,24 @@ export default function AppLayout() {
         }
       >
         <div className="space-y-4">
-          <p className="text-[12px] text-white/45 leading-relaxed">
-            Cuenta: <strong className="text-white/70">{user?.correo}</strong>
+          <p className="text-[12px] dark:text-white/45 text-slate-900/45 leading-relaxed">
+            Cuenta: <strong className="dark:text-white/70 text-slate-900/70">{user?.correo}</strong>
           </p>
           <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+            <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
               Contraseña actual
-              <span className="normal-case font-normal ml-1 text-white/25">(déjala vacía si es la primera vez)</span>
+              <span className="normal-case font-normal ml-1 dark:text-white/25 text-slate-900/25">(déjala vacía si es la primera vez)</span>
             </label>
             <input type="password" className="gm-input-d w-full" placeholder="Contraseña actual (opcional)"
                    value={pwCurrent} onChange={e => setPwCurrent(e.target.value)} autoComplete="current-password" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Nueva contraseña</label>
+            <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">Nueva contraseña</label>
             <input type="password" className="gm-input-d w-full" placeholder="Mínimo 6 caracteres"
                    value={pw1} onChange={e => setPw1(e.target.value)} autoComplete="new-password" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Repetir contraseña</label>
+            <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">Repetir contraseña</label>
             <input type="password" className="gm-input-d w-full" placeholder="Vuelve a escribirla"
                    value={pw2} onChange={e => setPw2(e.target.value)} autoComplete="new-password" />
           </div>

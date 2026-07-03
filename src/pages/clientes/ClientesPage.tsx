@@ -128,7 +128,7 @@ function StatChip({ icon:Icon, label, value, color='#3B82F6' }:{
       </div>
       <div>
         <p className="text-lg font-black leading-none" style={{ color }}>{value}</p>
-        <p className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mt-0.5">{label}</p>
+        <p className="text-[10px] dark:text-white/30 text-slate-900/30 uppercase tracking-wider font-semibold mt-0.5">{label}</p>
       </div>
     </div>
   );
@@ -198,7 +198,7 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
     <div className="space-y-6">
       {/* Volver */}
       <button onClick={onBack}
-        className="flex items-center gap-2 text-[13px] text-white/35 hover:text-white/80 font-semibold transition-colors group">
+        className="flex items-center gap-2 text-[13px] dark:text-white/35 text-slate-900/35 hover:dark:text-white/80 text-slate-900/80 font-semibold transition-colors group">
         <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
         Volver a clientes
       </button>
@@ -212,19 +212,19 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
-                  <h2 className="text-xl font-black text-white/95 leading-tight">{client.nombre_completo}</h2>
-                  <p className="text-sm text-white/30 mt-0.5">@{client.nombre_usuario}</p>
+                  <h2 className="text-xl font-black dark:text-white/95 text-slate-900/95 leading-tight">{client.nombre_completo}</h2>
+                  <p className="text-sm dark:text-white/30 text-slate-900/30 mt-0.5">@{client.nombre_usuario}</p>
                 </div>
                 <Badge variant="success">Cliente activo</Badge>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
-                <span className="flex items-center gap-1.5 text-[12px] text-white/40">
-                  <Mail size={11} className="text-white/20" />{client.correo}
+                <span className="flex items-center gap-1.5 text-[12px] dark:text-white/40 text-slate-900/40">
+                  <Mail size={11} className="dark:text-white/20 text-slate-900/20" />{client.correo}
                 </span>
                 {client.ciudad && (
-                  <span className="flex items-center gap-1.5 text-[12px] text-white/40">
-                    <MapPin size={11} className="text-white/20" />{client.ciudad}, {client.pais}
+                  <span className="flex items-center gap-1.5 text-[12px] dark:text-white/40 text-slate-900/40">
+                    <MapPin size={11} className="dark:text-white/20 text-slate-900/20" />{client.ciudad}, {client.pais}
                   </span>
                 )}
               </div>
@@ -237,24 +237,24 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                     {cedula && (
                       <span className="flex items-center gap-1.5 text-[12px]">
                         <CreditCard size={11} className="text-gm-red" />
-                        <span className="text-white/40">C.I.</span>
-                        <span className="font-mono font-black text-white/85 tracking-widest">{cedula}</span>
+                        <span className="dark:text-white/40 text-slate-900/40">C.I.</span>
+                        <span className="font-mono font-black dark:text-white/85 text-slate-900/85 tracking-widest">{cedula}</span>
                       </span>
                     )}
                     {(phone || client.telefono) && (
                       <span className="flex items-center gap-1.5 text-[12px]">
                         <Phone size={11} className="text-gm-red" />
-                        <span className="font-mono font-black text-white/85 tracking-widest">{client.telefono || phone}</span>
+                        <span className="font-mono font-black dark:text-white/85 text-slate-900/85 tracking-widest">{client.telefono || phone}</span>
                       </span>
                     )}
                     {client.direccion && (
                       <span className="flex items-center gap-1.5 text-[12px]">
                         <MapPin size={11} className="text-gm-red" />
-                        <span className="text-white/85">{client.direccion}</span>
+                        <span className="dark:text-white/85 text-slate-900/85">{client.direccion}</span>
                       </span>
                     )}
                     {!cedula && !phone && !client.telefono && !client.direccion && (
-                      <span className="text-[11px] text-white/25 italic">Sin datos de contacto registrados</span>
+                      <span className="text-[11px] dark:text-white/25 text-slate-900/25 italic">Sin datos de contacto registrados</span>
                     )}
                     <span className="flex items-center gap-1 text-[11px] text-emerald-400/70">
                       <Unlock size={10} /> Datos verificados
@@ -293,7 +293,7 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-black whitespace-nowrap transition-all ${
               tab === t.id
                 ? 'bg-gm-red text-white shadow-lg'
-                : 'text-white/40 hover:text-white/70 border border-white/[0.07]'
+                : 'dark:text-white/40 text-slate-900/40 hover:dark:text-white/70 text-slate-900/70 border border-white/[0.07]'
             }`}
             style={tab !== t.id ? { background:'rgba(255,255,255,0.03)' } : {}}>
             <t.icon size={12} />
@@ -310,14 +310,14 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
       {/* ── Tab: SERVICIOS ── */}
       {tab === 'servicios' && (
         <div>
-          <p className="text-[10px] tracking-[0.3em] uppercase text-white/20 font-black mb-3 flex items-center gap-2">
+          <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/20 text-slate-900/20 font-black mb-3 flex items-center gap-2">
             <Activity size={10} className="text-gm-red" />
             Historial de servicios ({regs.length})
           </p>
           {regs.length === 0 ? (
             <div className="gm-card-d rounded-2xl py-16 text-center">
-              <Wrench size={28} className="mx-auto text-white/10 mb-3" />
-              <p className="text-white/25 text-sm">Sin registros de servicio aún</p>
+              <Wrench size={28} className="mx-auto dark:text-white/10 text-slate-900/10 mb-3" />
+              <p className="dark:text-white/25 text-slate-900/25 text-sm">Sin registros de servicio aún</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -333,16 +333,16 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-[13px] font-bold text-white/85">{r.tipo_servicio || 'Servicio'}</p>
+                        <p className="text-[13px] font-bold dark:text-white/85 text-slate-900/85">{r.tipo_servicio || 'Servicio'}</p>
                         {r.placa && <span className="plate-tag py-0 text-[10px]">{r.placa}</span>}
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5 flex-wrap text-[11px] text-white/30">
+                      <div className="flex items-center gap-3 mt-0.5 flex-wrap text-[11px] dark:text-white/30 text-slate-900/30">
                         <span className="flex items-center gap-1"><Calendar size={9} />{fmtDate(r.fecha)}</span>
                         {r.kilometraje ? <span className="flex items-center gap-1"><Bike size={9} />{r.kilometraje.toLocaleString('es-EC')} km</span> : null}
                         {r.descripcion ? <span className="italic truncate max-w-[160px]">{r.descripcion}</span> : null}
                       </div>
                       {r.descripcion ? (
-                        <p className="text-[11px] text-white/35 mt-1 leading-relaxed">{r.descripcion}</p>
+                        <p className="text-[11px] dark:text-white/35 text-slate-900/35 mt-1 leading-relaxed">{r.descripcion}</p>
                       ) : null}
                       {r.detalles && r.detalles.length > 0 && (
                         <div className="mt-2 space-y-1">
@@ -350,10 +350,10 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                             const kind = detalleKind(d);
                             const color = kind === 'descuento' ? 'text-emerald-400' : kind === 'repuesto' ? 'text-amber-400' : 'text-blue-400';
                             return (
-                              <div key={d.idDetalleFactura ?? d.id_detalle ?? idx} className="flex items-center gap-2 text-[11px] text-white/45">
+                              <div key={d.idDetalleFactura ?? d.id_detalle ?? idx} className="flex items-center gap-2 text-[11px] dark:text-white/45 text-slate-900/45">
                                 <span className={`font-black uppercase ${color}`}>{kind === 'descuento' ? 'Cupón' : kind === 'repuesto' ? 'Rep.' : 'MO'}</span>
                                 <span className="flex-1 min-w-0 truncate">{cleanDescripcion(d.descripcion) || 'Detalle'}</span>
-                                <span className="tabular-nums text-white/55">{fmtMoney(Number(d.subtotal ?? 0))}</span>
+                                <span className="tabular-nums dark:text-white/55 text-slate-900/55">{fmtMoney(Number(d.subtotal ?? 0))}</span>
                               </div>
                             );
                           })}
@@ -362,7 +362,7 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <Badge variant={v} dot>{est.label}</Badge>
-                      <p className="text-sm font-bold text-white/75 tabular-nums">{fmtMoney(r.costo_total)}</p>
+                      <p className="text-sm font-bold dark:text-white/75 text-slate-900/75 tabular-nums">{fmtMoney(r.costo_total)}</p>
                     </div>
                   </div>
                 );
@@ -375,14 +375,14 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
       {/* ── Tab: MOTOS ── */}
       {tab === 'motos' && (
         <div>
-          <p className="text-[10px] tracking-[0.3em] uppercase text-white/20 font-black mb-3 flex items-center gap-2">
+          <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/20 text-slate-900/20 font-black mb-3 flex items-center gap-2">
             <Bike size={10} className="text-gm-red" />
             Motocicletas registradas ({motos.length})
           </p>
           {motos.length === 0 ? (
             <div className="gm-card-d rounded-2xl py-16 text-center">
-              <Bike size={28} className="mx-auto text-white/10 mb-3" />
-              <p className="text-white/25 text-sm">Sin motos registradas</p>
+              <Bike size={28} className="mx-auto dark:text-white/10 text-slate-900/10 mb-3" />
+              <p className="dark:text-white/25 text-slate-900/25 text-sm">Sin motos registradas</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -401,15 +401,15 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <p className="text-[14px] font-black text-white/90">
+                        <p className="text-[14px] font-black dark:text-white/90 text-slate-900/90">
                           {m.marca} {m.modelo}
                         </p>
                         <span className="plate-tag text-[10px] py-0">{m.placa}</span>
                       </div>
                       {m.nombre_moto && (
-                        <p className="text-[11px] text-white/35 italic mb-1">"{m.nombre_moto}"</p>
+                        <p className="text-[11px] dark:text-white/35 text-slate-900/35 italic mb-1">"{m.nombre_moto}"</p>
                       )}
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/35">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] dark:text-white/35 text-slate-900/35">
                         <span className="flex items-center gap-1"><Calendar size={9} />{m.anio}</span>
                         <span className="flex items-center gap-1"><Gauge size={9} />{m.kilometraje.toLocaleString('es-EC')} km</span>
                         <span className="flex items-center gap-1"><Zap size={9} />{m.cilindraje} cc</span>
@@ -427,15 +427,15 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
       {/* ── Tab: COMPRAS ── */}
       {tab === 'compras' && (
         <div>
-          <p className="text-[10px] tracking-[0.3em] uppercase text-white/20 font-black mb-3 flex items-center gap-2">
+          <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/20 text-slate-900/20 font-black mb-3 flex items-center gap-2">
             <Package size={10} className="text-gm-red" />
             Compras en inventario ({facturas.length})
           </p>
           {facturas.length === 0 ? (
             <div className="gm-card-d rounded-2xl py-16 text-center">
-              <Package size={28} className="mx-auto text-white/10 mb-3" />
-              <p className="text-white/25 text-sm">Sin compras registradas</p>
-              <p className="text-white/15 text-[11px] mt-1">Las ventas directas de inventario aparecen aquí</p>
+              <Package size={28} className="mx-auto dark:text-white/10 text-slate-900/10 mb-3" />
+              <p className="dark:text-white/25 text-slate-900/25 text-sm">Sin compras registradas</p>
+              <p className="dark:text-white/15 text-slate-900/15 text-[11px] mt-1">Las ventas directas de inventario aparecen aquí</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -456,8 +456,8 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                           {facturas.length - i}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-bold text-white/85">Nota de venta #{f.id_factura}</p>
-                          <p className="text-[11px] text-white/30 flex items-center gap-1 mt-0.5">
+                          <p className="text-[13px] font-bold dark:text-white/85 text-slate-900/85">Nota de venta #{f.id_factura}</p>
+                          <p className="text-[11px] dark:text-white/30 text-slate-900/30 flex items-center gap-1 mt-0.5">
                             <Calendar size={9} />{fmtDate(f.fecha_emision)}
                           </p>
                         </div>
@@ -465,8 +465,8 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                           {fmtMoney(f.costo_total)}
                         </p>
                         {isExpanded
-                          ? <ChevronUp size={14} className="text-white/30 shrink-0" />
-                          : <ChevronDown size={14} className="text-white/30 shrink-0" />
+                          ? <ChevronUp size={14} className="dark:text-white/30 text-slate-900/30 shrink-0" />
+                          : <ChevronDown size={14} className="dark:text-white/30 text-slate-900/30 shrink-0" />
                         }
                       </button>
 
@@ -482,7 +482,7 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                             <div className="overflow-x-auto dark-scroll">
                               <table className="w-full text-[12px] min-w-[300px]">
                                 <thead>
-                                  <tr className="text-[10px] text-white/25 uppercase tracking-wider">
+                                  <tr className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-wider">
                                     <th className="text-left pb-2 font-black">Producto</th>
                                     <th className="text-center pb-2 font-black w-16">Cant.</th>
                                     <th className="text-right pb-2 font-black">Subtotal</th>
@@ -491,11 +491,11 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                                 <tbody className="divide-y divide-white/[0.04]">
                                 {detalles.map(d => (
                                   <tr key={d.id_detalle}>
-                                    <td className="py-1.5 text-white/70">
+                                    <td className="py-1.5 dark:text-white/70 text-slate-900/70">
                                       {d.descripcion || `Producto #${d.id_producto}`}
                                     </td>
-                                    <td className="py-1.5 text-center text-white/40">{d.cantidad}</td>
-                                    <td className="py-1.5 text-right font-bold text-white/75 tabular-nums">
+                                    <td className="py-1.5 text-center dark:text-white/40 text-slate-900/40">{d.cantidad}</td>
+                                    <td className="py-1.5 text-right font-bold dark:text-white/75 text-slate-900/75 tabular-nums">
                                       {fmtMoney(d.subtotal)}
                                     </td>
                                   </tr>
@@ -503,14 +503,14 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                               </tbody>
                               <tfoot>
                                 <tr className="border-t border-white/[0.08]">
-                                  <td colSpan={2} className="pt-2 text-[11px] text-white/30 font-black uppercase tracking-wider">Total</td>
+                                  <td colSpan={2} className="pt-2 text-[11px] dark:text-white/30 text-slate-900/30 font-black uppercase tracking-wider">Total</td>
                                   <td className="pt-2 text-right font-black text-purple-400 tabular-nums">{fmtMoney(f.costo_total)}</td>
                                 </tr>
                               </tfoot>
                             </table>
                             </div>
                           ) : (
-                            <p className="text-[11px] text-white/25 italic">Sin detalles disponibles</p>
+                            <p className="text-[11px] dark:text-white/25 text-slate-900/25 italic">Sin detalles disponibles</p>
                           )}
                         </div>
                       )}
@@ -546,12 +546,12 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
               <p className="font-black text-2xl mt-0.5" style={{ color:nivel.color }}>
                 {nivel.icon} {nivel.label}
               </p>
-              <p className="text-4xl font-black text-white mt-3">{totalPts}</p>
-              <p className="text-[12px] text-white/30 mt-1">puntos acumulados · {fmtMoney(totalPts / 20)} en cashback</p>
+              <p className="text-4xl font-black dark:text-white text-slate-900 mt-3">{totalPts}</p>
+              <p className="text-[12px] dark:text-white/30 text-slate-900/30 mt-1">puntos acumulados · {fmtMoney(totalPts / 20)} en cashback</p>
 
               {nextLvl && (
                 <div className="mt-4 max-w-xs mx-auto">
-                  <div className="flex justify-between text-[10px] text-white/30 mb-1.5">
+                  <div className="flex justify-between text-[10px] dark:text-white/30 text-slate-900/30 mb-1.5">
                     <span>{totalPts} pts</span>
                     <span>{nextLvl.min} pts para {nextLvl.icon} {nextLvl.label}</span>
                   </div>
@@ -567,23 +567,23 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
           {/* Stats de puntos */}
           <div className="grid grid-cols-3 gap-3">
             <div className="gm-card-d rounded-xl p-3 text-center">
-              <p className="text-xl font-black text-white/80">{totalPts}</p>
-              <p className="text-[10px] text-white/25 uppercase tracking-wider mt-0.5">Ganados</p>
+              <p className="text-xl font-black dark:text-white/80 text-slate-900/80">{totalPts}</p>
+              <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-wider mt-0.5">Ganados</p>
             </div>
             <div className="gm-card-d rounded-xl p-3 text-center">
-              <p className="text-xl font-black text-white/80">0</p>
-              <p className="text-[10px] text-white/25 uppercase tracking-wider mt-0.5">Canjeados</p>
+              <p className="text-xl font-black dark:text-white/80 text-slate-900/80">0</p>
+              <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-wider mt-0.5">Canjeados</p>
             </div>
             <div className="gm-card-d rounded-xl p-3 text-center">
               <p className="text-xl font-black" style={{ color:nivel.color }}>{totalPts}</p>
-              <p className="text-[10px] text-white/25 uppercase tracking-wider mt-0.5">Disponibles</p>
+              <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-wider mt-0.5">Disponibles</p>
             </div>
           </div>
 
           {/* Historial de puntos */}
           {pointsHist.length > 0 && (
             <div>
-              <p className="text-[10px] tracking-[0.3em] uppercase text-white/20 font-black mb-3 flex items-center gap-2">
+              <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/20 text-slate-900/20 font-black mb-3 flex items-center gap-2">
                 <Gift size={10} className="text-gm-red" />
                 Historial de puntos
               </p>
@@ -595,8 +595,8 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                       <Star size={13} style={{ color:nivel.color }} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-bold text-white/80 truncate">{h.tipo_servicio || 'Servicio'}</p>
-                      <p className="text-[10px] text-white/30 flex items-center gap-1 mt-0.5">
+                      <p className="text-[12px] font-bold dark:text-white/80 text-slate-900/80 truncate">{h.tipo_servicio || 'Servicio'}</p>
+                      <p className="text-[10px] dark:text-white/30 text-slate-900/30 flex items-center gap-1 mt-0.5">
                         <Calendar size={8} />{fmtDate(h.fecha)}
                         {h.placa && <><span>·</span><span className="plate-tag text-[9px] py-0">{h.placa}</span></>}
                       </p>
@@ -618,14 +618,14 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
       {/* ── Tab: COMBUSTIBLE ── */}
       {tab === 'combustible' && (
         <div>
-          <p className="text-[10px] tracking-[0.3em] uppercase text-white/20 font-black mb-3 flex items-center gap-2">
+          <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/20 text-slate-900/20 font-black mb-3 flex items-center gap-2">
             <Fuel size={10} className="text-gm-red" />
             Historial de combustible ({combustible.length})
           </p>
           {combustible.length === 0 ? (
             <div className="gm-card-d rounded-2xl py-16 text-center">
-              <Fuel size={28} className="mx-auto text-white/10 mb-3" />
-              <p className="text-white/25 text-sm">Sin registros de combustible</p>
+              <Fuel size={28} className="mx-auto dark:text-white/10 text-slate-900/10 mb-3" />
+              <p className="dark:text-white/25 text-slate-900/25 text-sm">Sin registros de combustible</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -635,17 +635,17 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                   <p className="text-xl font-black text-amber-400">
                     {combustible.reduce((s,c)=>s+c.litros, 0).toFixed(1)}
                   </p>
-                  <p className="text-[10px] text-white/25 uppercase tracking-wider mt-0.5">Litros</p>
+                  <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-wider mt-0.5">Litros</p>
                 </div>
                 <div className="gm-card-d rounded-xl p-3 text-center">
                   <p className="text-xl font-black text-orange-400">
                     {fmtMoney(combustible.reduce((s,c)=>s+c.costo_total, 0))}
                   </p>
-                  <p className="text-[10px] text-white/25 uppercase tracking-wider mt-0.5">Gastado</p>
+                  <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-wider mt-0.5">Gastado</p>
                 </div>
                 <div className="gm-card-d rounded-xl p-3 text-center">
-                  <p className="text-xl font-black text-white/70">{combustible.length}</p>
-                  <p className="text-[10px] text-white/25 uppercase tracking-wider mt-0.5">Cargas</p>
+                  <p className="text-xl font-black dark:text-white/70 text-slate-900/70">{combustible.length}</p>
+                  <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-wider mt-0.5">Cargas</p>
                 </div>
               </div>
 
@@ -663,7 +663,7 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-[13px] font-bold text-white/85">
+                          <p className="text-[13px] font-bold dark:text-white/85 text-slate-900/85">
                             {c.litros} L
                             {(c as unknown as Record<string, unknown>).tipo_combustible
                               ? ` · ${(c as unknown as Record<string, unknown>).tipo_combustible}`
@@ -671,7 +671,7 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
                           </p>
                           {c.placa && <span className="plate-tag text-[10px] py-0">{c.placa}</span>}
                         </div>
-                        <div className="flex items-center gap-3 mt-0.5 flex-wrap text-[11px] text-white/30">
+                        <div className="flex items-center gap-3 mt-0.5 flex-wrap text-[11px] dark:text-white/30 text-slate-900/30">
                           <span className="flex items-center gap-1"><Calendar size={9} />{fmtDate(c.fecha)}</span>
                           {c.km_actual ? <span className="flex items-center gap-1"><Gauge size={9} />{c.km_actual.toLocaleString('es-EC')} km</span> : null}
                           {rendimiento && <span className="flex items-center gap-1"><Zap size={9} />{rendimiento} km/L</span>}
@@ -712,8 +712,8 @@ function ClienteCard({ client, regs, unlocked, onSelect, onUnlock }: {
         <div className="flex items-start gap-3">
           <Avatar name={client.nombre_completo} />
           <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-black text-white/90 truncate">{client.nombre_completo}</p>
-            <p className="text-[11px] text-white/30 mt-0.5">@{client.nombre_usuario}</p>
+            <p className="text-[14px] font-black dark:text-white/90 text-slate-900/90 truncate">{client.nombre_completo}</p>
+            <p className="text-[11px] dark:text-white/30 text-slate-900/30 mt-0.5">@{client.nombre_usuario}</p>
             <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
               <Badge variant="success">Cliente</Badge>
               {regs.length > 0 && (
@@ -727,13 +727,13 @@ function ClienteCard({ client, regs, unlocked, onSelect, onUnlock }: {
 
         {/* Info pública */}
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[12px] text-white/40">
-            <Mail size={11} className="text-white/20 shrink-0" />
+          <div className="flex items-center gap-2 text-[12px] dark:text-white/40 text-slate-900/40">
+            <Mail size={11} className="dark:text-white/20 text-slate-900/20 shrink-0" />
             <span className="truncate">{client.correo}</span>
           </div>
           {client.ciudad && (
-            <div className="flex items-center gap-2 text-[12px] text-white/40">
-              <MapPin size={11} className="text-white/20 shrink-0" />
+            <div className="flex items-center gap-2 text-[12px] dark:text-white/40 text-slate-900/40">
+              <MapPin size={11} className="dark:text-white/20 text-slate-900/20 shrink-0" />
               <span>{client.ciudad}</span>
             </div>
           )}
@@ -746,18 +746,18 @@ function ClienteCard({ client, regs, unlocked, onSelect, onUnlock }: {
               {cedula && (
                 <div className="flex items-center gap-2 text-[12px]">
                   <CreditCard size={11} className="text-gm-red shrink-0" />
-                  <span className="text-white/35">C.I.</span>
-                  <span className="font-mono font-black text-white/85 tracking-widest">{cedula}</span>
+                  <span className="dark:text-white/35 text-slate-900/35">C.I.</span>
+                  <span className="font-mono font-black dark:text-white/85 text-slate-900/85 tracking-widest">{cedula}</span>
                 </div>
               )}
               {phone && (
                 <div className="flex items-center gap-2 text-[12px]">
                   <Phone size={11} className="text-gm-red shrink-0" />
-                  <span className="font-mono font-black text-white/85 tracking-widest">{phone}</span>
+                  <span className="font-mono font-black dark:text-white/85 text-slate-900/85 tracking-widest">{phone}</span>
                 </div>
               )}
               {!cedula && !phone && (
-                <p className="text-[11px] text-white/20 italic">Sin datos privados registrados</p>
+                <p className="text-[11px] dark:text-white/20 text-slate-900/20 italic">Sin datos privados registrados</p>
               )}
             </div>
           ) : (
@@ -777,12 +777,12 @@ function ClienteCard({ client, regs, unlocked, onSelect, onUnlock }: {
         {regs.length > 0 && (
           <div className="grid grid-cols-2 gap-2 border-t border-white/[0.04] pt-3">
             <div className="text-center rounded-xl py-2 bg-white/[0.025] border border-white/[0.04]">
-              <p className="text-[15px] font-black text-white/75">{regs.length}</p>
-              <p className="text-[10px] text-white/25 uppercase tracking-wider">Visitas</p>
+              <p className="text-[15px] font-black dark:text-white/75 text-slate-900/75">{regs.length}</p>
+              <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-wider">Visitas</p>
             </div>
             <div className="text-center rounded-xl py-2 bg-gm-red/[0.06] border border-gm-red/[0.12]">
               <p className="text-[15px] font-black text-gm-red">{fmtMoney(total)}</p>
-              <p className="text-[10px] text-white/25 uppercase tracking-wider">Gastado</p>
+              <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-wider">Gastado</p>
             </div>
           </div>
         )}
@@ -790,8 +790,8 @@ function ClienteCard({ client, regs, unlocked, onSelect, onUnlock }: {
         {/* Footer */}
         <div className="flex items-center justify-between mt-auto pt-1">
           {last
-            ? <p className="text-[11px] text-white/22 flex items-center gap-1"><Clock size={9} />Última: {fmtDate(last.fecha)}</p>
-            : <p className="text-[11px] text-white/20 italic">Sin visitas aún</p>
+            ? <p className="text-[11px] dark:text-white/22 text-slate-900/22 flex items-center gap-1"><Clock size={9} />Última: {fmtDate(last.fecha)}</p>
+            : <p className="text-[11px] dark:text-white/20 text-slate-900/20 italic">Sin visitas aún</p>
           }
           <span className="flex items-center gap-1 text-[11px] text-gm-red/40 group-hover:text-gm-red font-bold transition-colors">
             Ver detalle <ChevronRight size={11} />
@@ -1053,11 +1053,11 @@ export default function ClientesPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
             <div>
-              <p className="text-[10px] tracking-[0.35em] uppercase text-white/20 font-black mb-2 flex items-center gap-2">
+              <p className="text-[10px] tracking-[0.35em] uppercase dark:text-white/20 text-slate-900/20 font-black mb-2 flex items-center gap-2">
                 <Users size={10} className="text-gm-red" /> Taller · Gestión de clientes
               </p>
-              <h1 className="text-[1.9rem] font-black text-white leading-tight">Clientes</h1>
-              <p className="text-white/30 text-sm mt-1">
+              <h1 className="text-[1.9rem] font-black dark:text-white text-slate-900 leading-tight">Clientes</h1>
+              <p className="dark:text-white/30 text-slate-900/30 text-sm mt-1">
                 {clientes.length} clientes · {totalVisitas} visitas en total
               </p>
             </div>
@@ -1083,7 +1083,7 @@ export default function ClientesPage() {
                        style={{ background:`${color}18`, border:`1px solid ${color}28` }}>
                     <Icon size={16} style={{ color }} />
                   </div>
-                  <span className="text-[10px] text-white/30 font-black tracking-[0.15em] uppercase">{label}</span>
+                  <span className="text-[10px] dark:text-white/30 text-slate-900/30 font-black tracking-[0.15em] uppercase">{label}</span>
                 </div>
                 <p className="text-3xl font-black" style={{ color }}>{value}</p>
               </div>
@@ -1103,11 +1103,11 @@ export default function ClientesPage() {
             </div>
             {search && (
               <button onClick={() => setSearch('')}
-                className="text-[11px] text-white/30 hover:text-white/60 transition-colors font-semibold">
+                className="text-[11px] dark:text-white/30 text-slate-900/30 hover:dark:text-white/60 text-slate-900/60 transition-colors font-semibold">
                 Limpiar
               </button>
             )}
-            <span className="text-[11px] text-white/20">{filtered.length} resultado(s)</span>
+            <span className="text-[11px] dark:text-white/20 text-slate-900/20">{filtered.length} resultado(s)</span>
           </div>
 
           {/* Grid */}
@@ -1118,13 +1118,13 @@ export default function ClientesPage() {
           ) : filtered.length === 0 ? (
             <div className="py-24 text-center flex flex-col items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-center">
-                <Users size={26} className="text-white/15" />
+                <Users size={26} className="dark:text-white/15 text-slate-900/15" />
               </div>
               <div>
-                <p className="text-sm font-bold text-white/35">
+                <p className="text-sm font-bold dark:text-white/35 text-slate-900/35">
                   {search ? 'Sin resultados para esa búsqueda' : 'No hay clientes registrados'}
                 </p>
-                <p className="text-[11px] text-white/20 mt-1">
+                <p className="text-[11px] dark:text-white/20 text-slate-900/20 mt-1">
                   {search ? 'Prueba con nombre, cédula, teléfono o placa' : 'Registra clientes desde la sección Perfiles'}
                 </p>
               </div>
@@ -1173,7 +1173,7 @@ export default function ClientesPage() {
               <p className="text-[11px] uppercase tracking-[0.2em] font-black text-gm-red mb-1">
                 Datos protegidos
               </p>
-              <p className="text-[12px] text-white/45 leading-relaxed">
+              <p className="text-[12px] dark:text-white/45 text-slate-900/45 leading-relaxed">
                 Para ingresar al panel de gestión de clientes,{' '}
                 confirma tu contraseña de administrador.
               </p>
@@ -1190,7 +1190,7 @@ export default function ClientesPage() {
             autoFocus
           />
 
-          <p className="text-[11px] text-white/20 flex items-center gap-1.5">
+          <p className="text-[11px] dark:text-white/20 text-slate-900/20 flex items-center gap-1.5">
             <Lock size={9} />
             El desbloqueo dura toda la sesión — no tendrás que volver a verificar
           </p>
@@ -1220,13 +1220,13 @@ export default function ClientesPage() {
                style={{ background:'rgba(225,20,40,0.06)', border:'1px solid rgba(225,20,40,0.15)' }}>
             <Mail size={18} className="text-gm-red shrink-0" />
             <div>
-              <p className="text-[12px] font-black text-white/80">
+              <p className="text-[12px] font-black dark:text-white/80 text-slate-900/80">
                 {correosFiltradosPorCC
                   ? `${correosFiltradosPorCC.length} clientes con moto en rango ${ccFiltro?.label}`
                   : `${clientes.filter(c => !c.correo?.endsWith('@gmotors.local') && ofertaRoles.includes(2)).length} clientes con correo real`
                 }
               </p>
-              <p className="text-[11px] text-white/35 mt-0.5">
+              <p className="text-[11px] dark:text-white/35 text-slate-900/35 mt-0.5">
                 Los correos @gmotors.local (seed) se omiten automáticamente
               </p>
             </div>
@@ -1234,7 +1234,7 @@ export default function ClientesPage() {
 
           {/* Destinatarios */}
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-white/35 mb-2">Destinatarios</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.15em] dark:text-white/35 text-slate-900/35 mb-2">Destinatarios</p>
             <div className="flex gap-2 flex-wrap">
               {[
                 { id: 2, label: 'Clientes',   color: '#3B82F6' },
@@ -1261,7 +1261,7 @@ export default function ClientesPage() {
 
           {/* Filtro por cilindraje */}
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.15em] text-white/35 mb-2">Filtrar por cilindraje <span className="normal-case font-medium opacity-60">(opcional)</span></p>
+            <p className="text-[11px] font-black uppercase tracking-[0.15em] dark:text-white/35 text-slate-900/35 mb-2">Filtrar por cilindraje <span className="normal-case font-medium opacity-60">(opcional)</span></p>
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setCcFiltro(null)}
@@ -1303,7 +1303,7 @@ export default function ClientesPage() {
           />
 
           <div>
-            <label className="block text-[11px] font-black uppercase tracking-[0.15em] text-white/35 mb-2">
+            <label className="block text-[11px] font-black uppercase tracking-[0.15em] dark:text-white/35 text-slate-900/35 mb-2">
               Mensaje
             </label>
             <textarea
@@ -1321,7 +1321,7 @@ export default function ClientesPage() {
             />
           </div>
 
-          <p className="text-[10px] text-white/20 leading-relaxed">
+          <p className="text-[10px] dark:text-white/20 text-slate-900/20 leading-relaxed">
             El email se envía con la plantilla oficial de Gorila Motos. Incluye el asunto como título
             y un botón "Ver portal" al final. El sistema retoma intentos fallidos — si Render está dormido
             puede tardar hasta 60 s.

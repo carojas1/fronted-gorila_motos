@@ -160,14 +160,14 @@ export default function PuntosPage() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <Star size={13} className="text-gm-red/60" />
-          <span className="text-[10px] tracking-[0.3em] uppercase text-white/28 font-bold">
+          <span className="text-[10px] tracking-[0.3em] uppercase dark:text-white/28 text-slate-900/28 font-bold">
             Gorila Motos · Puntos
           </span>
         </div>
-        <h1 className="text-[2rem] font-black text-white leading-tight tracking-tight">
+        <h1 className="text-[2rem] font-black dark:text-white text-slate-900 leading-tight tracking-tight">
           Sistema de <span className="text-gradient-red">Puntos</span>
         </h1>
-        <p className="text-white/35 text-sm mt-1">
+        <p className="dark:text-white/35 text-slate-900/35 text-sm mt-1">
           Gana puntos en cada servicio · 100 pts = USD 5 de descuento
         </p>
       </div>
@@ -175,7 +175,7 @@ export default function PuntosPage() {
       {/* ── Selector de usuario (solo admin/mec) ── */}
       {(isAdmin || isMecanico) && data.length > 1 && (
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-[11px] text-white/35 font-bold uppercase tracking-wider">Cliente:</span>
+          <span className="text-[11px] dark:text-white/35 text-slate-900/35 font-bold uppercase tracking-wider">Cliente:</span>
           {data.map(d => (
             <button
               key={d.usuario.id_usuario}
@@ -213,19 +213,19 @@ export default function PuntosPage() {
               </div>
               {/* Puntos */}
               <div className="flex-1">
-                <p className="text-[11px] text-white/30 font-bold uppercase tracking-widest mb-1">
+                <p className="text-[11px] dark:text-white/30 text-slate-900/30 font-bold uppercase tracking-widest mb-1">
                   {selected.usuario.nombre_completo}
                 </p>
                 <div className="flex items-baseline gap-3">
-                  <p className="text-5xl font-black text-white">{disponibles}</p>
-                  <p className="text-xl text-white/40 font-bold">pts</p>
+                  <p className="text-5xl font-black dark:text-white text-slate-900">{disponibles}</p>
+                  <p className="text-xl dark:text-white/40 text-slate-900/40 font-bold">pts</p>
                 </div>
                 <p className="font-black text-lg mt-0.5" style={{ color: nivel.color }}>
                   Nivel {nivel.label}
                 </p>
                 {next && (
                   <div className="mt-3 max-w-xs">
-                    <div className="flex justify-between text-[11px] text-white/35 mb-1">
+                    <div className="flex justify-between text-[11px] dark:text-white/35 text-slate-900/35 mb-1">
                       <span>Hacia {next.label}</span>
                       <span>{next.min - disponibles} pts más</span>
                     </div>
@@ -243,7 +243,7 @@ export default function PuntosPage() {
                    style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
                 <Gift size={20} className="mx-auto mb-1 text-emerald-400" />
                 <p className="text-3xl font-black text-emerald-400">{fmtMoney(cashback)}</p>
-                <p className="text-[11px] text-white/35 mt-0.5">Cashback disponible</p>
+                <p className="text-[11px] dark:text-white/35 text-slate-900/35 mt-0.5">Cashback disponible</p>
                 <p className="text-[10px] text-emerald-400/50 mt-1">{Math.floor(disponibles / 100) * 100} pts listos</p>
               </div>
             </div>
@@ -281,11 +281,11 @@ export default function PuntosPage() {
                        style={{ background: `${color}15`, border: `1px solid ${color}25` }}>
                     <Icon size={18} style={{ color }} />
                   </div>
-                  <p className="text-3xl font-black text-white">
+                  <p className="text-3xl font-black dark:text-white text-slate-900">
                     {unit === 'USD' ? fmtMoney(value) : value.toLocaleString()}
-                    {unit !== 'USD' && <span className="text-base text-white/35 ml-1">{unit}</span>}
+                    {unit !== 'USD' && <span className="text-base dark:text-white/35 text-slate-900/35 ml-1">{unit}</span>}
                   </p>
-                  <p className="text-[12px] text-white/40 mt-1">{label}</p>
+                  <p className="text-[12px] dark:text-white/40 text-slate-900/40 mt-1">{label}</p>
                 </div>
               ))}
 
@@ -293,7 +293,7 @@ export default function PuntosPage() {
               <div className="sm:col-span-4 gm-card-d rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <Trophy size={13} className="text-gm-red/60" />
-                  <p className="text-[10px] tracking-[0.3em] uppercase text-white/28 font-bold">Motos registradas</p>
+                  <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/28 text-slate-900/28 font-bold">Motos registradas</p>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {selected.motos.map(m => {
@@ -304,7 +304,7 @@ export default function PuntosPage() {
                       <div key={m.id_moto} className="rounded-xl px-3 py-2.5"
                            style={{ background: `${row?.color ?? '#fff'}0A`, border: `1px solid ${row?.color ?? '#fff'}18` }}>
                         <span className="plate-tag text-[10px]">{m.placa}</span>
-                        <p className="text-white/80 font-bold text-xs mt-1.5 truncate">{m.marca} {m.modelo}</p>
+                        <p className="dark:text-white/80 text-slate-900/80 font-bold text-xs mt-1.5 truncate">{m.marca} {m.modelo}</p>
                         <p className="text-[11px] font-black mt-0.5" style={{ color: row?.color }}>
                           +{pts} pts / servicio
                         </p>
@@ -312,7 +312,7 @@ export default function PuntosPage() {
                     );
                   })}
                   {selected.motos.length === 0 && (
-                    <p className="text-white/25 text-sm col-span-4">Sin motos registradas</p>
+                    <p className="dark:text-white/25 text-slate-900/25 text-sm col-span-4">Sin motos registradas</p>
                   )}
                 </div>
               </div>
@@ -323,17 +323,17 @@ export default function PuntosPage() {
           {tab === 'historia' && (
             <div className="gm-card-d rounded-2xl overflow-hidden">
               <div className="px-6 py-4 border-b border-white/[0.05] flex items-center justify-between">
-                <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+                <p className="text-[11px] tracking-[0.28em] uppercase dark:text-white/28 text-slate-900/28 font-bold">
                   Historial de puntos ({selected.historia.length})
                 </p>
-                <p className="text-[11px] text-white/35">
-                  Ganados: <span className="text-white/70 font-bold">{selected.totales} pts</span>
-                  {' '}· Canjeados: <span className="text-white/70 font-bold">{selected.canjeados} pts</span>
-                  {' '}· Disponibles: <span className="text-white/70 font-bold">{disponibles} pts</span>
+                <p className="text-[11px] dark:text-white/35 text-slate-900/35">
+                  Ganados: <span className="dark:text-white/70 text-slate-900/70 font-bold">{selected.totales} pts</span>
+                  {' '}· Canjeados: <span className="dark:text-white/70 text-slate-900/70 font-bold">{selected.canjeados} pts</span>
+                  {' '}· Disponibles: <span className="dark:text-white/70 text-slate-900/70 font-bold">{disponibles} pts</span>
                 </p>
               </div>
               {selected.historia.length === 0 ? (
-                <div className="py-14 text-center text-white/25 text-sm">Sin servicios registrados aún</div>
+                <div className="py-14 text-center dark:text-white/25 text-slate-900/25 text-sm">Sin servicios registrados aún</div>
               ) : (
                 <div className="overflow-x-auto dark-scroll">
                 <table className="gm-table-d" style={{ minWidth: 520 }}>
@@ -350,17 +350,17 @@ export default function PuntosPage() {
                   <tbody>
                     {selected.historia.map(h => (
                       <tr key={h.id_registro}>
-                        <td className="text-white/50 text-[12px]">{fmtDate(h.fecha)}</td>
+                        <td className="dark:text-white/50 text-slate-900/50 text-[12px]">{fmtDate(h.fecha)}</td>
                         <td>
                           <span className="plate-tag">{h.placa}</span>
-                          <span className="text-white/45 text-xs ml-2">{h.moto}</span>
+                          <span className="dark:text-white/45 text-slate-900/45 text-xs ml-2">{h.moto}</span>
                         </td>
-                        <td className="text-white/65 text-[13px]">{h.tipo}</td>
+                        <td className="dark:text-white/65 text-slate-900/65 text-[13px]">{h.tipo}</td>
                         <td className="text-right text-yellow-400 font-bold">+{h.pts}</td>
                         <td className="text-right text-emerald-400 font-bold">
                           {h.bono > 0 ? `+${h.bono}` : '—'}
                         </td>
-                        <td className="text-right text-white font-black">+{h.total}</td>
+                        <td className="text-right dark:text-white text-slate-900 font-black">+{h.total}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -376,16 +376,16 @@ export default function PuntosPage() {
               <div className="px-6 py-4 border-b border-white/[0.05] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Users size={13} className="text-gm-red/60" />
-                  <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+                  <p className="text-[11px] tracking-[0.28em] uppercase dark:text-white/28 text-slate-900/28 font-bold">
                     Ranking de clientes ({data.length})
                   </p>
                 </div>
-                <p className="text-[11px] text-white/35">
-                  Total puntos disponibles: <span className="text-white/70 font-bold">{data.reduce((s, d) => s + Math.max(0, d.totales - d.canjeados), 0)}</span>
+                <p className="text-[11px] dark:text-white/35 text-slate-900/35">
+                  Total puntos disponibles: <span className="dark:text-white/70 text-slate-900/70 font-bold">{data.reduce((s, d) => s + Math.max(0, d.totales - d.canjeados), 0)}</span>
                 </p>
               </div>
               {data.length === 0 ? (
-                <div className="py-14 text-center text-white/25 text-sm">Sin clientes registrados</div>
+                <div className="py-14 text-center dark:text-white/25 text-slate-900/25 text-sm">Sin clientes registrados</div>
               ) : (
                 <div className="overflow-x-auto dark-scroll">
                   <table className="gm-table-d" style={{ minWidth: 560 }}>
@@ -424,10 +424,10 @@ export default function PuntosPage() {
                                   {d.usuario?.nombre_completo?.charAt(0)?.toUpperCase() ?? '?'}
                                 </div>
                                 <div>
-                                  <p className="text-[13px] font-bold text-white/85 leading-tight">
+                                  <p className="text-[13px] font-bold dark:text-white/85 text-slate-900/85 leading-tight">
                                     {d.usuario.nombre_completo}
                                   </p>
-                                  <p className="text-[10px] text-white/30">{d.usuario.correo}</p>
+                                  <p className="text-[10px] dark:text-white/30 text-slate-900/30">{d.usuario.correo}</p>
                                 </div>
                               </div>
                             </td>
@@ -438,10 +438,10 @@ export default function PuntosPage() {
                               </span>
                             </td>
                             <td className="text-right">
-                              <span className="text-base font-black text-white">{disp}</span>
-                              <span className="text-[11px] text-white/30 ml-1">pts</span>
+                              <span className="text-base font-black dark:text-white text-slate-900">{disp}</span>
+                              <span className="text-[11px] dark:text-white/30 text-slate-900/30 ml-1">pts</span>
                             </td>
-                            <td className="text-right text-white/55 font-semibold">{d.historia.length}</td>
+                            <td className="text-right dark:text-white/55 text-slate-900/55 font-semibold">{d.historia.length}</td>
                             <td className="text-right text-emerald-400 font-black">${cb}</td>
                           </tr>
                         );
@@ -451,7 +451,7 @@ export default function PuntosPage() {
                 </div>
               )}
               <div className="px-5 py-3 border-t border-white/[0.04]">
-                <p className="text-[10px] text-white/22">Haz clic en un cliente para ver su detalle completo</p>
+                <p className="text-[10px] dark:text-white/22 text-slate-900/22">Haz clic en un cliente para ver su detalle completo</p>
               </div>
             </div>
           )}
@@ -462,20 +462,20 @@ export default function PuntosPage() {
               <div className="gm-card-d rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <Zap size={13} className="text-gm-red/60" />
-                  <p className="text-[10px] tracking-[0.3em] uppercase text-white/28 font-bold">Puntos por servicio</p>
+                  <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/28 text-slate-900/28 font-bold">Puntos por servicio</p>
                 </div>
                 <div className="space-y-2.5">
                   {POINTS_TABLE.map(r => (
                     <div key={r.label}
                          className="flex items-center justify-between px-4 py-2.5 rounded-xl"
                          style={{ background: `${r.color}0A`, border: `1px solid ${r.color}20` }}>
-                      <span className="text-[13px] text-white/70 font-semibold">{r.label}</span>
+                      <span className="text-[13px] dark:text-white/70 text-slate-900/70 font-semibold">{r.label}</span>
                       <span className="font-black text-lg" style={{ color: r.color }}>+{r.pts} pts</span>
                     </div>
                   ))}
                   <div className="flex items-center justify-between px-4 py-2.5 rounded-xl"
                        style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
-                    <span className="text-[13px] text-white/70 font-semibold">Bono cambio aceite</span>
+                    <span className="text-[13px] dark:text-white/70 text-slate-900/70 font-semibold">Bono cambio aceite</span>
                     <span className="font-black text-lg text-emerald-400">+3 pts</span>
                   </div>
                 </div>
@@ -484,7 +484,7 @@ export default function PuntosPage() {
               <div className="gm-card-d rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <Gift size={13} className="text-gm-red/60" />
-                  <p className="text-[10px] tracking-[0.3em] uppercase text-white/28 font-bold">Canje de puntos</p>
+                  <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/28 text-slate-900/28 font-bold">Canje de puntos</p>
                 </div>
                 <div className="space-y-3">
                   {[
@@ -497,14 +497,14 @@ export default function PuntosPage() {
                          className="flex items-center justify-between px-4 py-3 rounded-xl"
                          style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <div>
-                        <p className="text-[13px] text-white/75 font-semibold">{c.pts} pts</p>
-                        <p className="text-[11px] text-white/30">{c.desc}</p>
+                        <p className="text-[13px] dark:text-white/75 text-slate-900/75 font-semibold">{c.pts} pts</p>
+                        <p className="text-[11px] dark:text-white/30 text-slate-900/30">{c.desc}</p>
                       </div>
                       <span className="text-emerald-400 font-black text-lg">= ${c.val}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-white/25 mt-4 leading-relaxed">
+                <p className="text-[11px] dark:text-white/25 text-slate-900/25 mt-4 leading-relaxed">
                   Los puntos no tienen fecha de vencimiento. Aplica para servicios de taller.
                   Consulta condiciones con el personal del taller.
                 </p>
@@ -514,7 +514,7 @@ export default function PuntosPage() {
               <div className="sm:col-span-2 gm-card-d rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <Award size={13} className="text-gm-red/60" />
-                  <p className="text-[10px] tracking-[0.3em] uppercase text-white/28 font-bold">Niveles de membresía</p>
+                  <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/28 text-slate-900/28 font-bold">Niveles de membresía</p>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   {LEVELS.map(l => (
@@ -523,7 +523,7 @@ export default function PuntosPage() {
                          style={{ background: `${l.color}0E`, border: `1.5px solid ${l.color}${disponibles >= l.min ? '35' : '15'}` }}>
                       <div className="text-3xl mb-2">{l.icon}</div>
                       <p className="font-black text-sm" style={{ color: l.color }}>{l.label}</p>
-                      <p className="text-[10px] text-white/30 mt-0.5">{l.min}+ pts</p>
+                      <p className="text-[10px] dark:text-white/30 text-slate-900/30 mt-0.5">{l.min}+ pts</p>
                     </div>
                   ))}
                 </div>

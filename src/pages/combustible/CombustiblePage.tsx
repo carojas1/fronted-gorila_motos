@@ -310,11 +310,11 @@ export default function CombustiblePage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Fuel size={13} className="text-gm-red/60" />
-            <span className="text-[10px] tracking-[0.3em] uppercase text-white/28 font-bold">
+            <span className="text-[10px] tracking-[0.3em] uppercase dark:text-white/28 text-slate-900/28 font-bold">
               Gorila Motos · Combustible
             </span>
           </div>
-          <h1 className="text-[2rem] font-black text-white leading-tight tracking-tight">
+          <h1 className="text-[2rem] font-black dark:text-white text-slate-900 leading-tight tracking-tight">
             Rastreador de <span className="text-gradient-red">Combustible</span>
           </h1>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -327,7 +327,7 @@ export default function CombustiblePage() {
         </div>
         <button
           onClick={abrirModal}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm dark:text-white text-slate-900"
           style={{ background: '#E11428', boxShadow: '0 0 20px rgba(225,20,40,0.35)' }}
         >
           <Plus size={16} /> Registrar carga
@@ -360,7 +360,7 @@ export default function CombustiblePage() {
           <div className="px-6 py-4 border-b border-white/[0.05] flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <Users size={15} className="text-gm-red/70" />
-              <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+              <p className="text-[11px] tracking-[0.28em] uppercase dark:text-white/28 text-slate-900/28 font-bold">
                 Todos los usuarios ({adminRows.length})
               </p>
             </div>
@@ -376,8 +376,8 @@ export default function CombustiblePage() {
           </div>
           {adminRows.length === 0 ? (
             <div className="py-12 text-center">
-              <Fuel size={28} className="mx-auto mb-2 text-white/10" />
-              <p className="text-white/30 text-sm">
+              <Fuel size={28} className="mx-auto mb-2 dark:text-white/10 text-slate-900/10" />
+              <p className="dark:text-white/30 text-slate-900/30 text-sm">
                 {adminSearch ? 'Sin coincidencias para esa búsqueda' : 'Aún no hay cargas registradas'}
               </p>
             </div>
@@ -405,12 +405,12 @@ export default function CombustiblePage() {
                     const rend  = (km > 0 && r.litros > 0) ? (km / r.litros).toFixed(1) : '—';
                     return (
                       <tr key={r.id}>
-                        <td className="text-white/50 text-[12px]">{fmtDate(r.fecha)}</td>
-                        <td className="text-white/85 font-semibold text-[12px]">
-                          <span className="flex items-center gap-1.5"><Users size={11} className="text-white/25" />{r.owner.nombre}</span>
+                        <td className="dark:text-white/50 text-slate-900/50 text-[12px]">{fmtDate(r.fecha)}</td>
+                        <td className="dark:text-white/85 text-slate-900/85 font-semibold text-[12px]">
+                          <span className="flex items-center gap-1.5"><Users size={11} className="dark:text-white/25 text-slate-900/25" />{r.owner.nombre}</span>
                         </td>
-                        <td className="text-white/40 text-[12px]">
-                          <span className="flex items-center gap-1.5"><Mail size={10} className="text-white/20" />{r.owner.correo}</span>
+                        <td className="dark:text-white/40 text-slate-900/40 text-[12px]">
+                          <span className="flex items-center gap-1.5"><Mail size={10} className="dark:text-white/20 text-slate-900/20" />{r.owner.correo}</span>
                         </td>
                         <td><span className="plate-tag">{r.placa}</span></td>
                         <td>
@@ -419,7 +419,7 @@ export default function CombustiblePage() {
                                   style={{ background: `${colorXTipo(tipoM.tipo)}18`, color: colorXTipo(tipoM.tipo), border: `1px solid ${colorXTipo(tipoM.tipo)}35` }}>
                               {tipoM.label.split(' ')[0]}
                             </span>
-                          ) : <span className="text-white/30 text-[11px]">—</span>}
+                          ) : <span className="dark:text-white/30 text-slate-900/30 text-[11px]">—</span>}
                         </td>
                         <td className="text-right text-blue-400 font-bold">{r.litros.toFixed(1)}</td>
                         <td className="text-right text-emerald-400 font-bold">{fmtMoney(r.costo_total)}</td>
@@ -453,8 +453,8 @@ export default function CombustiblePage() {
                    style={{ background: `${color}15`, border: `1px solid ${color}25` }}>
                 <Icon size={16} style={{ color }} />
               </div>
-              <p className="text-xl font-black text-white">{val}</p>
-              <p className="text-[11px] text-white/35 mt-0.5">{label}</p>
+              <p className="text-xl font-black dark:text-white text-slate-900">{val}</p>
+              <p className="text-[11px] dark:text-white/35 text-slate-900/35 mt-0.5">{label}</p>
             </div>
           ))}
         </div>
@@ -490,16 +490,16 @@ export default function CombustiblePage() {
              style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.28)' }}>
           <AlertTriangle size={17} color="#F59E0B" className="shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-[13.5px] font-black text-white/90 flex items-center gap-2">
+            <p className="text-[13.5px] font-black dark:text-white/90 text-slate-900/90 flex items-center gap-2">
               El rendimiento bajó — posible falla
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
                     style={{ background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }}>
                 −{anomaly.pct}%
               </span>
             </p>
-            <p className="text-[12px] text-white/45 mt-1 leading-relaxed">
+            <p className="text-[12px] dark:text-white/45 text-slate-900/45 mt-1 leading-relaxed">
               Última carga: <b style={{ color: '#F59E0B' }}>{anomaly.last} km/gal</b> vs. promedio de{' '}
-              <b className="text-white/70">{anomaly.avg} km/gal</b>. Revisar llantas, filtro de aire, bujía.
+              <b className="dark:text-white/70 text-slate-900/70">{anomaly.avg} km/gal</b>. Revisar llantas, filtro de aire, bujía.
             </p>
             {selMoto && (
               <Link to={`/motos/${selMoto}`}
@@ -517,7 +517,7 @@ export default function CombustiblePage() {
         <div className="gm-card-d rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Activity size={15} className="text-gm-red/70" />
-            <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+            <p className="text-[11px] tracking-[0.28em] uppercase dark:text-white/28 text-slate-900/28 font-bold">
               Rendimiento (km / galón)
             </p>
           </div>
@@ -544,7 +544,7 @@ export default function CombustiblePage() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-[11px] text-white/30 mt-2 flex items-center gap-1.5">
+          <p className="text-[11px] dark:text-white/30 text-slate-900/30 mt-2 flex items-center gap-1.5">
             <TrendingUp size={11} /> Mayor es mejor. Caída sostenida → revisar mantenimiento.
           </p>
         </div>
@@ -557,7 +557,7 @@ export default function CombustiblePage() {
           <div className="gm-card-d rounded-2xl p-5 lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <DollarSign size={15} className="text-emerald-400/80" />
-              <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+              <p className="text-[11px] tracking-[0.28em] uppercase dark:text-white/28 text-slate-900/28 font-bold">
                 Gasto en combustible por carga
               </p>
             </div>
@@ -590,7 +590,7 @@ export default function CombustiblePage() {
           <div className="gm-card-d rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <Fuel size={15} className="text-gm-red/70" />
-              <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+              <p className="text-[11px] tracking-[0.28em] uppercase dark:text-white/28 text-slate-900/28 font-bold">
                 Gasto por tipo
               </p>
             </div>
@@ -616,7 +616,7 @@ export default function CombustiblePage() {
       {/* ── Tabla registros ── */}
       <div className="gm-card-d rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-white/[0.05] flex items-center justify-between">
-          <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+          <p className="text-[11px] tracking-[0.28em] uppercase dark:text-white/28 text-slate-900/28 font-bold">
             Registros ({filtered.length})
           </p>
           {selectedMoto && <span className="plate-tag">{selectedMoto.placa}</span>}
@@ -624,8 +624,8 @@ export default function CombustiblePage() {
 
         {filtered.length === 0 ? (
           <div className="py-16 text-center">
-            <Fuel size={32} className="mx-auto mb-3 text-white/10" />
-            <p className="text-white/30 text-sm font-semibold">Sin registros para este período</p>
+            <Fuel size={32} className="mx-auto mb-3 dark:text-white/10 text-slate-900/10" />
+            <p className="dark:text-white/30 text-slate-900/30 text-sm font-semibold">Sin registros para este período</p>
             <button onClick={abrirModal}
               className="mt-4 text-gm-red text-sm font-bold hover:text-gm-red-lt transition-colors">
               Agregar primera carga →
@@ -655,7 +655,7 @@ export default function CombustiblePage() {
                   const rend  = (km > 0 && l.litros > 0) ? (km / l.litros).toFixed(1) : '—';
                   return (
                     <tr key={l.id}>
-                      <td className="text-white/50 text-[12px]">{fmtDate(l.fecha)}</td>
+                      <td className="dark:text-white/50 text-slate-900/50 text-[12px]">{fmtDate(l.fecha)}</td>
                       <td><span className="plate-tag">{l.placa}</span></td>
                       <td>
                         {tipoM ? (
@@ -663,12 +663,12 @@ export default function CombustiblePage() {
                                 style={{ background: `${colorXTipo(tipoM.tipo)}18`, color: colorXTipo(tipoM.tipo), border: `1px solid ${colorXTipo(tipoM.tipo)}35` }}>
                             {tipoM.label.split(' ')[0]}
                           </span>
-                        ) : <span className="text-white/30 text-[11px]">—</span>}
+                        ) : <span className="dark:text-white/30 text-slate-900/30 text-[11px]">—</span>}
                       </td>
                       <td className="text-right text-blue-400 font-bold">{l.litros.toFixed(1)} gal</td>
                       <td className="text-right text-emerald-400 font-bold">{fmtMoney(l.costo_total)}</td>
-                      <td className="text-right text-white/40">{l.km_anterior ? l.km_anterior.toLocaleString() : '—'}</td>
-                      <td className="text-right text-white/75 font-bold">{l.km_actual > 0 ? l.km_actual.toLocaleString() : '—'}</td>
+                      <td className="text-right dark:text-white/40 text-slate-900/40">{l.km_anterior ? l.km_anterior.toLocaleString() : '—'}</td>
+                      <td className="text-right dark:text-white/75 text-slate-900/75 font-bold">{l.km_actual > 0 ? l.km_actual.toLocaleString() : '—'}</td>
                       <td className="text-right text-yellow-400 font-bold">{rend !== '—' ? `${rend} km/gal` : '—'}</td>
                       <td>
                         <button onClick={() => removeLog(l.id)} className="icon-btn danger ml-auto block">
@@ -699,8 +699,8 @@ export default function CombustiblePage() {
                }}>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-lg font-black text-white">Registrar carga</h2>
-                <p className="text-[12px] text-white/35">Nuevo registro de combustible</p>
+                <h2 className="text-lg font-black dark:text-white text-slate-900">Registrar carga</h2>
+                <p className="text-[12px] dark:text-white/35 text-slate-900/35">Nuevo registro de combustible</p>
               </div>
               <button onClick={() => setOpen(false)} className="icon-btn"><X size={16} /></button>
             </div>
@@ -710,7 +710,7 @@ export default function CombustiblePage() {
               {/* Fila 1: Moto + Fecha */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1.5">Moto *</label>
+                  <label className="block text-[11px] dark:text-white/40 text-slate-900/40 font-bold uppercase tracking-wider mb-1.5">Moto *</label>
                   <select className="gm-select-d w-full" value={form.id_moto}
                     onChange={e => onMotoChange(e.target.value)}>
                     <option value="">Seleccionar</option>
@@ -718,14 +718,14 @@ export default function CombustiblePage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1.5">Fecha *</label>
+                  <label className="block text-[11px] dark:text-white/40 text-slate-900/40 font-bold uppercase tracking-wider mb-1.5">Fecha *</label>
                   <input type="date" className="gm-input-d w-full" value={form.fecha} onChange={f('fecha')} />
                 </div>
               </div>
 
               {/* Fila 2: Tipo combustible */}
               <div>
-                <label className="block text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] dark:text-white/40 text-slate-900/40 font-bold uppercase tracking-wider mb-1.5">
                   Tipo de combustible *
                 </label>
                 <div className="grid grid-cols-4 gap-2">
@@ -752,15 +752,15 @@ export default function CombustiblePage() {
               {/* Fila 3: Galones + Costo */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1.5">Galones *</label>
+                  <label className="block text-[11px] dark:text-white/40 text-slate-900/40 font-bold uppercase tracking-wider mb-1.5">Galones *</label>
                   <input type="number" step="0.1" min="0" placeholder="Ej. 2.5"
                     className="gm-input-d w-full" value={form.litros} onChange={f('litros')} />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] dark:text-white/40 text-slate-900/40 font-bold uppercase tracking-wider mb-1.5">
                     Costo total USD
                     {form.litros && (
-                      <span className="text-white/25 normal-case font-normal ml-1">
+                      <span className="dark:text-white/25 text-slate-900/25 normal-case font-normal ml-1">
                         (est. ${costoEst})
                       </span>
                     )}
@@ -773,7 +773,7 @@ export default function CombustiblePage() {
               {/* Fila 4: Km anterior + Km actual */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] dark:text-white/40 text-slate-900/40 font-bold uppercase tracking-wider mb-1.5">
                     Km anterior
                     <span className="text-[10px] text-emerald-400/70 font-normal normal-case ml-1">(auto)</span>
                   </label>
@@ -782,9 +782,9 @@ export default function CombustiblePage() {
                     value={form.km_anterior} onChange={f('km_anterior')} />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1.5">
+                  <label className="block text-[11px] dark:text-white/40 text-slate-900/40 font-bold uppercase tracking-wider mb-1.5">
                     Km actual
-                    <span className="text-[10px] text-white/25 font-normal normal-case ml-1">(odómetro)</span>
+                    <span className="text-[10px] dark:text-white/25 text-slate-900/25 font-normal normal-case ml-1">(odómetro)</span>
                   </label>
                   <input type="number" min="0" placeholder="Leer del odómetro"
                     className="gm-input-d w-full" value={form.km_actual} onChange={f('km_actual')} />
@@ -794,7 +794,7 @@ export default function CombustiblePage() {
                 <p className="text-[11px] text-emerald-400/70 -mt-1">
                   Recorridos: <b>{(Number(form.km_actual) - Number(form.km_anterior)).toLocaleString()} km</b>
                   {form.litros && Number(form.litros) > 0 && (
-                    <span className="text-white/40 ml-2">
+                    <span className="dark:text-white/40 text-slate-900/40 ml-2">
                       → <b className="text-yellow-400">{((Number(form.km_actual) - Number(form.km_anterior)) / Number(form.litros)).toFixed(1)} km/gal</b>
                     </span>
                   )}
@@ -803,7 +803,7 @@ export default function CombustiblePage() {
 
               {/* Notas */}
               <div>
-                <label className="block text-[11px] text-white/40 font-bold uppercase tracking-wider mb-1.5">Notas</label>
+                <label className="block text-[11px] dark:text-white/40 text-slate-900/40 font-bold uppercase tracking-wider mb-1.5">Notas</label>
                 <input type="text" placeholder="Gasolinera, observaciones…"
                   className="gm-input-d w-full" value={form.notas} onChange={f('notas')} />
               </div>
@@ -811,13 +811,13 @@ export default function CombustiblePage() {
 
             <div className="flex gap-3 mt-5">
               <button onClick={() => setOpen(false)}
-                className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white/40 border border-white/[0.08] hover:border-white/15 transition-all">
+                className="flex-1 py-2.5 rounded-xl font-bold text-sm dark:text-white/40 text-slate-900/40 border border-white/[0.08] hover:border-white/15 transition-all">
                 Cancelar
               </button>
               <button
                 onClick={addLog}
                 disabled={saving || !form.id_moto || !form.fecha || !form.litros}
-                className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40"
+                className="flex-1 py-2.5 rounded-xl font-bold text-sm dark:text-white text-slate-900 transition-all disabled:opacity-40"
                 style={{ background: '#E11428' }}
               >
                 {saving ? 'Guardando…' : 'Guardar registro'}

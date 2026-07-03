@@ -169,11 +169,11 @@ export default function PortalClientePage() {
             {user?.nombre_completo?.charAt(0)?.toUpperCase() ?? 'U'}
           </div>
           <div className="flex-1">
-            <p className="text-[11px] text-white/30 font-bold uppercase tracking-widest">Mi portal</p>
-            <h1 className="text-2xl font-black text-white leading-tight">
+            <p className="text-[11px] dark:text-white/30 text-slate-900/30 font-bold uppercase tracking-widest">Mi portal</p>
+            <h1 className="text-2xl font-black dark:text-white text-slate-900 leading-tight">
               {user?.nombre_completo ?? 'Mi cuenta'}
             </h1>
-            <p className="text-white/35 text-sm mt-0.5">{user?.correo}</p>
+            <p className="dark:text-white/35 text-slate-900/35 text-sm mt-0.5">{user?.correo}</p>
           </div>
           {/* KPIs rápidos */}
           <div className="flex items-center gap-0 bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
@@ -185,7 +185,7 @@ export default function PortalClientePage() {
               <div key={label} className="flex items-center">
                 <div className="flex flex-col items-center gap-0.5 px-5 py-3">
                   <span className="text-xl font-black" style={{ color }}>{value}</span>
-                  <span className="text-[9px] font-bold text-white/30 uppercase tracking-wider">{label}</span>
+                  <span className="text-[9px] font-bold dark:text-white/30 text-slate-900/30 uppercase tracking-wider">{label}</span>
                 </div>
                 {i < arr.length - 1 && <div className="w-px h-8 bg-white/[0.07]" />}
               </div>
@@ -197,15 +197,15 @@ export default function PortalClientePage() {
       {/* ── Mis motos ── */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-black text-white/80">Mis motos</h2>
+          <h2 className="text-base font-black dark:text-white/80 text-slate-900/80">Mis motos</h2>
           <Link to="/motos" className="text-[11px] text-gm-red font-bold hover:text-gm-red-lt flex items-center gap-1">
             Administrar <ChevronRight size={11} />
           </Link>
         </div>
         {motos.length === 0 ? (
           <div className="gm-card-d rounded-2xl py-10 text-center">
-            <Bike size={28} className="mx-auto mb-2 text-white/15" />
-            <p className="text-white/30 text-sm">Sin motos registradas</p>
+            <Bike size={28} className="mx-auto mb-2 dark:text-white/15 text-slate-900/15" />
+            <p className="dark:text-white/30 text-slate-900/30 text-sm">Sin motos registradas</p>
             <Link to="/motos" className="mt-3 inline-flex text-gm-red text-sm font-bold">
               Registrar mi moto →
             </Link>
@@ -226,14 +226,14 @@ export default function PortalClientePage() {
                       {cfg.label}
                     </span>
                   </div>
-                  <p className="text-white/85 font-black text-sm">{m.marca} {m.modelo}</p>
-                  <p className="text-white/35 text-xs mt-0.5">{m.anio} · {m.cilindraje}cc · {m.tipo_moto}</p>
-                  <p className="text-white/50 text-xs mt-1">
+                  <p className="dark:text-white/85 text-slate-900/85 font-black text-sm">{m.marca} {m.modelo}</p>
+                  <p className="dark:text-white/35 text-slate-900/35 text-xs mt-0.5">{m.anio} · {m.cilindraje}cc · {m.tipo_moto}</p>
+                  <p className="dark:text-white/50 text-slate-900/50 text-xs mt-1">
                     {(m.kilometraje ?? 0).toLocaleString()} km totales
                   </p>
                   {/* Barra aceite */}
                   <div className="mt-3">
-                    <div className="flex justify-between text-[10px] text-white/30 mb-1">
+                    <div className="flex justify-between text-[10px] dark:text-white/30 text-slate-900/30 mb-1">
                       <span>Próximo cambio de aceite</span>
                       {alert?.urgency === 'unknown'
                         ? <span style={{ color: cfg.color }}>—</span>
@@ -276,11 +276,11 @@ export default function PortalClientePage() {
         <div className="gm-card-d rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-white/[0.05] flex items-center justify-between gap-3 flex-wrap">
             <div>
-              <p className="text-[11px] tracking-[0.28em] uppercase text-white/28 font-bold">
+              <p className="text-[11px] tracking-[0.28em] uppercase dark:text-white/28 text-slate-900/28 font-bold">
                 Historial · {registros.length} servicios
               </p>
-              <p className="text-xs text-white/30 mt-0.5">
-                Total gastado: <span className="text-white/60 font-bold">{fmtMoney(gastoTotal)}</span>
+              <p className="text-xs dark:text-white/30 text-slate-900/30 mt-0.5">
+                Total gastado: <span className="dark:text-white/60 text-slate-900/60 font-bold">{fmtMoney(gastoTotal)}</span>
               </p>
             </div>
             <input
@@ -292,7 +292,7 @@ export default function PortalClientePage() {
             />
           </div>
           {filtered.length === 0 ? (
-            <div className="py-12 text-center text-white/25 text-sm">Sin registros</div>
+            <div className="py-12 text-center dark:text-white/25 text-slate-900/25 text-sm">Sin registros</div>
           ) : (
             <div className="overflow-x-auto dark-scroll">
               <table className="gm-table-d" style={{ minWidth: 560 }}>
@@ -305,9 +305,9 @@ export default function PortalClientePage() {
                 <tbody>
                   {filtered.map(r => (
                     <tr key={r.id_registro}>
-                      <td className="text-white/45 text-xs whitespace-nowrap">{fmtDate(r.fecha)}</td>
+                      <td className="dark:text-white/45 text-slate-900/45 text-xs whitespace-nowrap">{fmtDate(r.fecha)}</td>
                       <td><span className="plate-tag">{r.placa}</span></td>
-                      <td className="text-white/65 text-sm">{r.tipo_servicio ?? '—'}</td>
+                      <td className="dark:text-white/65 text-slate-900/65 text-sm">{r.tipo_servicio ?? '—'}</td>
                       <td className="text-right text-emerald-400 font-bold text-sm whitespace-nowrap">{fmtMoney(r.costo_total)}</td>
                       <td>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
@@ -355,12 +355,12 @@ export default function PortalClientePage() {
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
                           style={{ background: cfg.bg, color: cfg.color }}>{cfg.label}</span>
                   </div>
-                  <p className="text-white/60 text-xs mt-1">
+                  <p className="dark:text-white/60 text-slate-900/60 text-xs mt-1">
                     {m.marca} {m.modelo} · {m.cilindraje}cc
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-black">{(m.kilometraje ?? 0).toLocaleString()} km</p>
+                  <p className="dark:text-white text-slate-900 font-black">{(m.kilometraje ?? 0).toLocaleString()} km</p>
                   {kmSince != null && (
                     <p className="text-[11px] mt-0.5" style={{ color: cfg.color }}>
                       {kmSince >= thr
@@ -375,7 +375,7 @@ export default function PortalClientePage() {
           {oilAlerts.length === 0 && (
             <div className="gm-card-d rounded-2xl py-12 text-center">
               <CheckCircle size={28} className="mx-auto mb-2 text-emerald-400/30" />
-              <p className="text-white/30 text-sm">Sin motos registradas</p>
+              <p className="dark:text-white/30 text-slate-900/30 text-sm">Sin motos registradas</p>
             </div>
           )}
         </div>
@@ -386,14 +386,14 @@ export default function PortalClientePage() {
         <div className="space-y-4">
           <div className="gm-card-d rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center gap-5">
             <div className="flex-1">
-              <p className="text-[11px] text-white/30 uppercase tracking-widest font-bold mb-1">Balance de puntos</p>
-              <p className="text-5xl font-black text-white">{puntosTotales}</p>
-              <p className="text-white/40 text-sm mt-1">
+              <p className="text-[11px] dark:text-white/30 text-slate-900/30 uppercase tracking-widest font-bold mb-1">Balance de puntos</p>
+              <p className="text-5xl font-black dark:text-white text-slate-900">{puntosTotales}</p>
+              <p className="dark:text-white/40 text-slate-900/40 text-sm mt-1">
                 Equivalen a <span className="text-emerald-400 font-bold">{fmtMoney(Math.floor(puntosTotales / 100) * 5)}</span> de descuento
               </p>
             </div>
             <Link to="/puntos"
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm dark:text-white text-slate-900"
                   style={{ background: 'rgba(225,20,40,0.15)', border: '1px solid rgba(225,20,40,0.35)' }}>
               <Star size={14} className="text-gm-red" /> Ver programa completo
             </Link>
@@ -407,8 +407,8 @@ export default function PortalClientePage() {
                 <Wrench size={16} className="text-amber-400" />
               </div>
               <div>
-                <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Por servicios</p>
-                <p className="text-2xl font-black text-white">{ptsServicios}<span className="text-xs text-white/30 ml-1">pts</span></p>
+                <p className="text-[10px] dark:text-white/30 text-slate-900/30 uppercase tracking-wider font-bold">Por servicios</p>
+                <p className="text-2xl font-black dark:text-white text-slate-900">{ptsServicios}<span className="text-xs dark:text-white/30 text-slate-900/30 ml-1">pts</span></p>
               </div>
             </div>
             <div className="gm-card-d rounded-2xl p-4 flex items-center gap-3">
@@ -417,9 +417,9 @@ export default function PortalClientePage() {
                 <Fuel size={16} className="text-emerald-400" />
               </div>
               <div>
-                <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Por combustible</p>
-                <p className="text-2xl font-black text-white">{ptsCombustible}<span className="text-xs text-white/30 ml-1">pts</span></p>
-                <p className="text-[10px] text-white/25">2 pts por día con carga</p>
+                <p className="text-[10px] dark:text-white/30 text-slate-900/30 uppercase tracking-wider font-bold">Por combustible</p>
+                <p className="text-2xl font-black dark:text-white text-slate-900">{ptsCombustible}<span className="text-xs dark:text-white/30 text-slate-900/30 ml-1">pts</span></p>
+                <p className="text-[10px] dark:text-white/25 text-slate-900/25">2 pts por día con carga</p>
               </div>
             </div>
             <div className="gm-card-d rounded-2xl p-4 flex items-center gap-3 col-span-2 sm:col-span-1">
@@ -428,9 +428,9 @@ export default function PortalClientePage() {
                 <Gift size={16} style={{ color: '#8B5CF6' }} />
               </div>
               <div>
-                <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">Por referidos</p>
-                <p className="text-2xl font-black text-white">{puntosBonus}<span className="text-xs text-white/30 ml-1">pts</span></p>
-                <p className="text-[10px] text-white/25">50 pts por código canjeado</p>
+                <p className="text-[10px] dark:text-white/30 text-slate-900/30 uppercase tracking-wider font-bold">Por referidos</p>
+                <p className="text-2xl font-black dark:text-white text-slate-900">{puntosBonus}<span className="text-xs dark:text-white/30 text-slate-900/30 ml-1">pts</span></p>
+                <p className="text-[10px] dark:text-white/25 text-slate-900/25">50 pts por código canjeado</p>
               </div>
             </div>
           </div>
@@ -439,7 +439,7 @@ export default function PortalClientePage() {
           <div className="gm-card-d rounded-2xl p-5 space-y-4">
             {/* Tu código */}
             <div>
-              <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Tu código de referido</p>
+              <p className="text-[10px] dark:text-white/30 text-slate-900/30 uppercase tracking-widest font-bold mb-2">Tu código de referido</p>
               <div className="flex items-center gap-2">
                 <div className="flex-1 px-4 py-2.5 rounded-xl font-black text-lg tracking-widest text-gm-red"
                      style={{ background: 'rgba(225,20,40,0.08)', border: '1px solid rgba(225,20,40,0.2)' }}>
@@ -456,7 +456,7 @@ export default function PortalClientePage() {
                   <Copy size={15} style={{ color: copied ? '#10B981' : 'rgba(255,255,255,0.4)' }} />
                 </button>
               </div>
-              <p className="text-[11px] text-white/25 mt-1.5">
+              <p className="text-[11px] dark:text-white/25 text-slate-900/25 mt-1.5">
                 Compártelo — tu amigo gana 50 pts y tú también
               </p>
             </div>
@@ -466,13 +466,13 @@ export default function PortalClientePage() {
               <div className="flex items-center gap-2 px-4 py-3 rounded-xl"
                    style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
                 <Gift size={14} style={{ color: '#8B5CF6' }} />
-                <p className="text-sm text-white/60">
+                <p className="text-sm dark:text-white/60 text-slate-900/60">
                   Código canjeado de <span className="font-black text-purple-400">@{codigoReferido}</span> · +50 pts acreditados
                 </p>
               </div>
             ) : (
               <div>
-                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">¿Tienes un código?</p>
+                <p className="text-[10px] dark:text-white/30 text-slate-900/30 uppercase tracking-widest font-bold mb-2">¿Tienes un código?</p>
                 <div className="flex gap-2">
                   <input
                     className="gm-input-d flex-1 text-sm"
@@ -504,7 +504,7 @@ export default function PortalClientePage() {
           </div>
 
           <div className="gm-card-d rounded-2xl p-4">
-            <p className="text-[10px] tracking-[0.28em] uppercase text-white/25 font-bold mb-3">
+            <p className="text-[10px] tracking-[0.28em] uppercase dark:text-white/25 text-slate-900/25 font-bold mb-3">
               Últimos 5 servicios
             </p>
             {registros.slice(0, 5).map(r => {
@@ -515,8 +515,8 @@ export default function PortalClientePage() {
                 <div key={r.id_registro}
                      className="flex items-center justify-between py-2.5 border-b border-white/[0.04] last:border-0">
                   <div>
-                    <p className="text-xs font-semibold text-white/60">{r.tipo_servicio ?? '—'}</p>
-                    <p className="text-[11px] text-white/30">{fmtDate(r.fecha)} · {r.placa}</p>
+                    <p className="text-xs font-semibold dark:text-white/60 text-slate-900/60">{r.tipo_servicio ?? '—'}</p>
+                    <p className="text-[11px] dark:text-white/30 text-slate-900/30">{fmtDate(r.fecha)} · {r.placa}</p>
                   </div>
                   <span className="text-yellow-400 font-black">+{pts} pts</span>
                 </div>
@@ -530,7 +530,7 @@ export default function PortalClientePage() {
       <div className="gm-card-d rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <Wrench size={13} className="text-gm-red/60" />
-          <p className="text-[10px] tracking-[0.3em] uppercase text-white/28 font-bold">Contáctanos</p>
+          <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/28 text-slate-900/28 font-bold">Contáctanos</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
@@ -545,16 +545,16 @@ export default function PortalClientePage() {
                 <Icon size={14} className="text-gm-red" />
               </div>
               <div>
-                <p className="text-[10px] text-white/30 font-bold uppercase tracking-wider">{label}</p>
-                <p className="text-[12px] text-white/65 font-semibold mt-0.5">{val}</p>
+                <p className="text-[10px] dark:text-white/30 text-slate-900/30 font-bold uppercase tracking-wider">{label}</p>
+                <p className="text-[12px] dark:text-white/65 text-slate-900/65 font-semibold mt-0.5">{val}</p>
               </div>
             </a>
           ))}
         </div>
         <div className="mt-3 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
           <div className="flex items-center gap-2">
-            <Clock size={12} className="text-white/30" />
-            <span className="text-[11px] text-white/35 font-semibold">{TALLER.horario}</span>
+            <Clock size={12} className="dark:text-white/30 text-slate-900/30" />
+            <span className="text-[11px] dark:text-white/35 text-slate-900/35 font-semibold">{TALLER.horario}</span>
           </div>
         </div>
       </div>

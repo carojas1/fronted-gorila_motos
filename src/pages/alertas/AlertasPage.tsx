@@ -136,14 +136,14 @@ export default function AlertasPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Bell size={13} className="text-gm-red/60" />
-            <span className="text-[10px] tracking-[0.3em] uppercase text-white/28 font-bold">
+            <span className="text-[10px] tracking-[0.3em] uppercase dark:text-white/28 text-slate-900/28 font-bold">
               Gorila Motos · Alertas
             </span>
           </div>
-          <h1 className="text-[2rem] font-black text-white leading-tight tracking-tight">
+          <h1 className="text-[2rem] font-black dark:text-white text-slate-900 leading-tight tracking-tight">
             Alertas de <span className="text-gradient-red">Mantenimiento</span>
           </h1>
-          <p className="text-white/35 text-sm mt-1">
+          <p className="dark:text-white/35 text-slate-900/35 text-sm mt-1">
             Cambios de aceite · {alertas.length} motos monitoreadas
           </p>
         </div>
@@ -169,7 +169,7 @@ export default function AlertasPage() {
             <div key={key} className="flex items-center">
               <div className="flex flex-col items-center gap-0.5 px-5 py-3">
                 <span className="text-xl font-black" style={{ color: col }}>{cnt}</span>
-                <span className="text-[9px] font-bold text-white/28 uppercase tracking-wider">{lbl}</span>
+                <span className="text-[9px] font-bold dark:text-white/28 text-slate-900/28 uppercase tracking-wider">{lbl}</span>
               </div>
               {i < arr.length - 1 && <div className="w-px h-8 bg-white/[0.07]" />}
             </div>
@@ -214,7 +214,7 @@ export default function AlertasPage() {
         {visible.length === 0 ? (
           <div className="gm-card-d rounded-2xl py-16 text-center">
             <CheckCircle size={32} className="mx-auto mb-3 text-emerald-400/30" />
-            <p className="text-white/35 font-semibold text-sm">Sin alertas en esta categoría</p>
+            <p className="dark:text-white/35 text-slate-900/35 font-semibold text-sm">Sin alertas en esta categoría</p>
           </div>
         ) : visible.map(a => {
           const cfg = URGENCY[a.urgency];
@@ -249,10 +249,10 @@ export default function AlertasPage() {
                       {cfg.label}
                     </span>
                   </div>
-                  <p className="text-white/85 font-bold text-sm truncate">
+                  <p className="dark:text-white/85 text-slate-900/85 font-bold text-sm truncate">
                     {a.moto.marca} {a.moto.modelo} {a.moto.anio}
                   </p>
-                  <p className="text-white/35 text-xs truncate">
+                  <p className="dark:text-white/35 text-slate-900/35 text-xs truncate">
                     {a.ownerName} · {a.moto.cilindraje} cc
                   </p>
                 </div>
@@ -261,7 +261,7 @@ export default function AlertasPage() {
               {/* Barra de progreso */}
               <div className="flex-1 min-w-0 sm:max-w-[280px]">
                 <div className="flex justify-between text-[12px] mb-1.5">
-                  <span className="text-white/40 truncate">
+                  <span className="dark:text-white/40 text-slate-900/40 truncate">
                     {a.kmSinceOil != null
                       ? `${a.kmSinceOil.toLocaleString()} km desde último cambio`
                       : 'Sin registro de cambio de aceite'}
@@ -280,12 +280,12 @@ export default function AlertasPage() {
                     }}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] text-white/22 mt-1.5">
+                <div className="flex justify-between text-[10px] dark:text-white/22 text-slate-900/22 mt-1.5">
                   <span>0 km</span>
                   <span>Límite: {a.threshold.toLocaleString()} km</span>
                 </div>
                 {a.lastOilDate && (
-                  <p className="text-[11px] text-white/25 mt-1.5">
+                  <p className="text-[11px] dark:text-white/25 text-slate-900/25 mt-1.5">
                     Último cambio: {fmtDate(a.lastOilDate)}
                   </p>
                 )}
@@ -293,8 +293,8 @@ export default function AlertasPage() {
 
               {/* Km info */}
               <div className="shrink-0 text-right min-w-[100px]">
-                <p className="text-[11px] text-white/28 mb-0.5">Km actual</p>
-                <p className="text-2xl font-black text-white leading-none">
+                <p className="text-[11px] dark:text-white/28 text-slate-900/28 mb-0.5">Km actual</p>
+                <p className="text-2xl font-black dark:text-white text-slate-900 leading-none">
                   {a.moto.kilometraje.toLocaleString()}
                 </p>
                 {kmOver != null && (
@@ -315,7 +315,7 @@ export default function AlertasPage() {
 
       {/* ── Leyenda ── */}
       <div className="gm-card-d rounded-2xl p-5">
-        <p className="text-[10px] tracking-[0.3em] uppercase text-white/28 font-bold mb-4">
+        <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/28 text-slate-900/28 font-bold mb-4">
           Reglas de mantenimiento
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -330,8 +330,8 @@ export default function AlertasPage() {
                  style={{ background: `${r.color}0A`, border: `1px solid ${r.color}20` }}>
               <div className="w-2 h-2 rounded-full shrink-0" style={{ background: r.color }} />
               <div>
-                <p className="text-[12px] font-bold text-white/80">{r.range}</p>
-                <p className="text-[11px] text-white/35">Cambio cada {r.km}</p>
+                <p className="text-[12px] font-bold dark:text-white/80 text-slate-900/80">{r.range}</p>
+                <p className="text-[11px] dark:text-white/35 text-slate-900/35">Cambio cada {r.km}</p>
               </div>
             </div>
           ))}

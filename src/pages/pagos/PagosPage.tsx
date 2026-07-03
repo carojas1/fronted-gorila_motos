@@ -119,13 +119,13 @@ export default function PagosPage() {
       {/* ─── Header ─── */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
         <div>
-          <p className="text-[10px] tracking-[0.35em] uppercase text-white/25 font-semibold mb-2 flex items-center gap-2">
+          <p className="text-[10px] tracking-[0.35em] uppercase dark:text-white/25 text-slate-900/25 font-semibold mb-2 flex items-center gap-2">
             <CreditCard size={10} className="text-gm-red" /> Facturación · Cobros
           </p>
-          <h1 className="text-[1.9rem] font-black text-white leading-tight tracking-tight">
+          <h1 className="text-[1.9rem] font-black dark:text-white text-slate-900 leading-tight tracking-tight">
             Módulo de <span className="text-gradient-red">Pagos</span>
           </h1>
-          <p className="text-white/35 text-sm mt-1">{registros.length} órdenes en total</p>
+          <p className="dark:text-white/35 text-slate-900/35 text-sm mt-1">{registros.length} órdenes en total</p>
         </div>
         {isAdmin && (
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl"
@@ -167,9 +167,9 @@ export default function PagosPage() {
               </div>
               {isAdmin
                 ? <p className="text-2xl font-black" style={{ color: t.color }}>{fmtMoney(s.total)}</p>
-                : <p className="text-base font-bold text-white/50">{s.count} {s.count === 1 ? 'orden' : 'órdenes'}</p>
+                : <p className="text-base font-bold dark:text-white/50 text-slate-900/50">{s.count} {s.count === 1 ? 'orden' : 'órdenes'}</p>
               }
-              <p className="text-[11px] text-white/25 mt-1">{t.desc}</p>
+              <p className="text-[11px] dark:text-white/25 text-slate-900/25 mt-1">{t.desc}</p>
             </button>
           );
         })}
@@ -201,7 +201,7 @@ export default function PagosPage() {
       {/* ─── Búsqueda ─── */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 dark:text-white/30 text-slate-900/30" />
           <input
             className="gm-input-d pl-9 w-full"
             placeholder="Buscar placa, cliente o servicio..."
@@ -209,7 +209,7 @@ export default function PagosPage() {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <span className="text-[11px] text-white/25">{filtered.length} resultado(s)</span>
+        <span className="text-[11px] dark:text-white/25 text-slate-900/25">{filtered.length} resultado(s)</span>
       </div>
 
       {/* ─── Tabla ─── */}
@@ -236,9 +236,9 @@ export default function PagosPage() {
                     <tr>
                       <td colSpan={colSpan}>
                         <div className="py-16 text-center">
-                          <Receipt size={32} className="text-white/12 mx-auto mb-3" />
-                          <p className="text-sm font-bold text-white/30">Sin registros en esta sección</p>
-                          <p className="text-[11px] text-white/18 mt-1">
+                          <Receipt size={32} className="dark:text-white/12 text-slate-900/12 mx-auto mb-3" />
+                          <p className="text-sm font-bold dark:text-white/30 text-slate-900/30">Sin registros en esta sección</p>
+                          <p className="text-[11px] dark:text-white/18 text-slate-900/18 mt-1">
                             {search ? 'Intenta con otra búsqueda' : 'No hay órdenes con este estado'}
                           </p>
                         </div>
@@ -248,16 +248,16 @@ export default function PagosPage() {
                   : filtered.map(r => (
                     <tr key={r.id_registro}>
                       <td>
-                        <span className="font-mono text-[11px] text-white/35">#{r.id_registro}</span>
+                        <span className="font-mono text-[11px] dark:text-white/35 text-slate-900/35">#{r.id_registro}</span>
                       </td>
                       <td>
-                        <span className="font-black text-white/85 tracking-wide">{r.placa}</span>
+                        <span className="font-black dark:text-white/85 text-slate-900/85 tracking-wide">{r.placa}</span>
                       </td>
                       <td className="hidden sm:table-cell">
-                        <span className="text-white/60 text-[12px]">{r.nombre_cliente}</span>
+                        <span className="dark:text-white/60 text-slate-900/60 text-[12px]">{r.nombre_cliente}</span>
                       </td>
                       <td className="hidden md:table-cell">
-                        <span className="text-white/50 text-[12px] truncate max-w-[150px] block">{r.tipo_servicio}</span>
+                        <span className="dark:text-white/50 text-slate-900/50 text-[12px] truncate max-w-[150px] block">{r.tipo_servicio}</span>
                       </td>
                       <td>
                         <span
@@ -268,11 +268,11 @@ export default function PagosPage() {
                         </span>
                       </td>
                       {isAdmin && (
-                        <td className="font-bold text-white/80 tabular-nums text-sm">
+                        <td className="font-bold dark:text-white/80 text-slate-900/80 tabular-nums text-sm">
                           {fmtMoney(r.costo_total ?? 0)}
                         </td>
                       )}
-                      <td className="hidden lg:table-cell text-white/30 text-[11px] tabular-nums whitespace-nowrap">
+                      <td className="hidden lg:table-cell dark:text-white/30 text-slate-900/30 text-[11px] tabular-nums whitespace-nowrap">
                         {fmtDate(r.fecha as unknown as string)}
                       </td>
                       <td>
@@ -284,7 +284,7 @@ export default function PagosPage() {
                             <FileText size={11} /> Factura <ChevronRight size={9} />
                           </Link>
                         ) : (
-                          <span className="text-[11px] text-white/20">—</span>
+                          <span className="text-[11px] dark:text-white/20 text-slate-900/20">—</span>
                         )}
                       </td>
                     </tr>
@@ -297,7 +297,7 @@ export default function PagosPage() {
         {/* Footer con total */}
         {!loading && filtered.length > 0 && (
           <div className="border-t border-white/[0.05] px-5 py-3 flex items-center justify-between">
-            <span className="text-[11px] text-white/30 font-bold">
+            <span className="text-[11px] dark:text-white/30 text-slate-900/30 font-bold">
               {filtered.length} {filtered.length === 1 ? 'registro' : 'registros'} · {tab.label}
             </span>
             {isAdmin && (

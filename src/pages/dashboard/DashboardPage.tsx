@@ -41,7 +41,7 @@ function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: {
            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E4E7EC',
            boxShadow: isDark ? '0 12px 32px rgba(0,0,0,0.5)' : '0 12px 32px rgba(0,0,0,0.12)',
          }}>
-      {label && <p className="text-white/40 font-bold mb-1">{label}</p>}
+      {label && <p className="dark:text-white/40 text-slate-900/40 font-bold mb-1">{label}</p>}
       {payload.map(p => (
         <p key={p.name} className="font-bold" style={{ color: p.color }}>
           {p.name}: {typeof p.value === 'number' && p.value > 100 ? fmtMoney(p.value) : p.value}
@@ -148,7 +148,7 @@ function KpiCard({ icon: Icon, label, target, sub, to, color, trend }: {
       </div>
       <p className="metric-num" ref={ref}>0</p>
       <p className="metric-label">{label}</p>
-      <p className="text-[11px] text-white/22 mt-0.5">{sub}</p>
+      <p className="text-[11px] dark:text-white/22 text-slate-900/22 mt-0.5">{sub}</p>
       {trend !== undefined && (
         <div className={`mt-2 ${up ? 'stat-trend-up' : 'stat-trend-down'}`}>
           {up ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
@@ -417,14 +417,14 @@ function WebDashboard() {
     return (
       <div className="space-y-6 pb-8">
         <div className="gm-card-d rounded-3xl p-6" style={{ background: 'linear-gradient(135deg,#17171E,rgba(225,20,40,0.06))' }}>
-          <p className="text-[11px] text-white/30 font-bold uppercase tracking-widest">{greeting}</p>
-          <h1 className="text-3xl font-black text-white mt-1">{firstName}</h1>
+          <p className="text-[11px] dark:text-white/30 text-slate-900/30 font-bold uppercase tracking-widest">{greeting}</p>
+          <h1 className="text-3xl font-black dark:text-white text-slate-900 mt-1">{firstName}</h1>
           <div className="flex items-center gap-4 mt-4 flex-wrap">
-            <div className="text-center"><p className="text-2xl font-black text-white">{myMotos.length}</p><p className="text-xs text-white/35">Motos</p></div>
+            <div className="text-center"><p className="text-2xl font-black dark:text-white text-slate-900">{myMotos.length}</p><p className="text-xs dark:text-white/35 text-slate-900/35">Motos</p></div>
             <div className="w-px h-8 bg-white/10" />
-            <div className="text-center"><p className="text-2xl font-black text-white">{myRegs.length}</p><p className="text-xs text-white/35">Servicios</p></div>
+            <div className="text-center"><p className="text-2xl font-black dark:text-white text-slate-900">{myRegs.length}</p><p className="text-xs dark:text-white/35 text-slate-900/35">Servicios</p></div>
             <div className="w-px h-8 bg-white/10" />
-            <div className="text-center"><p className="text-2xl font-black text-yellow-400">{myPuntos}</p><p className="text-xs text-white/35">Puntos</p></div>
+            <div className="text-center"><p className="text-2xl font-black text-yellow-400">{myPuntos}</p><p className="text-xs dark:text-white/35 text-slate-900/35">Puntos</p></div>
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -440,8 +440,8 @@ function WebDashboard() {
                    style={{ background: `${color}15`, border: `1px solid ${color}25` }}>
                 <Icon size={16} style={{ color }} />
               </div>
-              <span className="text-white/70 font-bold text-sm">{label}</span>
-              <ChevronRight size={13} className="text-white/20 ml-auto" />
+              <span className="dark:text-white/70 text-slate-900/70 font-bold text-sm">{label}</span>
+              <ChevronRight size={13} className="dark:text-white/20 text-slate-900/20 ml-auto" />
             </Link>
           ))}
         </div>
@@ -469,11 +469,11 @@ function WebDashboard() {
       {/* ── Header ── */}
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-[11px] text-white/28 font-bold uppercase tracking-widest">{greeting}, {firstName}</p>
-          <h1 className="text-[1.85rem] font-black text-white leading-tight tracking-tight">
+          <p className="text-[11px] dark:text-white/28 text-slate-900/28 font-bold uppercase tracking-widest">{greeting}, {firstName}</p>
+          <h1 className="text-[1.85rem] font-black dark:text-white text-slate-900 leading-tight tracking-tight">
             Panel de <span className="text-gradient-red">Control</span>
           </h1>
-          <p className="text-white/30 text-sm mt-0.5">{new Date().toLocaleDateString('es-EC', { weekday:'long', day:'numeric', month:'long' })}</p>
+          <p className="dark:text-white/30 text-slate-900/30 text-sm mt-0.5">{new Date().toLocaleDateString('es-EC', { weekday:'long', day:'numeric', month:'long' })}</p>
         </div>
         <div className="flex items-center gap-2">
           {isAdmin && (
@@ -611,8 +611,8 @@ function WebDashboard() {
               <Activity size={14} className="text-gm-red" />
             </div>
             <div>
-              <h2 className="text-sm font-black text-white/90">Actividad últimos 7 días</h2>
-              <p className="text-[11px] text-white/28 mt-0.5">Órdenes e ingresos diarios</p>
+              <h2 className="text-sm font-black dark:text-white/90 text-slate-900/90">Actividad últimos 7 días</h2>
+              <p className="text-[11px] dark:text-white/28 text-slate-900/28 mt-0.5">Órdenes e ingresos diarios</p>
             </div>
           </div>
           <Link to="/registros" className="text-[11px] text-gm-red hover:text-gm-red-lt font-bold flex items-center gap-1">
@@ -632,7 +632,7 @@ function WebDashboard() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <TrendingUp size={13} className="text-gm-red/60" />
-              <p className="text-[10px] tracking-[0.28em] uppercase text-white/28 font-bold">Rendimiento (7 días)</p>
+              <p className="text-[10px] tracking-[0.28em] uppercase dark:text-white/28 text-slate-900/28 font-bold">Rendimiento (7 días)</p>
             </div>
             <Link to="/contabilidad" className="text-[10px] text-gm-red hover:text-gm-red-lt font-semibold">
               Ver finanzas
@@ -645,7 +645,7 @@ function WebDashboard() {
         <div className="gm-card-d rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Activity size={13} className="text-gm-red/60" />
-            <p className="text-[10px] tracking-[0.28em] uppercase text-white/28 font-bold">Estado de órdenes</p>
+            <p className="text-[10px] tracking-[0.28em] uppercase dark:text-white/28 text-slate-900/28 font-bold">Estado de órdenes</p>
           </div>
           <div className="flex items-center gap-4">
             <EstadosPieChart data={pieData} isDark={isDark} />
@@ -654,7 +654,7 @@ function WebDashboard() {
                 <div key={d.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
-                    <span className="text-[12px] text-white/50 font-medium">{d.name}</span>
+                    <span className="text-[12px] dark:text-white/50 text-slate-900/50 font-medium">{d.name}</span>
                   </div>
                   <span className="text-[13px] font-black" style={{ color: d.color }}>{d.value}</span>
                 </div>
@@ -675,8 +675,8 @@ function WebDashboard() {
                 <Clock size={13} className="text-gm-red" />
               </div>
               <div>
-                <h2 className="text-sm font-black text-white/90">Actividad reciente</h2>
-                <p className="text-[11px] text-white/28 mt-0.5">Últimas órdenes de servicio</p>
+                <h2 className="text-sm font-black dark:text-white/90 text-slate-900/90">Actividad reciente</h2>
+                <p className="text-[11px] dark:text-white/28 text-slate-900/28 mt-0.5">Últimas órdenes de servicio</p>
               </div>
             </div>
             <Link to="/registros" className="text-[11px] text-gm-red hover:text-gm-red-lt font-bold flex items-center gap-1">
@@ -685,7 +685,7 @@ function WebDashboard() {
           </div>
           <div className="px-4 py-1">
             {recientes.length === 0 ? (
-              <div className="py-12 text-center text-white/25 text-sm">Sin actividad</div>
+              <div className="py-12 text-center dark:text-white/25 text-slate-900/25 text-sm">Sin actividad</div>
             ) : recientes.map(r => (
               <div key={r.id_registro}
                    className="flex items-center gap-3 py-3 border-b border-white/[0.035] last:border-0">
@@ -693,13 +693,13 @@ function WebDashboard() {
                   <Wrench size={13} className="text-gm-red" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white/80 truncate">{r.nombre_cliente}</p>
-                  <p className="text-[11px] text-white/32 font-mono tracking-wider truncate">
+                  <p className="text-sm font-semibold dark:text-white/80 text-slate-900/80 truncate">{r.nombre_cliente}</p>
+                  <p className="text-[11px] dark:text-white/32 text-slate-900/32 font-mono tracking-wider truncate">
                     {r.placa} · {fmtDate(r.fecha)}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  {isAdmin && <p className="text-sm font-black text-white/70">{fmtMoney(r.costo_total)}</p>}
+                  {isAdmin && <p className="text-sm font-black dark:text-white/70 text-slate-900/70">{fmtMoney(r.costo_total)}</p>}
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                         style={{
                           background: `${ESTADO_COLORS[r.estado] ?? '#6B7280'}18`,
@@ -720,9 +720,9 @@ function WebDashboard() {
           {isAdmin && (
             <div className="gm-card-d rounded-2xl p-5"
                  style={{ background: 'linear-gradient(135deg, #17171E, rgba(16,185,129,0.06))' }}>
-              <p className="text-[10px] tracking-[0.28em] uppercase text-white/28 font-bold mb-2">Ingresos facturados</p>
+              <p className="text-[10px] tracking-[0.28em] uppercase dark:text-white/28 text-slate-900/28 font-bold mb-2">Ingresos facturados</p>
               <p className="kpi-mega text-3xl">{fmtMoney(ingresosTotal)}</p>
-              <p className="text-xs text-white/30 mt-1">Total acumulado · {registros.filter(r=>r.estado===4).length} facturas</p>
+              <p className="text-xs dark:text-white/30 text-slate-900/30 mt-1">Total acumulado · {registros.filter(r=>r.estado===4).length} facturas</p>
             </div>
           )}
 
@@ -736,10 +736,10 @@ function WebDashboard() {
                 <AlertTriangle size={15} className="text-amber-400" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-bold text-white/80">{stockCritico} producto{stockCritico > 1 ? 's' : ''} con stock bajo</p>
-                <p className="text-[11px] text-white/35">Reponer inventario</p>
+                <p className="text-sm font-bold dark:text-white/80 text-slate-900/80">{stockCritico} producto{stockCritico > 1 ? 's' : ''} con stock bajo</p>
+                <p className="text-[11px] dark:text-white/35 text-slate-900/35">Reponer inventario</p>
               </div>
-              <ChevronRight size={13} className="text-white/25" />
+              <ChevronRight size={13} className="dark:text-white/25 text-slate-900/25" />
             </Link>
           )}
 
@@ -747,7 +747,7 @@ function WebDashboard() {
           <div className="gm-card-d rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <Zap size={12} className="text-gm-red/60" />
-              <p className="text-[10px] tracking-[0.3em] uppercase text-white/25 font-bold">Acciones rápidas</p>
+              <p className="text-[10px] tracking-[0.3em] uppercase dark:text-white/25 text-slate-900/25 font-bold">Acciones rápidas</p>
             </div>
             <div className="space-y-1.5">
               {[
@@ -762,13 +762,13 @@ function WebDashboard() {
                 <Link key={to} to={to}
                       className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/[0.04] transition-all group border border-transparent hover:border-white/[0.06]">
                   <div className="w-7 h-7 rounded-lg bg-gm-red/8 border border-gm-red/12 flex items-center justify-center shrink-0 group-hover:bg-gm-red group-hover:border-gm-red transition-all">
-                    <Icon size={12} className="text-gm-red group-hover:text-white transition-colors" />
+                    <Icon size={12} className="text-gm-red group-hover:dark:text-white text-slate-900 transition-colors" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-[13px] font-semibold text-white/65 group-hover:text-white/90 transition-colors">{label}</p>
-                    <p className="text-[10px] text-white/25">{desc}</p>
+                    <p className="text-[13px] font-semibold dark:text-white/65 text-slate-900/65 group-hover:dark:text-white/90 text-slate-900/90 transition-colors">{label}</p>
+                    <p className="text-[10px] dark:text-white/25 text-slate-900/25">{desc}</p>
                   </div>
-                  <ArrowRight size={11} className="text-white/18 group-hover:text-gm-red transition-colors" />
+                  <ArrowRight size={11} className="dark:text-white/18 text-slate-900/18 group-hover:text-gm-red transition-colors" />
                 </Link>
               ))}
             </div>

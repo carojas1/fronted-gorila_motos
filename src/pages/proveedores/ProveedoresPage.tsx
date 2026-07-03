@@ -230,8 +230,8 @@ function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose, onDel
            style={{ background: isDark ? '#131318' : '#FFFFFF', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E4E7EC'}` }}>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-black text-white">{isNew ? 'Nuevo proveedor' : 'Datos de contacto'}</h3>
-            {!isNew && <p className="text-[11px] text-white/35 mt-0.5 font-mono">Proveedor: {codigo}</p>}
+            <h3 className="text-base font-black dark:text-white text-slate-900">{isNew ? 'Nuevo proveedor' : 'Datos de contacto'}</h3>
+            {!isNew && <p className="text-[11px] dark:text-white/35 text-slate-900/35 mt-0.5 font-mono">Proveedor: {codigo}</p>}
           </div>
           <button onClick={onClose} className="text-white/30 hover:text-white/70 transition-colors">
             <X size={18} />
@@ -240,7 +240,7 @@ function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose, onDel
 
         {isNew && (
           <div>
-            <label className="text-[10px] font-black text-white/35 uppercase tracking-widest block mb-1">
+            <label className="text-[10px] font-black dark:text-white/35 text-slate-900/35 uppercase tracking-widest block mb-1">
               Código del proveedor *
             </label>
             <input
@@ -250,7 +250,7 @@ function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose, onDel
               onChange={e => setCodigoState(e.target.value)}
               autoFocus
             />
-            <p className="text-[10px] text-white/25 mt-1">
+            <p className="text-[10px] dark:text-white/25 text-slate-900/25 mt-1">
               Úsalo como "Código proveedor" al crear productos para agruparlos aquí.
             </p>
           </div>
@@ -264,7 +264,7 @@ function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose, onDel
             { label: 'Producto principal',value: producto, set: setProducto, ph: 'Aceite 20W-50, filtros...' },
           ].map(({ label, value, set, ph }) => (
             <div key={label}>
-              <label className="text-[10px] font-black text-white/35 uppercase tracking-widest block mb-1">
+              <label className="text-[10px] font-black dark:text-white/35 text-slate-900/35 uppercase tracking-widest block mb-1">
                 {label}
               </label>
               <input
@@ -289,7 +289,7 @@ function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose, onDel
           )}
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white/40 hover:text-white/70 border border-white/[0.07] transition-all"
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold dark:text-white/40 text-slate-900/40 hover:dark:text-white/70 text-slate-900/70 border border-white/[0.07] transition-all"
           >
             Cancelar
           </button>
@@ -436,13 +436,13 @@ export default function ProveedoresPage() {
       {/* ─── Header ─── */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
         <div>
-          <p className="text-[10px] tracking-[0.35em] uppercase text-white/25 font-semibold mb-2 flex items-center gap-2">
+          <p className="text-[10px] tracking-[0.35em] uppercase dark:text-white/25 text-slate-900/25 font-semibold mb-2 flex items-center gap-2">
             <Truck size={10} className="text-gm-red" /> Cadena de suministro
           </p>
-          <h1 className="text-[1.9rem] font-black text-white leading-tight tracking-tight">
+          <h1 className="text-[1.9rem] font-black dark:text-white text-slate-900 leading-tight tracking-tight">
             Proveedores
           </h1>
-          <p className="text-white/35 text-sm mt-1">
+          <p className="dark:text-white/35 text-slate-900/35 text-sm mt-1">
             {grupos.length} proveedor{grupos.length !== 1 ? 'es' : ''} · {productos.length} productos
           </p>
         </div>
@@ -462,7 +462,7 @@ export default function ProveedoresPage() {
           )}
           <button
             onClick={() => setCreatingNew(true)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white shrink-0"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm dark:text-white text-slate-900 shrink-0"
             style={{ background: '#E11428', boxShadow: '0 0 20px rgba(225,20,40,0.35)' }}
           >
             <Plus size={16} /> Nuevo proveedor
@@ -504,7 +504,7 @@ export default function ProveedoresPage() {
           <AlertTriangle size={11} /> Solo con alertas
         </button>
         {(search || filterAlert) && (
-          <span className="text-[11px] text-white/35">
+          <span className="text-[11px] dark:text-white/35 text-slate-900/35">
             {gruposFiltrados.length} de {grupos.length} proveedor{grupos.length !== 1 ? 'es' : ''}
           </span>
         )}
@@ -526,7 +526,7 @@ export default function ProveedoresPage() {
             </div>
             <div>
               <p className="text-2xl font-black" style={{ color }}>{value}</p>
-              <p className="text-[11px] text-white/35">{label}</p>
+              <p className="text-[11px] dark:text-white/35 text-slate-900/35">{label}</p>
             </div>
           </div>
         ))}
@@ -541,8 +541,8 @@ export default function ProveedoresPage() {
         </div>
       ) : gruposFiltrados.length === 0 ? (
         <div className="py-20 text-center">
-          <Truck size={40} className="text-white/12 mx-auto mb-3" />
-          <p className="text-sm font-bold text-white/30">
+          <Truck size={40} className="dark:text-white/12 text-slate-900/12 mx-auto mb-3" />
+          <p className="text-sm font-bold dark:text-white/30 text-slate-900/30">
             {search || filterAlert ? 'Sin resultados para este filtro' : 'No hay productos en inventario'}
           </p>
           {(search || filterAlert) && (
@@ -602,11 +602,11 @@ export default function ProveedoresPage() {
             {/* Header del modal */}
             <div className="px-6 py-4 flex items-center justify-between border-b border-white/[0.05]">
               <div>
-                <h2 className="text-lg font-black text-white flex items-center gap-2">
+                <h2 className="text-lg font-black dark:text-white text-slate-900 flex items-center gap-2">
                   <Package size={20} className="text-gm-red" />
                   Productos de {contactos[viewCodigo]?.nombre || viewCodigo}
                 </h2>
-                <p className="text-[12px] text-white/40 mt-1 font-mono">
+                <p className="text-[12px] dark:text-white/40 text-slate-900/40 mt-1 font-mono">
                   {productos.filter(p => p.codigo_proveedor === viewCodigo).length} productos asociados
                 </p>
               </div>
@@ -624,19 +624,19 @@ export default function ProveedoresPage() {
                   return (
                     <div key={p.id_producto} className="rounded-xl overflow-hidden" style={{ background: '#17171E', border: '1px solid rgba(255,255,255,0.05)' }}>
                       <div className="p-4 border-b border-white/[0.05]">
-                        <h3 className="text-sm font-bold text-white truncate mb-1">{p.nombre}</h3>
-                        <div className="flex gap-2 text-[10px] text-white/30 font-mono">
+                        <h3 className="text-sm font-bold dark:text-white text-slate-900 truncate mb-1">{p.nombre}</h3>
+                        <div className="flex gap-2 text-[10px] dark:text-white/30 text-slate-900/30 font-mono">
                           <span>{p.codigo_personal || 'SIN CÓD.'}</span>
                         </div>
                       </div>
                       <div className="p-4 grid grid-cols-3 gap-2">
                         <div>
-                          <p className="text-[10px] text-white/40 mb-0.5 uppercase">Costo</p>
-                          <p className="text-[12px] font-bold text-white/80">{fmtMoney(p.costo)}</p>
+                          <p className="text-[10px] dark:text-white/40 text-slate-900/40 mb-0.5 uppercase">Costo</p>
+                          <p className="text-[12px] font-bold dark:text-white/80 text-slate-900/80">{fmtMoney(p.costo)}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] text-white/40 mb-0.5 uppercase">PVP</p>
-                          <p className="text-[12px] font-bold text-white">{fmtMoney(p.pvp)}</p>
+                          <p className="text-[10px] dark:text-white/40 text-slate-900/40 mb-0.5 uppercase">PVP</p>
+                          <p className="text-[12px] font-bold dark:text-white text-slate-900">{fmtMoney(p.pvp)}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] mb-0.5 uppercase" style={{ color: `${st.color}80` }}>{st.label}</p>

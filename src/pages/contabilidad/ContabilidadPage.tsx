@@ -793,8 +793,8 @@ export default function ContabilidadPage() {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <p className="text-[10px] tracking-[0.3em] text-gm-red font-black uppercase mb-1">Taller · Finanzas</p>
-            <h1 className="text-3xl font-black text-white">Contabilidad</h1>
-            <p className="text-white/30 text-sm mt-1">Ingresos, gastos y balance del negocio</p>
+            <h1 className="text-3xl font-black dark:text-white text-slate-900">Contabilidad</h1>
+            <p className="dark:text-white/30 text-slate-900/30 text-sm mt-1">Ingresos, gastos y balance del negocio</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -883,7 +883,7 @@ export default function ContabilidadPage() {
           {/* Selector de fecha específica (día / semana) */}
           {(filtroTipo === 'dia' || filtroTipo === 'semana') && (
             <div className="flex items-center gap-2">
-              <Calendar size={14} className="text-white/30 shrink-0" />
+              <Calendar size={14} className="dark:text-white/30 text-slate-900/30 shrink-0" />
               <input
                 type="date"
                 value={filtroFecha}
@@ -892,7 +892,7 @@ export default function ContabilidadPage() {
                 style={{ height:36, paddingLeft:10, paddingRight:10 }}
               />
               {filtroTipo === 'semana' && (
-                <span className="text-[11px] text-white/40 font-semibold">{weekLabel(filtroFecha)}</span>
+                <span className="text-[11px] dark:text-white/40 text-slate-900/40 font-semibold">{weekLabel(filtroFecha)}</span>
               )}
             </div>
           )}
@@ -956,11 +956,11 @@ export default function ContabilidadPage() {
             <div key={label} className="rounded-2xl p-5 flex flex-col gap-3"
                  style={{ background:bg, border:`1px solid ${border}` }}>
               <div className="flex items-center justify-between">
-                <p className="text-[10px] tracking-[0.2em] uppercase font-black text-white/35">{label}</p>
+                <p className="text-[10px] tracking-[0.2em] uppercase font-black dark:text-white/35 text-slate-900/35">{label}</p>
                 <Icon size={16} style={{ color }}/>
               </div>
               <p className="text-2xl font-black tabular-nums" style={{ color }}>{value}</p>
-              <p className="text-[11px] text-white/30">{sub}</p>
+              <p className="text-[11px] dark:text-white/30 text-slate-900/30">{sub}</p>
             </div>
           ))}
         </div>
@@ -1186,7 +1186,7 @@ export default function ContabilidadPage() {
       <div className="section-enter gm-card-d rounded-2xl p-6">
         <div className="flex items-start justify-between mb-5">
           <div>
-            <p className="text-sm font-bold text-white/85 flex items-center gap-2">
+            <p className="text-sm font-bold dark:text-white/85 text-slate-900/85 flex items-center gap-2">
               <Activity size={15} className="text-gm-red"/>
               {filtroTipo === 'dia'    ? `Últimos 7 días` :
                filtroTipo === 'semana' ? `Últimas 4 semanas` :
@@ -1194,7 +1194,7 @@ export default function ContabilidadPage() {
                filtroTipo === 'anio'  ? `Análisis financiero ${filtroAnio}` :
                `Resumen histórico`}
             </p>
-            <p className="text-[11px] text-white/30 mt-0.5">
+            <p className="text-[11px] dark:text-white/30 text-slate-900/30 mt-0.5">
               Barras: ingresos / gastos · Línea amarilla: balance neto por período
             </p>
           </div>
@@ -1224,17 +1224,17 @@ export default function ContabilidadPage() {
             <div className="mt-5 pt-5 border-t grid grid-cols-3 gap-4"
                  style={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)' }}>
               <div className="text-center">
-                <p className="text-[10px] text-white/25 uppercase tracking-widest mb-1">Tendencia</p>
+                <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-widest mb-1">Tendencia</p>
                 <p className="text-sm font-black capitalize" style={{ color: tendColor }}>
                   {tendencia === 'creciente' ? '▲' : tendencia === 'decreciente' ? '▼' : '→'} {tendencia}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-[10px] text-white/25 uppercase tracking-widest mb-1">Mejor mes</p>
-                <p className="text-sm font-black text-white/80">{maxMes}</p>
+                <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-widest mb-1">Mejor mes</p>
+                <p className="text-sm font-black dark:text-white/80 text-slate-900/80">{maxMes}</p>
               </div>
               <div className="text-center">
-                <p className="text-[10px] text-white/25 uppercase tracking-widest mb-1">Rentabilidad</p>
+                <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-widest mb-1">Rentabilidad</p>
                 <p className="text-sm font-black" style={{ color: rentabilidad >= 0 ? '#10B981' : '#F43F5E' }}>
                   {rentabilidad.toFixed(1)}%
                 </p>
@@ -1247,8 +1247,8 @@ export default function ContabilidadPage() {
       {/* ─── Tabla de movimientos ─── */}
       <div className="section-enter gm-card-d rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
-          <p className="text-sm font-bold text-white/80">Movimientos</p>
-          <span className="text-[10px] text-white/25 font-semibold">{movimientos.length} registros</span>
+          <p className="text-sm font-bold dark:text-white/80 text-slate-900/80">Movimientos</p>
+          <span className="text-[10px] dark:text-white/25 text-slate-900/25 font-semibold">{movimientos.length} registros</span>
         </div>
         <div className="overflow-x-auto dark-scroll">
           <table className="gm-table-d">
@@ -1272,15 +1272,15 @@ export default function ContabilidadPage() {
                 <tr>
                   <td colSpan={5}>
                     <div className="py-14 text-center flex flex-col items-center gap-3">
-                      <Wallet size={28} className="text-white/12"/>
-                      <p className="text-sm text-white/25">Sin movimientos para este período</p>
+                      <Wallet size={28} className="dark:text-white/12 text-slate-900/12"/>
+                      <p className="text-sm dark:text-white/25 text-slate-900/25">Sin movimientos para este período</p>
                     </div>
                   </td>
                 </tr>
               ) : movimientos.map((m, idx) => (
                 <tr key={`${m.tipo}-${m.id}-${idx}`}>
-                  <td className="text-white/35 text-xs whitespace-nowrap">{fmtDate(m.fecha)}</td>
-                  <td className="text-white/70 text-sm max-w-[220px] truncate">{m.desc}</td>
+                  <td className="dark:text-white/35 text-slate-900/35 text-xs whitespace-nowrap">{fmtDate(m.fecha)}</td>
+                  <td className="dark:text-white/70 text-slate-900/70 text-sm max-w-[220px] truncate">{m.desc}</td>
                   <td>
                     {m.tipo === 'ingreso' ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
@@ -1319,7 +1319,7 @@ export default function ContabilidadPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Concepto</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Concepto</label>
             <select className="gm-select-d w-full" value={form.concepto}
               onChange={e => setForm(f => ({ ...f, concepto: e.target.value, empleadoId: 0, empSearch: '' }))}>
               {CONCEPTOS_GASTO.map(c => <option key={c} value={c}>{c}</option>)}
@@ -1338,7 +1338,7 @@ export default function ContabilidadPage() {
             const selEmp = empleados.find(e => e.id_usuario === form.empleadoId);
             return (
               <div>
-                <label className="text-sm font-medium text-white/70 block mb-1.5">
+                <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">
                   Empleado <span className="text-gm-red">*</span>
                 </label>
                 {selEmp ? (
@@ -1360,13 +1360,13 @@ export default function ContabilidadPage() {
                     <div className="max-h-36 overflow-y-auto rounded-xl divide-y"
                          style={{ border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.03)' }}>
                       {filtrados.length === 0
-                        ? <p className="px-3 py-2 text-xs text-white/30">Sin resultados</p>
+                        ? <p className="px-3 py-2 text-xs dark:text-white/30 text-slate-900/30">Sin resultados</p>
                         : filtrados.map(e => (
                           <button key={e.id_usuario}
                             className="w-full text-left px-3 py-2 text-sm hover:bg-white/[0.06] transition-colors"
                             onClick={() => setForm(f => ({ ...f, empleadoId: e.id_usuario!, empSearch: '' }))}
                           >
-                            <span className="font-semibold text-white/80">{e.nombre_completo.split(' ').slice(0,3).join(' ')}</span>
+                            <span className="font-semibold dark:text-white/80 text-slate-900/80">{e.nombre_completo.split(' ').slice(0,3).join(' ')}</span>
                           </button>
                         ))
                       }
@@ -1378,15 +1378,15 @@ export default function ContabilidadPage() {
           })()}
 
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Fecha</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Fecha</label>
             <input type="date" className="gm-input-d" value={form.fecha} onChange={e => setForm(f => ({...f,fecha:e.target.value}))}/>
           </div>
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Monto ($)</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Monto ($)</label>
             <input type="number" className="gm-input-d" placeholder="0.00" step="0.01" value={form.monto} onChange={e => setForm(f => ({...f,monto:e.target.value}))}/>
           </div>
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Descripción (opcional)</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Descripción (opcional)</label>
             <input type="text" className="gm-input-d" placeholder="Ej: Aceite 10W40 x5 litros" value={form.notas} onChange={e => setForm(f => ({...f,notas:e.target.value}))}/>
           </div>
         </div>

@@ -253,7 +253,7 @@ export function NotificationBell({ onClick, unread }: { onClick: () => void; unr
       <Bell size={16} style={{ color: unread > 0 ? '#E11428' : (isDark ? 'rgba(255,255,255,0.40)' : 'rgba(21,21,27,0.40)') }} />
       {unread > 0 && (
         <span
-          className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white notification-dot"
+          className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black dark:text-white text-slate-900 notification-dot"
           style={{ background: '#E11428', boxShadow: '0 0 8px rgba(225,20,40,0.7)' }}
         >
           {unread > 9 ? '9+' : unread}

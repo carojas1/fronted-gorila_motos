@@ -542,11 +542,11 @@ export default function InventoryPage() {
       {/* ─── Header ─── */}
       <div className="header-enter flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
         <div>
-          <p className="text-[10px] tracking-[0.35em] uppercase text-white/25 font-semibold mb-2 flex items-center gap-2">
+          <p className="text-[10px] tracking-[0.35em] uppercase dark:text-white/25 text-slate-900/25 font-semibold mb-2 flex items-center gap-2">
             <Package size={10} className="text-gm-red" /> Stock · Productos
           </p>
-          <h1 className="text-[1.9rem] font-black text-white leading-tight tracking-tight">Inventario</h1>
-          <p className="text-white/35 text-sm mt-1">{productos.length} productos registrados</p>
+          <h1 className="text-[1.9rem] font-black dark:text-white text-slate-900 leading-tight tracking-tight">Inventario</h1>
+          <p className="dark:text-white/35 text-slate-900/35 text-sm mt-1">{productos.length} productos registrados</p>
         </div>
         <div className="flex items-center gap-2.5">
           <Button variant="secondary" icon={<Tags size={15} />} onClick={() => setCatModalOpen(true)}>Categorías</Button>
@@ -576,8 +576,8 @@ export default function InventoryPage() {
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  {warn ? <AlertTriangle size={15} className="text-gm-red animate-pulse" /> : <Package size={15} className="text-white/30" />}
-                  <span className="text-[10px] tracking-[0.2em] uppercase text-white/40 font-bold">{label}</span>
+                  {warn ? <AlertTriangle size={15} className="text-gm-red animate-pulse" /> : <Package size={15} className="dark:text-white/30 text-slate-900/30" />}
+                  <span className="text-[10px] tracking-[0.2em] uppercase dark:text-white/40 text-slate-900/40 font-bold">{label}</span>
                 </div>
                 {isActive && <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ background: borderActive, color: '#fff' }}>Activo</span>}
               </div>
@@ -608,7 +608,7 @@ export default function InventoryPage() {
             <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>
           ))}
         </select>
-        <span className="text-[11px] text-white/25">{filtered.length} resultado(s)</span>
+        <span className="text-[11px] dark:text-white/25 text-slate-900/25">{filtered.length} resultado(s)</span>
       </div>
 
       {/* ─── Tabla ─── */}
@@ -631,11 +631,11 @@ export default function InventoryPage() {
                       <td colSpan={8}>
                         <div className="py-20 text-center flex flex-col items-center gap-4">
                           <div className="w-16 h-16 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-center">
-                            <Package size={28} className="text-white/20" />
+                            <Package size={28} className="dark:text-white/20 text-slate-900/20" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-white/50">Inventario vacío</p>
-                            <p className="text-[11px] text-white/30 mt-1">Aún no hay productos registrados o que coincidan con la búsqueda.</p>
+                            <p className="text-sm font-bold dark:text-white/50 text-slate-900/50">Inventario vacío</p>
+                            <p className="text-[11px] dark:text-white/30 text-slate-900/30 mt-1">Aún no hay productos registrados o que coincidan con la búsqueda.</p>
                           </div>
                         </div>
                       </td>
@@ -655,12 +655,12 @@ export default function InventoryPage() {
                           ) : (
                             <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
                               style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                              <Package size={16} className="text-white/20" />
+                              <Package size={16} className="dark:text-white/20 text-slate-900/20" />
                             </div>
                           )}
                           <div>
-                            <p className="font-semibold text-white/85">{p.nombre}</p>
-                            <p className="text-[11px] text-white/30 truncate max-w-[140px] mt-0.5">{p.descripcion}</p>
+                            <p className="font-semibold dark:text-white/85 text-slate-900/85">{p.nombre}</p>
+                            <p className="text-[11px] dark:text-white/30 text-slate-900/30 truncate max-w-[140px] mt-0.5">{p.descripcion}</p>
                           </div>
                         </div>
                       </td>
@@ -672,13 +672,13 @@ export default function InventoryPage() {
                       <td>
                         {p.codigo_proveedor ? (
                           <div className="flex flex-col">
-                            <span className="text-[11.5px] font-semibold text-white/75">
+                            <span className="text-[11.5px] font-semibold dark:text-white/75 text-slate-900/75">
                               {proveedores.find(pr => pr.codigo === p.codigo_proveedor)?.nombre || p.codigo_proveedor}
                             </span>
-                            <span className="text-[9px] text-white/30 font-mono">Cód: {p.codigo_proveedor}</span>
+                            <span className="text-[9px] dark:text-white/30 text-slate-900/30 font-mono">Cód: {p.codigo_proveedor}</span>
                           </div>
                         ) : (
-                          <span className="text-[11px] text-white/20">—</span>
+                          <span className="text-[11px] dark:text-white/20 text-slate-900/20">—</span>
                         )}
                       </td>
                       <td>
@@ -687,8 +687,8 @@ export default function InventoryPage() {
                       <td>
                         <Badge variant={stockVariant(p.stock)}>{p.stock} u.</Badge>
                       </td>
-                      <td className="text-white/45 tabular-nums">{fmtMoney(p.costo)}</td>
-                      <td className="font-bold text-white/85 tabular-nums">{fmtMoney(p.pvp)}</td>
+                      <td className="dark:text-white/45 text-slate-900/45 tabular-nums">{fmtMoney(p.costo)}</td>
+                      <td className="font-bold dark:text-white/85 text-slate-900/85 tabular-nums">{fmtMoney(p.pvp)}</td>
                       <td>
                         <div className="flex items-center gap-1.5">
                           <button
@@ -767,7 +767,7 @@ export default function InventoryPage() {
             <Input label="Código personal" placeholder="COD-001" error={errors.codigo_personal?.message} {...register('codigo_personal')} />
           </div>
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5 flex justify-between items-center">
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5 flex justify-between items-center">
               <span>Proveedor</span>
               <button type="button" onClick={() => setProvModalOpen(true)} className="text-[11px] text-gm-red hover:underline font-bold bg-transparent border-none p-0 cursor-pointer transition-transform hover:scale-105">
                 + Crear proveedor
@@ -790,7 +790,7 @@ export default function InventoryPage() {
             <Input label="Costo ($)" type="number" step="0.01" placeholder="0.00" error={errors.costo?.message} {...register('costo')} />
             <Input label="PVP ($)" type="number" step="0.01" placeholder="0.00" error={errors.pvp?.message} {...register('pvp')} />
             <div>
-              <label className="text-sm font-medium text-white/70 block mb-1.5 flex justify-between items-center">
+              <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5 flex justify-between items-center">
                 <span>Stock</span>
                 {editTarget && (
                   <button type="button" onClick={() => {
@@ -890,13 +890,13 @@ export default function InventoryPage() {
               <div className="relative inline-block">
                 <img src={previewUrl} alt="Preview" className="h-20 rounded-lg object-cover border" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#ddd' }} />
                 <button type="button" onClick={() => { setPreviewUrl(null); setImageFile(null); }}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center dark:text-white text-slate-900 text-[10px] font-bold"
                   style={{ background: '#E11428' }}>✕</button>
               </div>
             )}
           </div>
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Categoría</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Categoría</label>
             <select className="gm-select-d w-full" {...register('id_categoria')}>
               <option value="">Seleccionar categoría</option>
               {categorias.map((c) => (
@@ -911,8 +911,8 @@ export default function InventoryPage() {
       {/* Indicador de filtro activo */}
       {stockView !== 'all' && (
         <div className="flex items-center gap-2 -mt-3">
-          <span className="text-[11px] text-white/40">
-            Mostrando: <strong className="text-white/70">{filtered.length}</strong>{' '}
+          <span className="text-[11px] dark:text-white/40 text-slate-900/40">
+            Mostrando: <strong className="dark:text-white/70 text-slate-900/70">{filtered.length}</strong>{' '}
             {stockView === 'out' ? 'sin stock' : stockView === 'low' ? 'con stock bajo' : 'con stock OK'}
           </span>
           <button onClick={() => setStockView('all')} className="text-[11px] font-bold text-gm-red hover:underline">
@@ -945,7 +945,7 @@ export default function InventoryPage() {
                   </button>
                 )}
                 <button onClick={saveCategoria} disabled={savingCat}
-                  className="flex items-center gap-2 text-[12px] font-bold px-4 py-2 rounded-lg text-white"
+                  className="flex items-center gap-2 text-[12px] font-bold px-4 py-2 rounded-lg dark:text-white text-slate-900"
                   style={{ background: savingCat ? 'rgba(59,130,246,0.4)' : '#3B82F6' }}>
                   <Plus size={13} /> {editingCat ? 'Guardar' : 'Crear categoría'}
                 </button>
@@ -955,16 +955,16 @@ export default function InventoryPage() {
 
           {/* Lista de categorías */}
           <div className="space-y-2">
-            <p className="text-[10px] tracking-[0.2em] uppercase font-black text-white/25">Categorías existentes ({categorias.length})</p>
+            <p className="text-[10px] tracking-[0.2em] uppercase font-black dark:text-white/25 text-slate-900/25">Categorías existentes ({categorias.length})</p>
             {categorias.length === 0 ? (
-              <p className="text-[12px] text-white/30 text-center py-4">Aún no hay categorías</p>
+              <p className="text-[12px] dark:text-white/30 text-slate-900/30 text-center py-4">Aún no hay categorías</p>
             ) : categorias.map(c => {
               const count = productos.filter(p => p.id_categoria === c.id_categoria).length;
               return (
                 <div key={c.id_categoria} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold text-white/85 truncate">{c.nombre}</p>
-                    <p className="text-[11px] text-white/35 truncate">{c.descripcion || 'Sin descripción'} · {count} producto{count !== 1 ? 's' : ''}</p>
+                    <p className="text-[13px] font-bold dark:text-white/85 text-slate-900/85 truncate">{c.nombre}</p>
+                    <p className="text-[11px] dark:text-white/35 text-slate-900/35 truncate">{c.descripcion || 'Sin descripción'} · {count} producto{count !== 1 ? 's' : ''}</p>
                   </div>
                   <button onClick={() => editCategoria(c)} className="icon-btn" title="Editar"><Pencil size={12} /></button>
                   <button onClick={() => deleteCategoria(c)} className="icon-btn danger" title="Eliminar"><Trash2 size={12} /></button>
@@ -992,35 +992,35 @@ export default function InventoryPage() {
       >
         {sellTarget && (
           <div className="space-y-4">
-            <p className="text-[12px] text-white/45 leading-relaxed">
-              Venta a consumidor final — <strong className="text-white/70">solo descuenta el stock</strong>, sin crear orden de servicio.
+            <p className="text-[12px] dark:text-white/45 text-slate-900/45 leading-relaxed">
+              Venta a consumidor final — <strong className="dark:text-white/70 text-slate-900/70">solo descuenta el stock</strong>, sin crear orden de servicio.
               <br />
-              <span className="text-white/55">Tambien queda registrada para contabilidad.</span>
+              <span className="dark:text-white/55 text-slate-900/55">Tambien queda registrada para contabilidad.</span>
             </p>
             <div className="p-3 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
-              <p className="text-[14px] font-bold text-white/90">{sellTarget.nombre}</p>
-              <p className="text-[11px] text-white/40 mt-0.5">
+              <p className="text-[14px] font-bold dark:text-white/90 text-slate-900/90">{sellTarget.nombre}</p>
+              <p className="text-[11px] dark:text-white/40 text-slate-900/40 mt-0.5">
                 Stock actual: <strong style={{ color: '#10B981' }}>{sellTarget.stock} u.</strong> · PVP {fmtMoney(sellTarget.pvp)}
               </p>
             </div>
             <div>
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">Cantidad vendida</label>
+              <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">Cantidad vendida</label>
               <div className="flex items-center gap-2">
                 <button onClick={() => setSellQty(q => String(Math.max(1, parseInt(q || '1', 10) - 1)))} className="icon-btn"><Minus size={14} /></button>
                 <input type="number" min={1} max={sellTarget.stock} value={sellQty} onChange={e => setSellQty(e.target.value)}
                   className="gm-input-d text-center" style={{ width: 90 }} />
                 <button onClick={() => setSellQty(q => String(Math.min(sellTarget.stock, parseInt(q || '1', 10) + 1)))} className="icon-btn"><Plus size={14} /></button>
-                <span className="text-[13px] text-white/40 ml-2">
+                <span className="text-[13px] dark:text-white/40 text-slate-900/40 ml-2">
                   Total: <strong className="text-emerald-400">{fmtMoney((parseInt(sellQty || '0', 10)) * sellTarget.pvp)}</strong>
                 </span>
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
-                Email del cliente <span className="text-white/25 font-normal normal-case tracking-normal">(opcional — envía comprobante)</span>
+              <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
+                Email del cliente <span className="dark:text-white/25 text-slate-900/25 font-normal normal-case tracking-normal">(opcional — envía comprobante)</span>
               </label>
               <div className="relative">
-                <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 dark:text-white/30 text-slate-900/30 pointer-events-none" />
                 <input
                   type="email"
                   className="gm-input-d w-full pl-8"
@@ -1047,11 +1047,11 @@ export default function InventoryPage() {
           </>
         }
       >
-        <p className="text-sm text-white/60">
+        <p className="text-sm dark:text-white/60 text-slate-900/60">
           ¿Estás seguro de eliminar{' '}
-          <strong className="text-white/90">{deleteTarget?.nombre}</strong>?
+          <strong className="dark:text-white/90 text-slate-900/90">{deleteTarget?.nombre}</strong>?
           <br />
-          <span className="text-white/30 text-xs mt-1 block">Esta acción no se puede deshacer.</span>
+          <span className="dark:text-white/30 text-slate-900/30 text-xs mt-1 block">Esta acción no se puede deshacer.</span>
         </p>
       </Modal>
 
@@ -1093,16 +1093,16 @@ export default function InventoryPage() {
             {/* ── Columna izquierda: producto + instrucción ── */}
             <div className="col-span-2 space-y-4">
               <div className="p-4 rounded-xl h-full" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
-                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Producto</p>
-                <p className="text-[15px] font-black text-white/90 leading-tight">{vnTarget.nombre}</p>
-                <p className="text-[11px] text-white/40 mt-1">Código: {vnTarget.codigo_personal}</p>
+                <p className="text-[10px] dark:text-white/30 text-slate-900/30 uppercase tracking-widest font-bold mb-2">Producto</p>
+                <p className="text-[15px] font-black dark:text-white/90 text-slate-900/90 leading-tight">{vnTarget.nombre}</p>
+                <p className="text-[11px] dark:text-white/40 text-slate-900/40 mt-1">Código: {vnTarget.codigo_personal}</p>
                 <div className="mt-3 pt-3" style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
-                  <p className="text-[11px] text-white/35">Stock disponible</p>
+                  <p className="text-[11px] dark:text-white/35 text-slate-900/35">Stock disponible</p>
                   <p className="text-[22px] font-black" style={{ color: '#10B981' }}>{vnTarget.stock} u.</p>
                 </div>
                 <div className="mt-2">
-                  <p className="text-[11px] text-white/35">PVP unitario</p>
-                  <p className="text-[18px] font-black text-white/80">{fmtMoney(vnTarget.pvp)}</p>
+                  <p className="text-[11px] dark:text-white/35 text-slate-900/35">PVP unitario</p>
+                  <p className="text-[18px] font-black dark:text-white/80 text-slate-900/80">{fmtMoney(vnTarget.pvp)}</p>
                 </div>
               </div>
             </div>
@@ -1110,14 +1110,14 @@ export default function InventoryPage() {
             {/* ── Columna derecha: búsqueda + lista de clientes ── */}
             <div className="col-span-3 space-y-3">
               <div>
-                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+                <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
                   Seleccionar cliente
-                  <span className="ml-2 text-white/25 font-normal normal-case tracking-normal">
+                  <span className="ml-2 dark:text-white/25 text-slate-900/25 font-normal normal-case tracking-normal">
                     {vnUsuarios.length > 0 ? `${vnUsuarios.length} registrados` : 'cargando...'}
                   </span>
                 </label>
                 <div className="relative">
-                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 dark:text-white/30 text-slate-900/30 pointer-events-none" />
                   <input
                     className="gm-input-d w-full pl-8"
                     placeholder="Nombre o correo electrónico..."
@@ -1138,12 +1138,12 @@ export default function InventoryPage() {
                       .slice(0, 25);
                     if (vnUsuarios.length === 0) return (
                       <div className="flex items-center justify-center py-12">
-                        <p className="text-[12px] text-white/25">Cargando clientes...</p>
+                        <p className="text-[12px] dark:text-white/25 text-slate-900/25">Cargando clientes...</p>
                       </div>
                     );
                     if (lista.length === 0) return (
                       <div className="flex items-center justify-center py-12">
-                        <p className="text-[12px] text-white/25">Sin coincidencias</p>
+                        <p className="text-[12px] dark:text-white/25 text-slate-900/25">Sin coincidencias</p>
                       </div>
                     );
                     return lista.map((u, i) => (
@@ -1154,15 +1154,15 @@ export default function InventoryPage() {
                         className="w-full text-left px-4 py-3 transition-colors hover:bg-white/5 flex items-center gap-3"
                         style={{ borderBottom: i < lista.length - 1 ? (isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid #E4E7EC') : 'none' }}
                       >
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-black text-white shrink-0"
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-black dark:text-white text-slate-900 shrink-0"
                              style={{ background: 'rgba(225,20,40,0.18)', border: '1px solid rgba(225,20,40,0.3)' }}>
                           {u.nombre_completo?.charAt(0)?.toUpperCase() ?? '?'}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold text-white/85 truncate">{u.nombre_completo}</p>
-                          <p className="text-[11px] text-white/40 truncate">{u.correo}</p>
+                          <p className="text-[13px] font-semibold dark:text-white/85 text-slate-900/85 truncate">{u.nombre_completo}</p>
+                          <p className="text-[11px] dark:text-white/40 text-slate-900/40 truncate">{u.correo}</p>
                         </div>
-                        <UserCheck size={13} className="text-white/20 shrink-0" />
+                        <UserCheck size={13} className="dark:text-white/20 text-slate-900/20 shrink-0" />
                       </button>
                     ));
                   })()}
@@ -1181,20 +1181,20 @@ export default function InventoryPage() {
               <div className="p-4 rounded-xl" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
                 <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mb-2">Cliente seleccionado</p>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-black text-white shrink-0"
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-black dark:text-white text-slate-900 shrink-0"
                        style={{ background: 'rgba(225,20,40,0.18)', border: '1px solid rgba(225,20,40,0.3)' }}>
                     {vnCliente.nombre?.charAt(0)?.toUpperCase() ?? '?'}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[14px] font-bold text-white/90 truncate">{vnCliente.nombre}</p>
-                    <p className="text-[11px] text-white/50 truncate">{vnCliente.correo}</p>
+                    <p className="text-[14px] font-bold dark:text-white/90 text-slate-900/90 truncate">{vnCliente.nombre}</p>
+                    <p className="text-[11px] dark:text-white/50 text-slate-900/50 truncate">{vnCliente.correo}</p>
                   </div>
                 </div>
               </div>
               <div className="p-4 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
-                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold mb-2">Producto</p>
-                <p className="text-[13px] font-bold text-white/85">{vnTarget.nombre}</p>
-                <p className="text-[11px] text-white/40 mt-1">PVP: {fmtMoney(vnTarget.pvp)} · Stock: {vnTarget.stock} u.</p>
+                <p className="text-[10px] dark:text-white/30 text-slate-900/30 uppercase tracking-widest font-bold mb-2">Producto</p>
+                <p className="text-[13px] font-bold dark:text-white/85 text-slate-900/85">{vnTarget.nombre}</p>
+                <p className="text-[11px] dark:text-white/40 text-slate-900/40 mt-1">PVP: {fmtMoney(vnTarget.pvp)} · Stock: {vnTarget.stock} u.</p>
               </div>
               {vnCliente.correo && (
                 <div className="flex items-start gap-2 px-3 py-3 rounded-xl"
@@ -1210,7 +1210,7 @@ export default function InventoryPage() {
             {/* ── Derecha: cantidad + total ── */}
             <div className="col-span-3 flex flex-col justify-center space-y-5">
               <div>
-                <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-3">Cantidad a vender</label>
+                <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-3">Cantidad a vender</label>
                 <div className="flex items-center gap-3">
                   <button onClick={() => setVnQty(q => String(Math.max(1, parseInt(q || '1', 10) - 1)))} className="icon-btn w-10 h-10"><Minus size={16} /></button>
                   <input
@@ -1222,11 +1222,11 @@ export default function InventoryPage() {
                 </div>
               </div>
               <div className="p-5 rounded-2xl" style={{ background: 'linear-gradient(135deg,rgba(225,20,40,0.15),rgba(185,28,28,0.1))', border: '1px solid rgba(225,20,40,0.3)' }}>
-                <p className="text-[11px] text-white/40 uppercase tracking-widest mb-1">Total de la venta</p>
-                <p className="text-[36px] font-black text-white leading-none">
+                <p className="text-[11px] dark:text-white/40 text-slate-900/40 uppercase tracking-widest mb-1">Total de la venta</p>
+                <p className="text-[36px] font-black dark:text-white text-slate-900 leading-none">
                   {fmtMoney((parseInt(vnQty || '0', 10)) * vnTarget.pvp)}
                 </p>
-                <p className="text-[12px] text-white/35 mt-1">
+                <p className="text-[12px] dark:text-white/35 text-slate-900/35 mt-1">
                   {vnQty} u. × {fmtMoney(vnTarget.pvp)}
                 </p>
               </div>
@@ -1260,7 +1260,7 @@ export default function InventoryPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Cantidad a añadir</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Cantidad a añadir</label>
             <input 
               type="number" min={1} 
               className="gm-input-d w-full" 
@@ -1270,7 +1270,7 @@ export default function InventoryPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-white/70 block mb-1.5">Nuevo Costo ($)</label>
+              <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Nuevo Costo ($)</label>
               <input 
                 type="number" step="0.01"
                 className="gm-input-d w-full" 
@@ -1279,7 +1279,7 @@ export default function InventoryPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-white/70 block mb-1.5">Nuevo PVP ($)</label>
+              <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Nuevo PVP ($)</label>
               <input 
                 type="number" step="0.01"
                 className="gm-input-d w-full" 
@@ -1289,7 +1289,7 @@ export default function InventoryPage() {
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Proveedor</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Proveedor</label>
             <div className="flex gap-2">
               <select className="gm-input-d flex-1" value={addStockVals.id_proveedor || ''} onChange={e => setAddStockVals(v => ({ ...v, id_proveedor: e.target.value }))}>
                 <option value="">Seleccionar proveedor...</option>

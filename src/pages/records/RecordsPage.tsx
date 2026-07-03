@@ -86,14 +86,14 @@ function SearchDropdown<T>({
 
   return (
     <div className="relative">
-      <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+      <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
         {label}
       </label>
       {selected ? (
         <div className="flex items-center justify-between p-3 rounded-xl bg-gm-red/10 border border-gm-red/30">
           <div>
-            <p className="text-sm font-bold text-white/90">{getLabel(selected)}</p>
-            {getSubLabel && <p className="text-xs text-white/40">{getSubLabel(selected)}</p>}
+            <p className="text-sm font-bold dark:text-white/90 text-slate-900/90">{getLabel(selected)}</p>
+            {getSubLabel && <p className="text-xs dark:text-white/40 text-slate-900/40">{getSubLabel(selected)}</p>}
           </div>
           <button onClick={() => { onSelect(null as unknown as T); setQ(''); }} className="text-white/30 hover:text-gm-red">
             <X size={14} />
@@ -109,7 +109,7 @@ function SearchDropdown<T>({
             onFocus={() => setOpen(true)}
             onBlur={() => setTimeout(() => setOpen(false), 150)}
           />
-          <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+          <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 dark:text-white/25 text-slate-900/25 pointer-events-none" />
         </div>
       )}
       {open && !selected && filtered.length > 0 && (
@@ -125,8 +125,8 @@ function SearchDropdown<T>({
               className="w-full text-left px-4 py-2.5 hover:bg-white/[0.06] transition-colors border-b border-white/[0.04] last:border-0"
               onMouseDown={() => { onSelect(item); setQ(''); setOpen(false); }}
             >
-              <p className="text-sm font-medium text-white/85">{getLabel(item)}</p>
-              {getSubLabel && <p className="text-xs text-white/35">{getSubLabel(item)}</p>}
+              <p className="text-sm font-medium dark:text-white/85 text-slate-900/85">{getLabel(item)}</p>
+              {getSubLabel && <p className="text-xs dark:text-white/35 text-slate-900/35">{getSubLabel(item)}</p>}
             </button>
           ))}
         </div>
@@ -752,14 +752,14 @@ export default function RecordsPage() {
       {/* ─── Header ─── */}
       <div className="header-enter flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
         <div>
-          <p className="text-[10px] tracking-[0.35em] uppercase text-white/25 font-semibold mb-2 flex items-center gap-2">
+          <p className="text-[10px] tracking-[0.35em] uppercase dark:text-white/25 text-slate-900/25 font-semibold mb-2 flex items-center gap-2">
             <Wrench size={10} className="text-gm-red" />
             Taller · Servicios
           </p>
-          <h1 className="text-[1.9rem] font-black text-white leading-tight tracking-tight">
+          <h1 className="text-[1.9rem] font-black dark:text-white text-slate-900 leading-tight tracking-tight">
             Registros de servicio
           </h1>
-          <p className="text-white/35 text-sm mt-1">{registros.length} órdenes en total</p>
+          <p className="dark:text-white/35 text-slate-900/35 text-sm mt-1">{registros.length} órdenes en total</p>
         </div>
         <Button icon={<Plus size={15} />} onClick={() => setNewOrderOpen(true)}>
           Nueva orden
@@ -778,11 +778,11 @@ export default function RecordsPage() {
               style={isActive ? { borderColor: border, boxShadow: `0 0 0 1px ${border}40, 0 0 40px ${glow}` } : {}}
             >
               <div className="flex items-center justify-between mb-2">
-                <Icon size={16} className={isActive ? color : 'text-white/25 group-hover:text-white/50'} />
+                <Icon size={16} className={isActive ? color : 'dark:text-white/25 text-slate-900/25 group-hover:dark:text-white/50 text-slate-900/50'} />
                 {isActive && <span className="text-[9px] tracking-[0.2em] uppercase font-bold" style={{ color: border }}>Activo</span>}
               </div>
-              <p className={`text-2xl font-black mb-0.5 ${isActive ? color : 'text-white'}`}>{counts[e as keyof typeof counts]}</p>
-              <p className="text-[11px] text-white/40 font-medium">{label}</p>
+              <p className={`text-2xl font-black mb-0.5 ${isActive ? color : 'dark:text-white text-slate-900'}`}>{counts[e as keyof typeof counts]}</p>
+              <p className="text-[11px] dark:text-white/40 text-slate-900/40 font-medium">{label}</p>
             </button>
           );
         })}
@@ -835,7 +835,7 @@ export default function RecordsPage() {
             </button>
           ))}
         </div>
-        <span className="text-[11px] text-white/25">{filtered.length} resultado(s)</span>
+        <span className="text-[11px] dark:text-white/25 text-slate-900/25">{filtered.length} resultado(s)</span>
       </div>
 
       {/* ─── Tabla ─── */}
@@ -857,8 +857,8 @@ export default function RecordsPage() {
                     <tr>
                       <td colSpan={8}>
                         <div className="py-16 text-center flex flex-col items-center gap-3">
-                          <Wrench size={32} className="text-white/12" />
-                          <p className="text-sm text-white/25">Sin registros que mostrar</p>
+                          <Wrench size={32} className="dark:text-white/12 text-slate-900/12" />
+                          <p className="text-sm dark:text-white/25 text-slate-900/25">Sin registros que mostrar</p>
                         </div>
                       </td>
                     </tr>
@@ -871,7 +871,7 @@ export default function RecordsPage() {
 
                     return (
                       <tr key={r.id_registro}>
-                        <td className="text-white/35 text-xs whitespace-nowrap">{fmtDate(r.fecha)}</td>
+                        <td className="dark:text-white/35 text-slate-900/35 text-xs whitespace-nowrap">{fmtDate(r.fecha)}</td>
                         <td>
                           <button
                             onClick={() => {
@@ -879,11 +879,11 @@ export default function RecordsPage() {
                                 prev.includes(r.id_registro) ? prev.filter(id => id !== r.id_registro) : [...prev, r.id_registro]
                               );
                             }}
-                            className="group flex items-center gap-1.5 font-semibold text-white/90 hover:text-white transition-colors outline-none max-w-[150px] truncate"
+                            className="group flex items-center gap-1.5 font-semibold dark:text-white/90 text-slate-900/90 hover:dark:text-white text-slate-900 transition-colors outline-none max-w-[150px] truncate"
                             title="Desplegar información"
                           >
                             {r.nombre_cliente}
-                            <ChevronRight size={11} className={`text-white/40 transition-transform ${expandedRecords.includes(r.id_registro) ? 'rotate-90' : ''}`} />
+                            <ChevronRight size={11} className={`dark:text-white/40 text-slate-900/40 transition-transform ${expandedRecords.includes(r.id_registro) ? 'rotate-90' : ''}`} />
                           </button>
                           {expandedRecords.includes(r.id_registro) && (() => {
                             const cli = usuarios.find(u => u.nombre_completo === r.nombre_cliente);
@@ -899,12 +899,12 @@ export default function RecordsPage() {
                                   </a>
                                 )}
                                 {cedId && (
-                                  <span className="flex items-center gap-1 text-[10px] text-white/40">
+                                  <span className="flex items-center gap-1 text-[10px] dark:text-white/40 text-slate-900/40">
                                     <CreditCard size={9}/> {cedId}
                                   </span>
                                 )}
                                 {cli?.direccion && (
-                                  <span className="flex items-center gap-1 text-[10px] text-white/40">
+                                  <span className="flex items-center gap-1 text-[10px] dark:text-white/40 text-slate-900/40">
                                     <MapPin size={9}/> {cli.direccion}
                                   </span>
                                 )}
@@ -919,11 +919,11 @@ export default function RecordsPage() {
                           })()}
                         </td>
                         <td><span className="plate-tag">{r.placa}</span></td>
-                        <td className="text-white/45 max-w-[140px] truncate">{r.tipo_servicio}</td>
-                        <td className="text-white/40 text-xs tabular-nums whitespace-nowrap">
+                        <td className="dark:text-white/45 text-slate-900/45 max-w-[140px] truncate">{r.tipo_servicio}</td>
+                        <td className="dark:text-white/40 text-slate-900/40 text-xs tabular-nums whitespace-nowrap">
                           {r.kilometraje ? `${r.kilometraje.toLocaleString('es-EC')} km` : '—'}
                         </td>
-                        <td className="font-bold text-white/85 tabular-nums">{fmtMoney(r.costo_total ?? 0)}</td>
+                        <td className="font-bold dark:text-white/85 text-slate-900/85 tabular-nums">{fmtMoney(r.costo_total ?? 0)}</td>
                         <td><Badge variant={variant} dot>{est.label}</Badge></td>
                         <td>
                           <div className="flex items-center gap-1.5">
@@ -997,12 +997,12 @@ export default function RecordsPage() {
           {/* 1 · Buscar moto por PLACA (lo que manda) */}
           {!nMoto ? (
             <div>
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+              <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
                 1 · Placa de la moto <span className="text-gm-red">*</span>
-                <span className="text-white/25 normal-case font-normal ml-2">lo principal — busca o registra al instante</span>
+                <span className="dark:text-white/25 text-slate-900/25 normal-case font-normal ml-2">lo principal — busca o registra al instante</span>
               </label>
               <div className="relative">
-                <Gauge size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+                <Gauge size={13} className="absolute left-3 top-1/2 -translate-y-1/2 dark:text-white/25 text-slate-900/25 pointer-events-none" />
                 <input
                   className="gm-input-d w-full pl-8 uppercase"
                   placeholder="Ej. ABC-1234"
@@ -1026,19 +1026,19 @@ export default function RecordsPage() {
                         >
                           <span className="plate-tag text-[11px]">{m.placa}</span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-white/85 truncate">{m.marca} {m.modelo}</p>
-                            <p className="text-[11px] text-white/35 truncate">
+                            <p className="text-sm font-bold dark:text-white/85 text-slate-900/85 truncate">{m.marca} {m.modelo}</p>
+                            <p className="text-[11px] dark:text-white/35 text-slate-900/35 truncate">
                               {m.cilindraje}cc · {owner?.nombre_completo ?? 'Sin propietario'}
                             </p>
                           </div>
-                          <ChevronRight size={15} className="text-white/25 shrink-0" />
+                          <ChevronRight size={15} className="dark:text-white/25 text-slate-900/25 shrink-0" />
                         </button>
                       );
                     })
                   ) : (
                     <div className="p-3 rounded-xl border border-dashed border-white/[0.12] bg-white/[0.02]">
-                      <p className="text-[12px] text-white/40 mb-2">
-                        No existe ninguna moto con placa <strong className="text-white/70">{plateQuery.toUpperCase()}</strong>.
+                      <p className="text-[12px] dark:text-white/40 text-slate-900/40 mb-2">
+                        No existe ninguna moto con placa <strong className="dark:text-white/70 text-slate-900/70">{plateQuery.toUpperCase()}</strong>.
                       </p>
                       <button
                         type="button"
@@ -1059,7 +1059,7 @@ export default function RecordsPage() {
                   <p className="flex items-center gap-2 text-[12px] font-bold text-blue-300">
                     <Zap size={13} /> Registro rápido — placa {plateQuery.toUpperCase()}
                   </p>
-                  <p className="text-[11px] text-white/40 -mt-1">
+                  <p className="text-[11px] dark:text-white/40 text-slate-900/40 -mt-1">
                     Crea la moto y un cliente básico ahora. El cliente podrá completar sus datos después con calma.
                   </p>
                   <div className="grid grid-cols-2 gap-3">
@@ -1090,7 +1090,7 @@ export default function RecordsPage() {
                       Cancelar
                     </button>
                     <button type="button" onClick={crearRapido} disabled={creatingQuick}
-                      className="flex items-center gap-2 text-[12px] font-bold px-4 py-2 rounded-lg text-white"
+                      className="flex items-center gap-2 text-[12px] font-bold px-4 py-2 rounded-lg dark:text-white text-slate-900"
                       style={{ background: creatingQuick ? 'rgba(59,130,246,0.4)' : '#3B82F6' }}>
                       {creatingQuick
                         ? <><span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin .7s linear infinite', display: 'inline-block' }} /> Creando…</>
@@ -1105,14 +1105,14 @@ export default function RecordsPage() {
             <div className="flex items-center gap-3 p-3 rounded-xl bg-gm-red/[0.07] border border-gm-red/25">
               <span className="plate-tag text-[12px]">{nMoto.placa}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white/90 truncate">{nMoto.marca} {nMoto.modelo} · {nMoto.cilindraje}cc</p>
-                <p className="text-[11px] text-white/40 flex items-center gap-2">
+                <p className="text-sm font-bold dark:text-white/90 text-slate-900/90 truncate">{nMoto.marca} {nMoto.modelo} · {nMoto.cilindraje}cc</p>
+                <p className="text-[11px] dark:text-white/40 text-slate-900/40 flex items-center gap-2">
                   <span>{nCliente?.nombre_completo ?? 'Sin propietario'}</span>
                   {isAdmin && clientPhone && <span className="flex items-center gap-1"><Phone size={9} /> {clientPhone}</span>}
                 </p>
               </div>
               <button onClick={() => { setNMoto(null); setNCliente(null); setNKm(''); setNPartes([]); }}
-                className="text-[11px] text-white/40 hover:text-white/80 flex items-center gap-1">
+                className="text-[11px] dark:text-white/40 text-slate-900/40 hover:dark:text-white/80 text-slate-900/80 flex items-center gap-1">
                 <X size={12} /> Cambiar
               </button>
             </div>
@@ -1138,14 +1138,14 @@ export default function RecordsPage() {
                   );
                 })}
               </div>
-              <p className="text-[10.5px] text-white/30 mt-2">Toca para sumarlos al servicio sugerido al cliente.</p>
+              <p className="text-[10.5px] dark:text-white/30 text-slate-900/30 mt-2">Toca para sumarlos al servicio sugerido al cliente.</p>
             </div>
           )}
 
           {/* Partes con falla reportada */}
           <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
-              3 · ¿Qué presenta falla? <span className="text-white/25 normal-case font-normal">(toca las partes reportadas por el cliente)</span>
+            <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
+              3 · ¿Qué presenta falla? <span className="dark:text-white/25 text-slate-900/25 normal-case font-normal">(toca las partes reportadas por el cliente)</span>
             </label>
             <div className="flex flex-wrap gap-2">
               {PARTES_FALLA.map((parte) => {
@@ -1166,8 +1166,8 @@ export default function RecordsPage() {
               })}
             </div>
             {nPartes.length > 0 && (
-              <p className="text-[11px] text-white/35 mt-2">
-                {nPartes.length} parte{nPartes.length !== 1 ? 's' : ''} con falla: <span className="text-white/55 font-semibold">{nPartes.join(', ')}</span>
+              <p className="text-[11px] dark:text-white/35 text-slate-900/35 mt-2">
+                {nPartes.length} parte{nPartes.length !== 1 ? 's' : ''} con falla: <span className="dark:text-white/55 text-slate-900/55 font-semibold">{nPartes.join(', ')}</span>
               </p>
             )}
           </div>
@@ -1185,8 +1185,8 @@ export default function RecordsPage() {
 
           {/* Mantenimiento personalizado */}
           <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
-              5 · Descripción específica <span className="text-white/25 normal-case font-normal">(opcional)</span>
+            <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
+              5 · Descripción específica <span className="dark:text-white/25 text-slate-900/25 normal-case font-normal">(opcional)</span>
             </label>
             <input
               className="gm-input-d w-full"
@@ -1198,12 +1198,12 @@ export default function RecordsPage() {
 
           {/* Kilometraje — obligatorio */}
           <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+            <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
               6 · Kilometraje actual <span className="text-gm-red">*</span>
-              {nMoto && <span className="text-white/25 normal-case font-normal ml-2">(moto registrada: {nMoto.kilometraje.toLocaleString('es-EC')} km)</span>}
+              {nMoto && <span className="dark:text-white/25 text-slate-900/25 normal-case font-normal ml-2">(moto registrada: {nMoto.kilometraje.toLocaleString('es-EC')} km)</span>}
             </label>
             <div className="relative">
-              <Gauge size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+              <Gauge size={13} className="absolute left-3 top-1/2 -translate-y-1/2 dark:text-white/25 text-slate-900/25 pointer-events-none" />
               <input
                 type="number"
                 className="gm-input-d w-full pl-8"
@@ -1218,8 +1218,8 @@ export default function RecordsPage() {
 
           {/* Observaciones generales */}
           <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
-              7 · Observaciones generales <span className="text-white/25 normal-case font-normal">(opcional)</span>
+            <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
+              7 · Observaciones generales <span className="dark:text-white/25 text-slate-900/25 normal-case font-normal">(opcional)</span>
             </label>
             <textarea
               className="gm-input-d w-full resize-none"
@@ -1298,7 +1298,7 @@ export default function RecordsPage() {
         })()}
         <div className="space-y-2">
           {clientHistory.length === 0 ? (
-            <p className="text-sm text-white/30 text-center py-8">Sin registros para este cliente</p>
+            <p className="text-sm dark:text-white/30 text-slate-900/30 text-center py-8">Sin registros para este cliente</p>
           ) : (
             clientHistory.map((r) => {
               const est     = ESTADO_REGISTRO[r.estado] ?? ESTADO_REGISTRO[0];
@@ -1306,18 +1306,18 @@ export default function RecordsPage() {
               return (
                 <div key={r.id_registro} className="flex items-center gap-4 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                   <div className="text-center shrink-0 w-14">
-                    <p className="text-[10px] text-white/25 uppercase tracking-wider">{new Date(toIsoStr(r.fecha)+'T00:00:00').toLocaleDateString('es-ES', { month: 'short' })}</p>
-                    <p className="text-lg font-black text-white/80">{new Date(toIsoStr(r.fecha)+'T00:00:00').getDate()}</p>
-                    <p className="text-[10px] text-white/25">{new Date(toIsoStr(r.fecha)+'T00:00:00').getFullYear()}</p>
+                    <p className="text-[10px] dark:text-white/25 text-slate-900/25 uppercase tracking-wider">{new Date(toIsoStr(r.fecha)+'T00:00:00').toLocaleDateString('es-ES', { month: 'short' })}</p>
+                    <p className="text-lg font-black dark:text-white/80 text-slate-900/80">{new Date(toIsoStr(r.fecha)+'T00:00:00').getDate()}</p>
+                    <p className="text-[10px] dark:text-white/25 text-slate-900/25">{new Date(toIsoStr(r.fecha)+'T00:00:00').getFullYear()}</p>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white/85">{r.tipo_servicio}</p>
-                    <p className="text-xs text-white/35 truncate mt-0.5">
+                    <p className="text-sm font-bold dark:text-white/85 text-slate-900/85">{r.tipo_servicio}</p>
+                    <p className="text-xs dark:text-white/35 text-slate-900/35 truncate mt-0.5">
                       <span className="plate-tag text-[10px] py-0.5 px-1.5 mr-1">{r.placa}</span>
                       {r.descripcion}
                     </p>
                     {r.observaciones && r.observaciones !== r.descripcion && (
-                      <p className="text-[11px] text-white/35 mt-1 leading-relaxed">{r.observaciones}</p>
+                      <p className="text-[11px] dark:text-white/35 text-slate-900/35 mt-1 leading-relaxed">{r.observaciones}</p>
                     )}
                     {r.detalles && r.detalles.length > 0 && (
                       <div className="mt-2 space-y-1">
@@ -1325,10 +1325,10 @@ export default function RecordsPage() {
                           const kind = detalleKind(d);
                           const color = kind === 'descuento' ? 'text-emerald-400' : kind === 'repuesto' ? 'text-amber-400' : 'text-blue-400';
                           return (
-                            <div key={d.idDetalleFactura ?? d.id_detalle ?? idx} className="flex items-center gap-2 text-[11px] text-white/45">
+                            <div key={d.idDetalleFactura ?? d.id_detalle ?? idx} className="flex items-center gap-2 text-[11px] dark:text-white/45 text-slate-900/45">
                               <span className={`font-black uppercase ${color}`}>{kind === 'descuento' ? 'Cupón' : kind === 'repuesto' ? 'Rep.' : 'MO'}</span>
                               <span className="flex-1 min-w-0 truncate">{cleanDescripcion(d.descripcion) || 'Detalle'}</span>
-                              <span className="tabular-nums text-white/55">{fmtMoney(Number(d.subtotal ?? 0))}</span>
+                              <span className="tabular-nums dark:text-white/55 text-slate-900/55">{fmtMoney(Number(d.subtotal ?? 0))}</span>
                             </div>
                           );
                         })}
@@ -1336,7 +1336,7 @@ export default function RecordsPage() {
                     )}
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-black text-white/80 tabular-nums">{fmtMoney(r.costo_total ?? 0)}</p>
+                    <p className="text-sm font-black dark:text-white/80 text-slate-900/80 tabular-nums">{fmtMoney(r.costo_total ?? 0)}</p>
                     <div className="mt-1">
                       <Badge variant={variant} dot>{est.label}</Badge>
                     </div>

@@ -25,14 +25,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-white/70">
+          <label htmlFor={inputId} className="text-sm font-medium dark:text-white/70 text-slate-900/70">
             {label}
           </label>
         )}
 
         <div className="relative flex items-center">
           {prefix && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35 pointer-events-none">{prefix}</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 dark:text-white/35 text-slate-900/35 pointer-events-none">{prefix}</span>
           )}
 
           <input
@@ -53,19 +53,19 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={() => setShow((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 dark:text-white/30 text-slate-900/30 hover:dark:text-white/60 text-slate-900/60 transition-colors"
               tabIndex={-1}
             >
               {show ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           )}
           {!isPass && suffix && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/35">{suffix}</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 dark:text-white/35 text-slate-900/35">{suffix}</span>
           )}
         </div>
 
         {error && <p className="text-xs text-gm-red/80 flex items-center gap-1">{error}</p>}
-        {!error && hint && <p className="text-xs text-white/30">{hint}</p>}
+        {!error && hint && <p className="text-xs dark:text-white/30 text-slate-900/30">{hint}</p>}
       </div>
     );
   }

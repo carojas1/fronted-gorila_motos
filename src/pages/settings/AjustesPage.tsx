@@ -205,7 +205,7 @@ export default function AjustesPage() {
            style={{ color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(21,21,27,0.42)' }}>
           Configuración
         </p>
-        <h1 className="text-[1.7rem] font-black text-white">Ajustes</h1>
+        <h1 className="text-[1.7rem] font-black dark:text-white text-slate-900">Ajustes</h1>
       </div>
 
       {/* ─── Perfil ─── */}
@@ -372,7 +372,7 @@ export default function AjustesPage() {
           <Input label="Teléfono" value={editTel} onChange={e => setEditTel(e.target.value)} disabled={editSaving} placeholder="0999999999" />
           <Input label="Dirección de casa" value={editDir} onChange={e => setEditDir(e.target.value)} disabled={editSaving} placeholder="Av. Principal y Secundaria" />
           
-          <p className="text-[11px] text-white/30 pt-2">
+          <p className="text-[11px] dark:text-white/30 text-slate-900/30 pt-2">
             El correo electrónico no se puede cambiar aquí. Contacta al soporte si necesitas actualizarlo.
           </p>
         </div>
@@ -397,9 +397,9 @@ export default function AjustesPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+            <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
               Contraseña actual
-              <span className="normal-case font-normal ml-1 text-white/25">(déjalo vacío si es primera vez)</span>
+              <span className="normal-case font-normal ml-1 dark:text-white/25 text-slate-900/25">(déjalo vacío si es primera vez)</span>
             </label>
             <input
               className="gm-input-d w-full"
@@ -411,7 +411,7 @@ export default function AjustesPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+            <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
               Nueva contraseña
             </label>
             <input
@@ -424,7 +424,7 @@ export default function AjustesPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1.5">
+            <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
               Confirmar contraseña
             </label>
             <input

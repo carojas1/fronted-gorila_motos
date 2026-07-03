@@ -198,7 +198,7 @@ function MotoCard({
 
         <div className="moto-stat-item">
           <div className="moto-stat-icon" style={{ background: 'rgba(255,255,255,0.05)' }}>
-            <Zap size={13} className="text-white/40" />
+            <Zap size={13} className="dark:text-white/40 text-slate-900/40" />
           </div>
           <div>
             <p className="moto-stat-val">{km}</p>
@@ -210,7 +210,7 @@ function MotoCard({
 
         <div className="moto-stat-item">
           <div className="moto-stat-icon" style={{ background: 'rgba(255,255,255,0.05)' }}>
-            <Calendar size={13} className="text-white/40" />
+            <Calendar size={13} className="dark:text-white/40 text-slate-900/40" />
           </div>
           <div>
             <p className="moto-stat-val">{moto.anio}</p>
@@ -620,8 +620,8 @@ export default function MotosPage() {
 
           {/* Foto de la moto */}
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">
-              Foto de la moto <span className="text-white/25 text-xs font-normal">(opcional)</span>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">
+              Foto de la moto <span className="dark:text-white/25 text-slate-900/25 text-xs font-normal">(opcional)</span>
             </label>
             <div
               role="button"
@@ -643,14 +643,14 @@ export default function MotosPage() {
                   />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200"
                        style={{ background: 'rgba(0,0,0,0.55)' }}>
-                    <p className="text-white text-xs font-bold tracking-wider uppercase">Cambiar foto</p>
+                    <p className="dark:text-white text-slate-900 text-xs font-bold tracking-wider uppercase">Cambiar foto</p>
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 gap-2">
-                  <ImageIcon size={28} className="text-white/40" />
-                  <p className="text-[12px] font-semibold text-white/55">Toca para subir foto</p>
-                  <p className="text-[10px] text-white/40">JPG · PNG · WebP · máx 10 MB</p>
+                  <ImageIcon size={28} className="dark:text-white/40 text-slate-900/40" />
+                  <p className="text-[12px] font-semibold dark:text-white/55 text-slate-900/55">Toca para subir foto</p>
+                  <p className="text-[10px] dark:text-white/40 text-slate-900/40">JPG · PNG · WebP · máx 10 MB</p>
                 </div>
               )}
               <input
@@ -673,7 +673,7 @@ export default function MotosPage() {
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium text-white/70 block mb-1.5">Tipo de moto</label>
+              <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Tipo de moto</label>
               <select className="gm-input-d" {...register('tipo_moto')}>
                 <option value="">Seleccionar</option>
                 {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -684,7 +684,7 @@ export default function MotosPage() {
             <Input label="Kilometraje" type="number" placeholder="0" error={errors.kilometraje?.message} {...register('kilometraje')} />
           </div>
           <div>
-            <label className="text-sm font-medium text-white/70 block mb-1.5">Propietario</label>
+            <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5">Propietario</label>
             {canManage ? (
               /* Admin / Mecánico — elige cualquier propietario */
               <>
@@ -710,7 +710,7 @@ export default function MotosPage() {
               /* Cliente — siempre es él mismo */
               <>
                 <input type="hidden" value={me?.id_usuario ?? 0} {...register('id_usuario')} />
-                <div className="gm-input-d flex items-center gap-2 text-white/50 cursor-not-allowed select-none"
+                <div className="gm-input-d flex items-center gap-2 dark:text-white/50 text-slate-900/50 cursor-not-allowed select-none"
                      style={{ opacity: 0.7 }}>
                   <User size={13} />
                   <span>{me?.nombre_completo} (tu cuenta)</span>
@@ -734,12 +734,12 @@ export default function MotosPage() {
           </>
         }
       >
-        <p className="text-sm text-white/60">
+        <p className="text-sm dark:text-white/60 text-slate-900/60">
           ¿Eliminar la moto{' '}
           <span className="plate-tag">{deleteTarget?.placa}</span>
-          {' '}·{' '}<strong className="text-white/85">{deleteTarget?.marca} {deleteTarget?.modelo}</strong>?
+          {' '}·{' '}<strong className="dark:text-white/85 text-slate-900/85">{deleteTarget?.marca} {deleteTarget?.modelo}</strong>?
           <br />
-          <span className="text-white/35 text-xs mt-2 block">Se perderán todos sus registros de servicio.</span>
+          <span className="dark:text-white/35 text-slate-900/35 text-xs mt-2 block">Se perderán todos sus registros de servicio.</span>
         </p>
       </Modal>
     </div>

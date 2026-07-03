@@ -12,7 +12,11 @@
         try {
           var t = localStorage.getItem('gm_theme') || 'dark';
           document.documentElement.setAttribute('data-theme', t);
-        } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+          if (t === 'dark') document.documentElement.classList.add('dark');
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.classList.add('dark');
+        }
       })();
     </script>
     <!-- Detector de errores de arranque (script clásico: corre aunque el módulo falle al parsear) -->

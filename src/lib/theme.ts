@@ -17,6 +17,11 @@ export function getTheme(): Theme {
 
 export function applyTheme(t: Theme) {
   document.documentElement.setAttribute('data-theme', t);
+  if (t === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
   try { localStorage.setItem(KEY, t); } catch { /* noop */ }
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
