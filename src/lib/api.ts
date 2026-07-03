@@ -173,6 +173,8 @@ export const productosApi = {
          return res.json();
       }).then(data => ({ data }));
   },
+  ventaDirecta: (data: Record<string, unknown>) =>
+    api.post('/productos/venta-directa', data),
   enviarComprobante: (data: Record<string, unknown>) =>
     api.post('/productos/venta-comprobante', data),
 };

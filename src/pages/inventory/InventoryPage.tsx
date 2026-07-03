@@ -13,6 +13,7 @@ import gsap from 'gsap';
 import { productosApi, categoriasApi, usuariosApi, motosApi, facturasApi, detallesFacturaApi } from '../../lib/api';
 import { isNativeApp } from '../../lib/platform';
 import { useTheme } from '../../lib/theme';
+import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { fmtMoney, getErrorMsg, nextProductCode } from '../../lib/utils';
 import { comprimirImagen } from '../../lib/fotos';
@@ -62,6 +63,7 @@ export default function InventoryPage() {
   const [theme] = useTheme();
   const isDark  = theme === 'dark';
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Estados principales
   const [productos,    setProductos]    = useState<Producto[]>([]);
@@ -256,13 +258,18 @@ export default function InventoryPage() {
     const qty = parseInt(sellQty, 10);
     if (isNaN(qty) || qty <= 0) { toast.error('Cantidad inválida'); return; }
     if (qty > sellTarget.stock) { toast.error(`Solo hay ${sellTarget.stock} unidades en stock`); return; }
+    if (!user?.id_usuario) { toast.error('No se pudo identificar el usuario que registra la venta'); return; }
     setSelling(true);
     try {
-      await productosApi.update(sellTarget.id_producto, {
-        ...sellTarget,
-        stock:              sellTarget.stock - qty,
-        fecha_modificacion: new Date().toISOString().slice(0, 10),
+      const total = qty * sellTarget.pvp;
+      const ventaRes = await productosApi.ventaDirecta({
+        idProducto: sellTarget.id_producto,
+        cantidad:   qty,
+        idUsuario:  user.id_usuario,
       });
+      const venta = ventaRes.data as { idFactura?: number; id_factura?: number; stockRestante?: number | null };
+      const facturaId = venta.idFactura ?? venta.id_factura ?? null;
+      const stockRestante = typeof venta.stockRestante === 'number' ? venta.stockRestante : sellTarget.stock - qty;
       let emailOk: boolean | null = null;
       if (sellEmail.trim()) {
         const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -274,8 +281,9 @@ export default function InventoryPage() {
             codigoProducto: sellTarget.codigo_personal,
             cantidad:       qty,
             pvp:            sellTarget.pvp,
-            total:          qty * sellTarget.pvp,
+            total,
             fecha,
+            referencia:     facturaId ? `FAC-${String(facturaId).padStart(5, '0')}` : undefined,
           });
           emailOk = Boolean((comprobante.data as { sent?: boolean })?.sent);
         } catch {
@@ -285,6 +293,12 @@ export default function InventoryPage() {
       toast.success(`Venta registrada · ${qty} u. de ${sellTarget.nombre} (quedan ${sellTarget.stock - qty})`);
       if (emailOk === false) {
         toast.warning('La venta quedó registrada, pero el comprobante no se pudo enviar. Revisa la configuración de correo.');
+      }
+      if (stockRestante !== sellTarget.stock - qty) {
+        toast.success(`Stock actualizado en servidor: ${stockRestante} u.`);
+      }
+      if (!facturaId) {
+        toast.warning('La venta se registro, pero no llego el numero de factura para referencia.');
       }
       setSellTarget(null); setSellQty('1'); setSellEmail('');
       fetchData();
@@ -901,6 +915,8 @@ export default function InventoryPage() {
           <div className="space-y-4">
             <p className="text-[12px] text-white/45 leading-relaxed">
               Venta a consumidor final — <strong className="text-white/70">solo descuenta el stock</strong>, sin crear orden de servicio.
+              <br />
+              <span className="text-white/55">Tambien queda registrada para contabilidad.</span>
             </p>
             <div className="p-3 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
               <p className="text-[14px] font-bold text-white/90">{sellTarget.nombre}</p>

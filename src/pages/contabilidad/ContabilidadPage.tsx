@@ -14,7 +14,7 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
   CartesianGrid, ReferenceLine,
 } from 'recharts';
-import { registrosApi, pagosEmpleadoApi, usuariosApi, productosApi, detallesFacturaApi, type PagoEmpleadoAPI } from '../../lib/api';
+import { registrosApi, pagosEmpleadoApi, usuariosApi, productosApi, detallesFacturaApi, facturasApi, type PagoEmpleadoAPI } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { splitTotales, detalleKind, type DetalleLike } from '../../lib/detalles';
 
@@ -23,7 +23,7 @@ import { fmtMoney, fmtDate, getErrorMsg, toIsoStr } from '../../lib/utils';
 import { useToast } from '../../components/ui/Toast';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
-import type { RegistroDetalle, Usuario, Producto } from '../../types';
+import type { RegistroDetalle, Usuario, Producto, Factura } from '../../types';
 import { usePageEntrance } from '../../hooks/useGsap';
 import { useTheme } from '../../lib/theme';
 
@@ -455,6 +455,7 @@ export default function ContabilidadPage() {
   const { user, isAdmin } = useAuth();
 
   const [registros,   setRegistros]   = useState<RegistroDetalle[]>([]);
+  const [facturas,    setFacturas]    = useState<Factura[]>([]);
   const [gastos,      setGastos]      = useState<PagoEmpleadoAPI[]>([]);
   const [empleados,   setEmpleados]   = useState<Usuario[]>([]);
   const [productos,   setProductos]   = useState<Producto[]>([]);
@@ -504,16 +505,18 @@ export default function ContabilidadPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [rRes, gRes, uRes, pRes] = await Promise.all([
+      const [rRes, gRes, uRes, pRes, fRes] = await Promise.all([
         registrosApi.list(),
         pagosEmpleadoApi.listAll(),
         usuariosApi.list(),
         productosApi.list(),
+        facturasApi.list(),
       ]);
       const allRegistros: RegistroDetalle[] = Array.isArray(rRes.data) ? rRes.data : [];
       /* Mecánico ve solo sus propias órdenes */
       const myId = user?.id_usuario;
       setRegistros(isAdmin || !myId ? allRegistros : allRegistros.filter(r => r.id_encargado === myId));
+      setFacturas(Array.isArray(fRes.data) ? fRes.data : []);
       setGastos(Array.isArray(gRes.data) ? gRes.data : []);
       setEmpleados(Array.isArray(uRes.data) ? uRes.data : []);
       setProductos(Array.isArray(pRes.data) ? pRes.data : []);
@@ -544,8 +547,12 @@ export default function ContabilidadPage() {
   /* ── KPIs ── */
   const ingresosPeriodo = useMemo(() => {
     const cobrados = registros.filter(r => r.estado === 4);
-    return filtrar(cobrados.map(r => ({ ...r }))).reduce((s, r) => s + (r.costo_total ?? 0), 0);
-  }, [registros, filtrar]);
+    const facturasDirectas = facturas.filter(f => !registros.some(r => r.id_factura === f.id_factura));
+    
+    const sumaRegistros = filtrar(cobrados.map(r => ({ ...r }))).reduce((s, r) => s + (r.costo_total ?? 0), 0);
+    const sumaDirectas = filtrar(facturasDirectas.map(f => ({ ...f, fecha: f.fecha_emision || f.fecha }))).reduce((s, f) => s + (f.costo_total ?? 0), 0);
+    return sumaRegistros + sumaDirectas;
+  }, [registros, facturas, filtrar]);
 
   const gastosEmpleados = useMemo(
     () => filtrar(gastos.filter(g => g.id_empleado > 0)).reduce((s, g) => s + Number(g.monto), 0),
@@ -561,6 +568,12 @@ export default function ContabilidadPage() {
   /* ── Chart adaptable al filtro activo ── */
   const { chartIngresos, chartGastos, chartLabels } = useMemo(() => {
     const cobrados = registros.filter(r => r.estado === 4);
+    const facturasDirectas = facturas.filter(f => !registros.some(r => r.id_factura === f.id_factura));
+    
+    const todosIngresos = [
+      ...cobrados.map(r => ({ fecha: toIsoStr(r.fecha), costo_total: r.costo_total })),
+      ...facturasDirectas.map(f => ({ fecha: toIsoStr(f.fecha_emision || f.fecha), costo_total: f.costo_total }))
+    ];
 
     if (filtroTipo === 'dia') {
       // Últimos 7 días desde la fecha seleccionada
@@ -569,7 +582,7 @@ export default function ContabilidadPage() {
         const d = new Date(base); d.setDate(base.getDate() - 6 + i);
         return d.toISOString().slice(0, 10);
       });
-      const ing = dias.map(d => cobrados.filter(r => toIsoStr(r.fecha) === d).reduce((s,r) => s+(r.costo_total??0), 0));
+      const ing = dias.map(d => todosIngresos.filter(r => toIsoStr(r.fecha) === d).reduce((s,r) => s+(r.costo_total??0), 0));
       const gas = dias.map(d => gastos.filter(g => toIsoStr(g.fecha) === d).reduce((s,g) => s+Number(g.monto), 0));
       return { chartIngresos: ing, chartGastos: gas, chartLabels: dias.map(d => { const dd = new Date(d+'T12:00:00'); return `${dd.getDate()}/${dd.getMonth()+1}`; }) };
     }
@@ -583,7 +596,7 @@ export default function ContabilidadPage() {
         const sun = new Date(d); sun.setDate(d.getDate() + 6);
         return { mon, sun: sun.toISOString().slice(0,10) };
       });
-      const ing = semanas.map(({ mon, sun }) => cobrados.filter(r => { const f=toIsoStr(r.fecha); return f>=mon && f<=sun; }).reduce((s,r) => s+(r.costo_total??0), 0));
+      const ing = semanas.map(({ mon, sun }) => todosIngresos.filter(r => { const f=toIsoStr(r.fecha); return f>=mon && f<=sun; }).reduce((s,r) => s+(r.costo_total??0), 0));
       const gas = semanas.map(({ mon, sun }) => gastos.filter(g => { const f=toIsoStr(g.fecha); return f>=mon && f<=sun; }).reduce((s,g) => s+Number(g.monto), 0));
       const labels = semanas.map(({ mon }) => { const d=new Date(mon+'T12:00:00'); return `S${d.getDate()}/${d.getMonth()+1}`; });
       return { chartIngresos: ing, chartGastos: gas, chartLabels: labels };
@@ -596,14 +609,14 @@ export default function ContabilidadPage() {
         if (m <= 0) { m += 12; y -= 1; }
         return { m, y };
       });
-      const ing = meses.map(({ m, y }) => cobrados.filter(r => { const f=toIsoStr(r.fecha); return f.startsWith(`${y}-${String(m).padStart(2,'0')}`); }).reduce((s,r) => s+(r.costo_total??0), 0));
+      const ing = meses.map(({ m, y }) => todosIngresos.filter(r => { const f=toIsoStr(r.fecha); return f.startsWith(`${y}-${String(m).padStart(2,'0')}`); }).reduce((s,r) => s+(r.costo_total??0), 0));
       const gas = meses.map(({ m, y }) => gastos.filter(g => { const f=toIsoStr(g.fecha); return f.startsWith(`${y}-${String(m).padStart(2,'0')}`); }).reduce((s,g) => s+Number(g.monto), 0));
       return { chartIngresos: ing, chartGastos: gas, chartLabels: meses.map(({ m }) => MES_SHORT[m-1]) };
     }
 
     if (filtroTipo === 'anio') {
       const año = filtroAnio;
-      const cobradosAnio = cobrados.filter(r => toIsoStr(r.fecha).startsWith(String(año)));
+      const cobradosAnio = todosIngresos.filter(r => toIsoStr(r.fecha).startsWith(String(año)));
       const ing = Array.from({ length: 12 }, (_, m) => cobradosAnio.filter(r => Number(toIsoStr(r.fecha).slice(5,7)) === m+1).reduce((s,r) => s+(r.costo_total??0), 0));
       const gas = Array.from({ length: 12 }, (_, m) => gastos.filter(g => toIsoStr(g.fecha).startsWith(String(año)) && Number(toIsoStr(g.fecha).slice(5,7)) === m+1).reduce((s,g) => s+Number(g.monto), 0));
       return { chartIngresos: ing, chartGastos: gas, chartLabels: MES_SHORT };
@@ -611,10 +624,10 @@ export default function ContabilidadPage() {
 
     // todo: últimos 3 años, por año
     const años = [anioActual - 2, anioActual - 1, anioActual];
-    const ing = años.map(y => cobrados.filter(r => toIsoStr(r.fecha).startsWith(String(y))).reduce((s,r) => s+(r.costo_total??0), 0));
+    const ing = años.map(y => todosIngresos.filter(r => toIsoStr(r.fecha).startsWith(String(y))).reduce((s,r) => s+(r.costo_total??0), 0));
     const gas = años.map(y => gastos.filter(g => toIsoStr(g.fecha).startsWith(String(y))).reduce((s,g) => s+Number(g.monto), 0));
     return { chartIngresos: ing, chartGastos: gas, chartLabels: años.map(String) };
-  }, [registros, gastos, anioActual, filtroTipo, filtroFecha, filtroMes, filtroAnio]);
+  }, [registros, facturas, gastos, anioActual, filtroTipo, filtroFecha, filtroMes, filtroAnio]);
 
   const nombreEmpleado = (idEmp: number) => {
     if (idEmp === 0) return 'Gasto general';
@@ -704,11 +717,12 @@ export default function ContabilidadPage() {
     setCierreLoading(true);
     try {
       const ordered = filtrar(registros.filter(r => r.estado === 4));
-      const results = await Promise.allSettled(
-        ordered.map(r => registrosApi.detalles(r.id_factura)
-          .then(res => res.data as DetalleFila[])
-        )
-      );
+      const facturasDirectas = filtrar(facturas.filter(f => !registros.some(r => r.id_factura === f.id_factura)).map(f => ({ ...f, fecha: f.fecha_emision || f.fecha })));
+      
+      const results = await Promise.allSettled([
+        ...ordered.map(r => registrosApi.detalles(r.id_factura).then(res => res.data as DetalleFila[])),
+        ...facturasDirectas.map(f => detallesFacturaApi.byFactura(f.id_factura).then(res => res.data as DetalleFila[]))
+      ]);
       const prodMap = new Map<number, Producto>(
         productos.map(p => [p.id_producto, p])
       );
