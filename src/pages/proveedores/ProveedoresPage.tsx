@@ -616,8 +616,6 @@ export default function ProveedoresPage() {
                         <h3 className="text-sm font-bold text-white truncate mb-1">{p.nombre}</h3>
                         <div className="flex gap-2 text-[10px] text-white/30 font-mono">
                           <span>{p.codigo_personal || 'SIN CÓD.'}</span>
-                          <span>|</span>
-                          <span>Reg: {p.fecha_registro.split('T')[0]}</span>
                         </div>
                       </div>
                       <div className="p-4 grid grid-cols-3 gap-2">

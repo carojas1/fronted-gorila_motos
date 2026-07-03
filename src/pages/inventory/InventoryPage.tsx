@@ -129,9 +129,22 @@ export default function InventoryPage() {
       categoriasApi.list(),
       proveedorContactosApi.list()
     ]);
-    if (p.status === 'fulfilled') setProductos(p.value.data as Producto[]);
+    
+    const fetchedProds = p.status === 'fulfilled' ? (p.value.data as Producto[]) : [];
+    const fetchedContactos = pr.status === 'fulfilled' ? (pr.value.data as any[]) : [];
+    
+    if (p.status === 'fulfilled') setProductos(fetchedProds);
     if (c.status === 'fulfilled') setCategorias(c.value.data as Categoria[]);
-    if (pr.status === 'fulfilled') setProveedores(pr.value.data as any[]);
+    
+    const provMap = new Map<string, {codigo: string, nombre: string}>();
+    fetchedContactos.forEach(ct => provMap.set(ct.codigo, ct));
+    fetchedProds.forEach(prod => {
+      if (prod.codigo_proveedor && !provMap.has(prod.codigo_proveedor)) {
+        provMap.set(prod.codigo_proveedor, { codigo: prod.codigo_proveedor, nombre: `Proveedor ${prod.codigo_proveedor}` });
+      }
+    });
+    setProveedores(Array.from(provMap.values()));
+    
     setLoading(false);
   }, []);
 
@@ -499,7 +512,11 @@ export default function InventoryPage() {
 
   const filtered = productos.filter((p) => {
     const q        = search.toLowerCase();
-    const matchQ   = p.nombre.toLowerCase().includes(q) || p.codigo_personal.toLowerCase().includes(q);
+    const provName = proveedores.find(pr => pr.codigo === p.codigo_proveedor)?.nombre || '';
+    const matchQ   = p.nombre.toLowerCase().includes(q) || 
+                     p.codigo_personal.toLowerCase().includes(q) || 
+                     (p.codigo_proveedor || '').toLowerCase().includes(q) || 
+                     provName.toLowerCase().includes(q);
     const matchCat = catFilter === 0 || p.id_categoria === catFilter;
     const matchStock =
       stockView === 'all' ? true :
@@ -748,9 +765,9 @@ export default function InventoryPage() {
               className="gm-input-d w-full"
               {...register('codigo_proveedor')}
             >
-              <option value="">-- Sin proveedor --</option>
+              <option value="" className="dark:bg-[#131318] dark:text-white bg-white text-black">-- Sin proveedor --</option>
               {proveedores.map(pr => (
-                <option key={pr.codigo} value={pr.codigo}>
+                <option key={pr.codigo} value={pr.codigo} className="dark:bg-[#131318] dark:text-white bg-white text-black">
                   {pr.nombre} (Cód. {pr.codigo})
                 </option>
               ))}
