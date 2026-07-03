@@ -63,13 +63,18 @@ function ProveedorCard({ codigo, productos, contacto, onEdit, onView }: Proveedo
               <Truck size={16} style={{ color: cardColor }} />
             </div>
             <div>
-              <p className="text-[13px] font-black text-white/90">{contacto?.nombre || `Proveedor ${codigo}`}</p>
-              <p className="text-[11px] text-white/35 font-mono mt-0.5">Cód. {codigo}</p>
+              <p className="text-[13px] font-black" style={{ color: isDark ? 'rgba(255,255,255,0.9)' : '#15151B' }}>
+                {contacto?.nombre || `Proveedor ${codigo}`}
+              </p>
+              <p className="text-[11px] font-mono mt-0.5" style={{ color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(21,21,27,0.6)' }}>
+                Cód. {codigo}
+              </p>
             </div>
           </div>
           <button
             onClick={() => onEdit(codigo)}
-            className="flex items-center gap-1 text-[10px] text-white/25 hover:text-white/60 transition-colors font-bold"
+            className="flex items-center gap-1 text-[10px] transition-colors font-bold"
+            style={{ color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(21,21,27,0.5)' }}
           >
             <Edit2 size={10} /> Editar
           </button>
@@ -79,13 +84,13 @@ function ProveedorCard({ codigo, productos, contacto, onEdit, onView }: Proveedo
         {(contacto?.telefono || contacto?.email) && (
           <div className="mt-3 space-y-1">
             {contacto.telefono && (
-              <div className="flex items-center gap-2 text-[11px] text-white/40">
-                <Phone size={9} className="text-white/20" /> {contacto.telefono}
+              <div className="flex items-center gap-2 text-[11px]" style={{ color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(21,21,27,0.7)' }}>
+                <Phone size={9} style={{ opacity: 0.5 }} /> {contacto.telefono}
               </div>
             )}
             {contacto.email && (
-              <div className="flex items-center gap-2 text-[11px] text-white/40">
-                <Mail size={9} className="text-white/20" /> {contacto.email}
+              <div className="flex items-center gap-2 text-[11px]" style={{ color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(21,21,27,0.7)' }}>
+                <Mail size={9} style={{ opacity: 0.5 }} /> {contacto.email}
               </div>
             )}
           </div>
@@ -165,20 +170,26 @@ function ProveedorCard({ codigo, productos, contacto, onEdit, onView }: Proveedo
       )}
 
       {/* Ver productos */}
-      <div className="px-4 py-3 bg-white/5 border-t border-white/[0.04]">
+      <div className="px-4 py-3 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.04)' : '#E4E7EC', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
         <button
           onClick={() => onView(codigo)}
-          className="w-full py-2 rounded-xl text-[12px] font-bold transition-all hover:bg-white/10"
-          style={{ border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E4E7EC'}` }}
+          className="w-full py-2 rounded-xl text-[12px] font-bold transition-all"
+          style={{ 
+            background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E4E7EC'}`,
+            color: isDark ? 'rgba(255,255,255,0.85)' : '#15151B'
+          }}
         >
           Ver {productos.length} producto{productos.length !== 1 ? 's' : ''}
         </button>
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-white/[0.04] flex items-center justify-between">
-        <span className="text-[10px] text-white/25">{productos.length} producto{productos.length > 1 ? 's' : ''}</span>
-        <span className="text-[10px] text-white/25 font-mono">
+      <div className="px-4 py-3 border-t flex items-center justify-between" style={{ borderColor: isDark ? 'rgba(255,255,255,0.04)' : '#E4E7EC' }}>
+        <span className="text-[10px]" style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.5)' }}>
+          {productos.length} producto{productos.length > 1 ? 's' : ''}
+        </span>
+        <span className="text-[10px] font-mono" style={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(21,21,27,0.5)' }}>
           Valor total: {fmtMoney(productos.reduce((s, p) => s + (p.pvp * p.stock), 0))}
         </span>
       </div>
