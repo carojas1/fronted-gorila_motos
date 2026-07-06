@@ -14,7 +14,7 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
   CartesianGrid, ReferenceLine,
 } from 'recharts';
-import { registrosApi, pagosEmpleadoApi, usuariosApi, productosApi, detallesFacturaApi, facturasApi, type PagoEmpleadoAPI } from '../../lib/api';
+import { registrosApi, pagosEmpleadoApi, usuariosApi, productosApi, detallesFacturaApi, facturasApi, proveedorContactosApi, type PagoEmpleadoAPI } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { splitTotales, detalleKind, type DetalleLike } from '../../lib/detalles';
 
@@ -32,6 +32,60 @@ const MES_SHORT  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct',
 const CONCEPTOS_GASTO = ['Compra inventario', 'Sueldo', 'Bono', 'Anticipo', 'Servicio externo', 'Alquiler', 'Otro'];
 
 type FiltroTipo = 'dia' | 'semana' | 'mes' | 'anio' | 'todo';
+type ProveedorContacto = { codigo: string; nombre?: string | null; telefono?: string | null; email?: string | null; producto?: string | null };
+type VentaDirectaInfo = { resumen: string; detalle: string; producto: string; proveedor: string; cantidad: number; codigoProducto: string };
+
+function detalleIdProducto(d: DetalleFila): number | null {
+  const id = d.idProducto ?? (d as { id_producto?: number | null }).id_producto ?? null;
+  return id == null ? null : Number(id);
+}
+
+function productoVentaLabel(p?: Producto | null, fallback?: string | null): string {
+  return (p?.nombre || fallback || 'Producto sin nombre').trim();
+}
+
+function proveedorVentaLabel(p: Producto | undefined, proveedores: Map<string, ProveedorContacto>): string {
+  const codigo = (p?.codigo_proveedor || '').trim();
+  if (!codigo) return 'Proveedor sin codigo';
+  const contacto = proveedores.get(codigo);
+  const nombre = (contacto?.nombre || '').trim();
+  return nombre ? `${nombre} (${codigo})` : `Proveedor ${codigo}`;
+}
+
+function codigoProductoLabel(p?: Producto): string {
+  return (p?.codigo_personal || p?.codigo_proveedor || '').trim();
+}
+
+function ventaDirectaInfo(
+  idFactura: number,
+  detalles: DetalleFila[] | undefined,
+  productos: Producto[],
+  proveedores: Map<string, ProveedorContacto>
+): VentaDirectaInfo {
+  const detalle = detalles?.[0];
+  const idProd = detalle ? detalleIdProducto(detalle) : null;
+  const producto = idProd != null ? productos.find(p => p.id_producto === idProd) : undefined;
+  const cantidad = Number(detalle?.cantidad ?? 1);
+  const nombreProducto = productoVentaLabel(producto, detalle?.descripcion);
+  const proveedor = proveedorVentaLabel(producto, proveedores);
+  const codigo = codigoProductoLabel(producto);
+  const ref = `FAC-${String(idFactura).padStart(5, '0')}`;
+  const piezas = [
+    'Venta mostrador',
+    `${cantidad}x ${nombreProducto}`,
+    proveedor,
+    codigo ? `Cod. ${codigo}` : '',
+    `Ref. ${ref}`,
+  ].filter(Boolean);
+  return {
+    resumen: piezas.join(' · '),
+    detalle: piezas.join(' | '),
+    producto: nombreProducto,
+    proveedor,
+    cantidad,
+    codigoProducto: codigo,
+  };
+}
 
 function getWeekRange(dateStr: string): [string, string] {
   const d   = new Date(dateStr + 'T12:00:00');
@@ -192,7 +246,8 @@ function buildReportSheet(
   label:     string,
   detallesMap?: Map<number, DetalleFila[]>,
   productos:  Producto[] = [],
-  mode: 'all' | 'resumen' | 'ingresos' | 'gastos' | 'inventario' | 'pendientes' | 'activas' = 'all'
+  mode: 'all' | 'resumen' | 'ingresos' | 'gastos' | 'inventario' | 'pendientes' | 'activas' = 'all',
+  proveedores: Map<string, ProveedorContacto> = new Map()
 ): Record<string, { v: unknown; t: string; s?: CellStyle }> {
   const hoy    = new Date().toISOString().slice(0, 10);
   const nombreEmp = (id: number) => {
@@ -302,6 +357,43 @@ function buildReportSheet(
     blank();
   }
 
+  if ((mode === 'all' || mode === 'inventario' || mode === 'ingresos') && detallesMap) {
+    const productosVendidos: (string | number)[][] = [];
+    for (const r of ingresos) {
+      const items = detallesMap.get(r.id_registro) ?? [];
+      for (const d of items) {
+        const idProd = detalleIdProducto(d);
+        if (idProd == null) continue;
+        const prod = productos.find(p => p.id_producto === idProd);
+        const cantidad = Number(d.cantidad ?? 1);
+        const venta = num(d.subtotal);
+        const costo = (prod?.costo ?? 0) * cantidad;
+        const info = ventaDirectaInfo(r.id_factura, [d], productos, proveedores);
+        productosVendidos.push([
+          toIsoStr(r.fecha),
+          r.placa || 'Venta directa',
+          info.producto,
+          info.codigoProducto || '',
+          info.proveedor,
+          cantidad,
+          +venta.toFixed(2),
+          +costo.toFixed(2),
+          +(venta - costo).toFixed(2),
+        ]);
+      }
+    }
+    if (productosVendidos.length > 0) {
+      R.push({ cells: ['PRODUCTOS VENDIDOS'], kind: 'banner', bannerStyle: XS.headerAmber });
+      R.push({
+        cells: ['Fecha', 'Origen', 'Producto', 'Codigo', 'Proveedor', 'Cant.', 'Venta ($)', 'Costo ($)', 'Ganancia ($)'],
+        kind: 'header',
+        headerStyles: [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGray, XS.headerGray, XS.headerAmber, XS.headerGreen, XS.headerRed, XS.headerGreen],
+      });
+      productosVendidos.forEach(row => R.push({ cells: row, kind: 'data', numCols: [5, 6, 7, 8] }));
+      blank();
+    }
+  }
+
   if (mode === 'all' || mode === 'ingresos' || mode === 'pendientes' || mode === 'activas') {
     let bannerTitle = 'INGRESOS (COBRADOS)';
     let bStyle = XS.headerGreen;
@@ -380,6 +472,7 @@ function exportarExcel(
   empleados: Usuario[], label: string,
   detallesMap?: Map<number, DetalleFila[]>,
   productos: Producto[] = [],
+  proveedores: Map<string, ProveedorContacto> = new Map(),
   filtroTipo: FiltroTipo = 'mes',
   filtroAnio: number = new Date().getFullYear(),
   filtroFecha: string = ''
@@ -391,16 +484,16 @@ function exportarExcel(
   const pendientes = ingresos.filter(r => r.estado !== 4);
   const activas = ingresos.filter(r => r.estado < 3);
 
-  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'resumen'), 'Resumen');
-  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'ingresos'), 'Ingresos');
-  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'gastos'), 'Gastos');
-  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'inventario'), 'Inventario');
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'resumen', proveedores), 'Resumen');
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'ingresos', proveedores), 'Ingresos');
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'gastos', proveedores), 'Gastos');
+  XLSX.utils.book_append_sheet(wb, buildReportSheet(cobrados, gastos, empleados, label, detallesMap, productos, 'inventario', proveedores), 'Inventario');
 
   if (pendientes.length > 0) {
-    XLSX.utils.book_append_sheet(wb, buildReportSheet(pendientes, [], empleados, label, detallesMap, productos, 'pendientes'), 'Pendientes');
+    XLSX.utils.book_append_sheet(wb, buildReportSheet(pendientes, [], empleados, label, detallesMap, productos, 'pendientes', proveedores), 'Pendientes');
   }
   if (activas.length > 0) {
-    XLSX.utils.book_append_sheet(wb, buildReportSheet(activas, [], empleados, label, detallesMap, productos, 'activas'), 'Motos Activas');
+    XLSX.utils.book_append_sheet(wb, buildReportSheet(activas, [], empleados, label, detallesMap, productos, 'activas', proveedores), 'Motos Activas');
   }
 
   if (filtroTipo === 'anio') {
@@ -410,7 +503,7 @@ function exportarExcel(
       const mGas = gastos.filter(g  => toIsoStr(g.fecha).slice(5, 7) === mStr);
       if (!mIng.length && !mGas.length) continue;
       XLSX.utils.book_append_sheet(wb,
-        buildReportSheet(mIng, mGas, empleados, `${MES_LABELS[m - 1]} ${filtroAnio}`, detallesMap, productos),
+        buildReportSheet(mIng, mGas, empleados, `${MES_LABELS[m - 1]} ${filtroAnio}`, detallesMap, productos, 'all', proveedores),
         MES_SHORT[m - 1]
       );
     }
@@ -426,7 +519,7 @@ function exportarExcel(
       const dGas   = gastos.filter(g  => toIsoStr(g.fecha) === dayStr);
       if (!dIng.length && !dGas.length) continue;
       XLSX.utils.book_append_sheet(wb,
-        buildReportSheet(dIng, dGas, empleados, `${DIA_FULL[d]} ${dayStr}`, detallesMap, productos),
+        buildReportSheet(dIng, dGas, empleados, `${DIA_FULL[d]} ${dayStr}`, detallesMap, productos, 'all', proveedores),
         `${DIA_SHORT[d]} ${dayStr.slice(8)}`
       );
     }
@@ -459,6 +552,8 @@ export default function ContabilidadPage() {
   const [gastos,      setGastos]      = useState<PagoEmpleadoAPI[]>([]);
   const [empleados,   setEmpleados]   = useState<Usuario[]>([]);
   const [productos,   setProductos]   = useState<Producto[]>([]);
+  const [proveedores, setProveedores] = useState<Map<string, ProveedorContacto>>(new Map());
+  const [detallesDirectos, setDetallesDirectos] = useState<Map<number, DetalleFila[]>>(new Map());
   const [loading,       setLoading]       = useState(true);
   const [exportLoading,  setExportLoading]  = useState(false);
   const [desglose, setDesglose] = useState<{ mano: number; rep: number } | null>(null);
@@ -505,21 +600,31 @@ export default function ContabilidadPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [rRes, gRes, uRes, pRes, fRes] = await Promise.all([
+      const [rRes, gRes, uRes, pRes, fRes, provRes] = await Promise.all([
         registrosApi.list(),
         pagosEmpleadoApi.listAll(),
         usuariosApi.list(),
         productosApi.list(),
         facturasApi.list(),
+        proveedorContactosApi.list(),
       ]);
       const allRegistros: RegistroDetalle[] = Array.isArray(rRes.data) ? rRes.data : [];
+      const allFacturas: Factura[] = Array.isArray(fRes.data) ? fRes.data : [];
+      const directas = allFacturas.filter(f => !allRegistros.some(r => r.id_factura === f.id_factura));
+      const detallesResults = await Promise.allSettled(
+        directas.map(f => detallesFacturaApi.byFactura(f.id_factura).then(res => ({ id: f.id_factura, d: res.data as DetalleFila[] })))
+      );
       /* Mecánico ve solo sus propias órdenes */
       const myId = user?.id_usuario;
       setRegistros(isAdmin || !myId ? allRegistros : allRegistros.filter(r => r.id_encargado === myId));
-      setFacturas(Array.isArray(fRes.data) ? fRes.data : []);
+      setFacturas(allFacturas);
       setGastos(Array.isArray(gRes.data) ? gRes.data : []);
       setEmpleados(Array.isArray(uRes.data) ? uRes.data : []);
       setProductos(Array.isArray(pRes.data) ? pRes.data : []);
+      setProveedores(new Map((Array.isArray(provRes.data) ? provRes.data : []).map((p: ProveedorContacto) => [p.codigo, p])));
+      setDetallesDirectos(new Map(
+        detallesResults.flatMap(res => res.status === 'fulfilled' ? [[res.value.id, res.value.d] as [number, DetalleFila[]]] : [])
+      ));
     } catch { /* silencioso */ }
     finally { setLoading(false); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -668,13 +773,16 @@ export default function ContabilidadPage() {
     
     const facturasDirectas = filtrar(facturas.filter(f => !registros.some(r => r.id_factura === f.id_factura))
       .map(f => ({ ...f, fecha: f.fecha_emision || f.fecha })));
-    const ingDir = facturasDirectas.map(f => ({ tipo:'ingreso' as const, fecha:toIsoStr(f.fecha_emision || f.fecha), desc:`Venta mostrador (Ref: ${f.id_factura})`, monto:f.costo_total??0, id: -f.id_factura }));
+    const ingDir = facturasDirectas.map(f => {
+      const info = ventaDirectaInfo(f.id_factura, detallesDirectos.get(f.id_factura), productos, proveedores);
+      return { tipo:'ingreso' as const, fecha:toIsoStr(f.fecha_emision || f.fecha), desc:info.resumen, monto:f.costo_total??0, id: -f.id_factura };
+    });
     
     const gas = filtrar(gastos)
       .map(g => ({ tipo:'gasto' as const, fecha:toIsoStr(g.fecha), desc:`${g.concepto} — ${nombreEmpleado(g.id_empleado)}`, monto:Number(g.monto), id:g.id_pago, id_pago:g.id_pago }));
     return [...ing, ...ingDir, ...gas].sort((a,b) => b.fecha.localeCompare(a.fecha)).slice(0, 30);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registros, facturas, gastos, empleados, filtrar]);
+  }, [registros, facturas, gastos, empleados, productos, proveedores, detallesDirectos, filtrar]);
 
   /* ── KPIs de negocio ampliados ── */
   const serviciosPeriodo = useMemo(
@@ -817,25 +925,28 @@ export default function ContabilidadPage() {
                   );
                 } catch { /* skip breakdown on error */ }
                 
-                const mockRegistros = facturasDirectas.map(f => ({
-                  id_registro: -f.id_factura,
-                  id_cliente: 0,
-                  id_moto: 0,
-                  id_encargado: 0,
-                  id_factura: f.id_factura,
-                  fecha: f.fecha,
-                  estado: 4,
-                  tipo: 0,
-                  observaciones: 'Venta de mostrador (Directa)',
-                  kilometraje: 0,
-                  nivel_gasolina: '',
-                  costo_total: f.costo_total,
-                  placa: 'Venta Directa',
-                  tipo_servicio: 'Venta Inventario'
-                } as RegistroDetalle));
+                const mockRegistros = facturasDirectas.map(f => {
+                  const info = ventaDirectaInfo(f.id_factura, detallesMap?.get(-f.id_factura), productos, proveedores);
+                  return {
+                    id_registro: -f.id_factura,
+                    id_cliente: 0,
+                    id_moto: 0,
+                    id_encargado: 0,
+                    id_factura: f.id_factura,
+                    fecha: f.fecha,
+                    estado: 4,
+                    tipo: 0,
+                    observaciones: info.detalle,
+                    kilometraje: 0,
+                    nivel_gasolina: '',
+                    costo_total: f.costo_total,
+                    placa: 'Venta directa',
+                    tipo_servicio: info.detalle
+                  } as RegistroDetalle;
+                });
 
                 exportarExcel([...filtrar(registros), ...mockRegistros], filtrar(gastos), empleados,
-                  filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio), detallesMap, productos,
+                  filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio), detallesMap, productos, proveedores,
                   filtroTipo, filtroAnio, filtroFecha);
                 setExportLoading(false);
               }}
