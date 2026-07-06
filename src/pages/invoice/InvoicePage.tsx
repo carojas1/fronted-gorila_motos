@@ -36,13 +36,18 @@ const ESTADO_LABEL: Record<number, { label: string; color: string }> = {
 /* Número de orden único: delega en el helper compartido (ordenNumero) */
 const genNumero = ordenNumero;
 
+function internalPath(path?: string | null) {
+  if (!path || !path.startsWith('/') || path.startsWith('//')) return null;
+  return path;
+}
+
 export default function InvoicePage() {
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const [theme]  = useTheme();
   const isDark   = theme === 'dark';
-  const { user } = useAuth();
+  const { user, isCliente } = useAuth();
 
   const [reg,       setReg]       = useState<RegistroDetalle | null>(null);
   const [cliente,   setCliente]   = useState<Usuario | null>(null);
@@ -54,12 +59,23 @@ export default function InvoicePage() {
   const stateReturnTo = (location.state as { returnTo?: string; from?: string } | null)?.returnTo
     ?? (location.state as { returnTo?: string; from?: string } | null)?.from;
   const queryReturnTo = new URLSearchParams(location.search).get('returnTo');
-  const rawReturnTo = queryReturnTo ?? stateReturnTo;
-  const safeReturnTo = rawReturnTo?.startsWith('/') && !rawReturnTo.startsWith('//')
-    ? rawReturnTo
-    : id?.startsWith('f_') ? '/inventario' : '/registros';
+  const storedReturnTo = sessionStorage.getItem('gm_invoice_return_to');
+  const defaultReturnTo = id?.startsWith('f_') ? '/inventario' : isCliente ? '/portal' : '/registros';
+  const safeReturnTo = internalPath(queryReturnTo)
+    ?? internalPath(stateReturnTo)
+    ?? internalPath(storedReturnTo)
+    ?? defaultReturnTo;
   const handleBack = () => {
+    sessionStorage.removeItem('gm_invoice_return_to');
     navigate(safeReturnTo, { replace: true });
+
+    window.setTimeout(() => {
+      const target = new URL(safeReturnTo, window.location.origin);
+      if (window.location.pathname !== target.pathname || window.location.search !== target.search) {
+        window.history.replaceState(null, '', safeReturnTo);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+    }, 80);
   };
 
   useEffect(() => {

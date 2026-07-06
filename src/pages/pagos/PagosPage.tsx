@@ -280,6 +280,7 @@ export default function PagosPage() {
                           <Link
                             to={`/invoice/${r.id_registro}?returnTo=${encodeURIComponent('/pagos')}`}
                             state={{ returnTo: '/pagos' }}
+                            onClick={() => sessionStorage.setItem('gm_invoice_return_to', '/pagos')}
                             className="flex items-center gap-1 text-[11px] font-bold text-gm-red hover:text-gm-red-lt transition-colors whitespace-nowrap"
                           >
                             <FileText size={11} /> Factura <ChevronRight size={9} />

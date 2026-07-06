@@ -468,6 +468,7 @@ export default function InventoryPage() {
       setVnTarget(null); setVnStep('search'); setVnQuery(''); setVnCliente(null); setVnQty('1');
       fetchData();
       if (facturaId) {
+        sessionStorage.setItem('gm_invoice_return_to', '/inventario');
         navigate(`/invoice/f_${facturaId}?returnTo=${encodeURIComponent('/inventario')}`, { state: { returnTo: '/inventario' } });
       }
     } catch (err) { toast.error(getErrorMsg(err)); }
