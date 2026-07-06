@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { mantenimientoParametrosApi } from './api';
+import { mantenimientoParametrosApi, tokenVencido } from './api';
 import { INTERVALOS } from './mantenimiento';
 
 export interface ParametroMantenimiento {
@@ -22,6 +22,12 @@ export const useIntervalosStore = create<IntervalosState>((set, get) => ({
   parametros: [],
   loading: false,
   fetchParametros: async () => {
+    const token = localStorage.getItem('gm_token');
+    if (tokenVencido(token)) {
+      set({ loading: false });
+      return;
+    }
+
     set({ loading: true });
     try {
       const { data } = await mantenimientoParametrosApi.list();
@@ -40,7 +46,10 @@ export const useIntervalosStore = create<IntervalosState>((set, get) => ({
         }
       });
     } catch (err) {
-      console.error('Error fetching parametros mantenimiento', err);
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status !== 401 && status !== 403) {
+        console.error('Error fetching parametros mantenimiento', err);
+      }
     } finally {
       set({ loading: false });
     }
