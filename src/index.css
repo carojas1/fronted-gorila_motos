@@ -2201,3 +2201,27 @@ html[data-theme="light"] .gm-table-d td {
 }
 .dark .gm-toast .text-gm-text { color: #F0EEE8 !important; }
 .dark .gm-toast .text-gm-muted { color: rgba(255,255,255,0.62) !important; }
+
+html[data-theme="light"] .gm-provider-products-modal,
+html[data-theme="light"] .gm-provider-products-modal h2,
+html[data-theme="light"] .gm-provider-products-modal h3,
+html[data-theme="light"] .gm-provider-products-modal p,
+html[data-theme="light"] .gm-provider-products-modal span,
+html[data-theme="light"] .gm-provider-products-modal button {
+  color: inherit;
+}
+html[data-theme="light"] .gm-provider-products-modal .text-\[\#F4F4F5\] {
+  color: #F4F4F5 !important;
+}
+html[data-theme="light"] .gm-provider-products-modal .text-white\/85 {
+  color: rgba(255,255,255,0.85) !important;
+}
+html[data-theme="light"] .gm-provider-products-modal .text-white\/55 {
+  color: rgba(255,255,255,0.55) !important;
+}
+html[data-theme="light"] .gm-provider-products-modal .text-white\/50 {
+  color: rgba(255,255,255,0.50) !important;
+}
+html[data-theme="light"] .gm-provider-products-modal .text-white\/45 {
+  color: rgba(255,255,255,0.45) !important;
+}

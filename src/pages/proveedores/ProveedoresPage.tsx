@@ -596,21 +596,21 @@ export default function ProveedoresPage() {
       {viewCodigo !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
              style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
-          <div className="w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden"
+          <div className="gm-provider-products-modal w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden"
                style={{ background: '#131318', border: '1px solid rgba(255,255,255,0.1)' }}>
             
             {/* Header del modal */}
             <div className="px-6 py-4 flex items-center justify-between border-b border-white/[0.05]">
               <div>
-                <h2 className="text-lg font-black dark:text-white text-slate-900 flex items-center gap-2">
+                <h2 className="text-lg font-black text-[#F4F4F5] flex items-center gap-2">
                   <Package size={20} className="text-gm-red" />
                   Productos de {contactos[viewCodigo]?.nombre || viewCodigo}
                 </h2>
-                <p className="text-[12px] dark:text-white/40 text-slate-900/40 mt-1 font-mono">
+                <p className="text-[12px] text-white/45 mt-1 font-mono">
                   {productos.filter(p => p.codigo_proveedor === viewCodigo).length} productos asociados
                 </p>
               </div>
-              <button onClick={() => setViewCodigo(null)} className="text-white/30 hover:text-white/70 transition-colors">
+              <button onClick={() => setViewCodigo(null)} className="text-white/55 hover:text-white transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -622,21 +622,21 @@ export default function ProveedoresPage() {
                   const lvl = stockLevel(p.stock);
                   const st  = LEVEL_STYLE[lvl];
                   return (
-                    <div key={p.id_producto} className="rounded-xl overflow-hidden" style={{ background: '#17171E', border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <div className="p-4 border-b border-white/[0.05]">
-                        <h3 className="text-sm font-bold dark:text-white text-slate-900 truncate mb-1">{p.nombre}</h3>
-                        <div className="flex gap-2 text-[10px] dark:text-white/30 text-slate-900/30 font-mono">
+                    <div key={p.id_producto} className="rounded-xl overflow-hidden" style={{ background: '#17171E', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div className="p-4 border-b border-white/[0.08]">
+                        <h3 className="text-sm font-bold text-[#F4F4F5] truncate mb-1">{p.nombre}</h3>
+                        <div className="flex gap-2 text-[10px] text-white/45 font-mono">
                           <span>{p.codigo_personal || 'SIN CÓD.'}</span>
                         </div>
                       </div>
                       <div className="p-4 grid grid-cols-3 gap-2">
                         <div>
-                          <p className="text-[10px] dark:text-white/40 text-slate-900/40 mb-0.5 uppercase">Costo</p>
-                          <p className="text-[12px] font-bold dark:text-white/80 text-slate-900/80">{fmtMoney(p.costo)}</p>
+                          <p className="text-[10px] text-white/50 mb-0.5 uppercase">Costo</p>
+                          <p className="text-[12px] font-bold text-white/85">{fmtMoney(p.costo)}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] dark:text-white/40 text-slate-900/40 mb-0.5 uppercase">PVP</p>
-                          <p className="text-[12px] font-bold dark:text-white text-slate-900">{fmtMoney(p.pvp)}</p>
+                          <p className="text-[10px] text-white/50 mb-0.5 uppercase">PVP</p>
+                          <p className="text-[12px] font-bold text-[#F4F4F5]">{fmtMoney(p.pvp)}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] mb-0.5 uppercase" style={{ color: `${st.color}80` }}>{st.label}</p>
