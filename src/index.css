@@ -2163,3 +2163,41 @@ html[data-theme="light"] .app-bg {
   background: #F4F5F7 !important;
   color: #15151B !important;
 }
+
+/* Final APK contrast pass: keep the last word after all theme overrides. */
+html[data-theme="light"] .btn-red,
+html[data-theme="light"] .btn-red *,
+html[data-theme="light"] .invoice-print .text-white,
+html[data-theme="light"] [style*="#0C0C10"] .text-white,
+html[data-theme="light"] [style*="#DC2626"] .text-white,
+html[data-theme="light"] [style*="#991B1B"] .text-white,
+html[data-theme="light"] [style*="#E11428"].text-white,
+html[data-theme="light"] [style*="#E11428"] .text-white {
+  color: #FFFFFF !important;
+}
+html[data-theme="light"] .invoice-print .text-white\/80 { color: rgba(255,255,255,0.80) !important; }
+html[data-theme="light"] .invoice-print .text-white\/70 { color: rgba(255,255,255,0.70) !important; }
+html[data-theme="light"] .invoice-print .text-white\/50 { color: rgba(255,255,255,0.50) !important; }
+html[data-theme="light"] .gm-table-d th {
+  background: #F8F9FC !important;
+  color: rgba(21,21,27,0.58) !important;
+  border-bottom-color: #E4E7EC !important;
+}
+html[data-theme="light"] .gm-table-d td {
+  color: #15151B !important;
+  border-bottom-color: #E4E7EC !important;
+}
+.gm-toast {
+  background: #FFFFFF !important;
+  border-color: #E4E7EC !important;
+}
+.gm-toast .text-gm-text,
+.gm-toast .text-gm-muted {
+  color: #15151B !important;
+}
+.dark .gm-toast {
+  background: #17171E !important;
+  border-color: rgba(255,255,255,0.10) !important;
+}
+.dark .gm-toast .text-gm-text { color: #F0EEE8 !important; }
+.dark .gm-toast .text-gm-muted { color: rgba(255,255,255,0.62) !important; }

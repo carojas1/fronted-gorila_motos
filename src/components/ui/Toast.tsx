@@ -71,7 +71,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
     <div
       ref={ref}
       className={cn(
-        'flex items-start gap-3 bg-gm-surface rounded-xl shadow-modal px-4 py-3',
+        'gm-toast flex items-start gap-3 bg-gm-surface rounded-xl shadow-modal px-4 py-3',
         'border border-gm-border border-l-4 min-w-[280px] max-w-[360px]',
         borders[toast.type],
       )}

@@ -4,7 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft, AlertCircle, CheckCircle, Clock, Package, FileText } from 'lucide-react';
 import { registrosApi, usuariosApi, productosApi, detallesFacturaApi, facturasApi } from '../../lib/api';
 import { fmtDate, fmtMoney, extractCedula, extractPhone, ordenNumero } from '../../lib/utils';
@@ -174,6 +174,10 @@ export default function InvoicePage() {
     ?? (user?.nombre_usuario ? `@${user.nombre_usuario}` : null)
     ?? WORKSHOP_CONTACT.email;
   const placa = reg.placa?.trim() || '—';
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/dashboard', { replace: true });
+  };
 
   const productoById = (id?: number | null) =>
     id ? productos.find(p => p.id_producto === id) : undefined;
@@ -200,17 +204,17 @@ export default function InvoicePage() {
       {/* ── Barra de acciones (solo pantalla) ── */}
       <div className="no-print flex items-center justify-between flex-wrap gap-3 px-2">
         <div className="flex items-center gap-3">
-          <Link to="/registros"
+          <button onClick={handleBack}
                 className="flex items-center gap-2 text-sm font-semibold transition-colors"
                 style={{ color: sc.btnBackTxt }}>
             <ArrowLeft size={15} /> Volver
-          </Link>
+          </button>
           <span style={{ color: sc.btnBackBord }}>·</span>
           <span className="text-sm font-mono" style={{ color: sc.btnBackTxt, opacity: 0.7 }}>{numComp}</span>
         </div>
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm dark:text-white text-slate-900 transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all"
           style={{ background: '#E11428', boxShadow: '0 0 24px rgba(225,20,40,0.35)' }}
         >
           <Printer size={15} /> Imprimir / PDF
@@ -316,10 +320,10 @@ export default function InvoicePage() {
                 />
                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(12,12,16,0.88) 0%, rgba(12,12,16,0.4) 55%, transparent 100%)' }} />
                 <div className="absolute inset-0 flex flex-col justify-end p-3">
-                  <span className="font-mono font-black dark:text-white text-slate-900" style={{ fontSize: 20, letterSpacing: '0.18em', textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
+                  <span className="font-mono font-black text-white" style={{ fontSize: 20, letterSpacing: '0.18em', textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
                     {placa}
                   </span>
-                  <span className="dark:text-white/70 text-slate-900/70 text-[11px] font-semibold mt-0.5">
+                  <span className="text-white/70 text-[11px] font-semibold mt-0.5">
                     {reg.marca_moto} {reg.modelo_moto}
                     {reg.kilometraje ? ` · ${reg.kilometraje.toLocaleString('es-EC')} km` : ''}
                   </span>
@@ -331,7 +335,7 @@ export default function InvoicePage() {
                 <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.55)' }}>
                   Placa
                 </span>
-                <span className="font-mono font-black dark:text-white text-slate-900" style={{ fontSize: 22, letterSpacing: '0.18em' }}>
+                <span className="font-mono font-black text-white" style={{ fontSize: 22, letterSpacing: '0.18em' }}>
                   {placa}
                 </span>
               </div>
@@ -530,7 +534,7 @@ export default function InvoicePage() {
             </h2>
             <div className="flex items-center gap-3 p-3 rounded-xl"
                  style={{ background: '#F3F4F6', border: '1px solid #E5E7EB' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center dark:text-white text-slate-900 font-black text-sm shrink-0"
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0"
                    style={{ background: '#0C0C10' }}>
                 {mecanico.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
               </div>
@@ -600,14 +604,14 @@ export default function InvoicePage() {
               <div className="p-4" style={{ background: 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)' }}>
                 <div className="flex items-end justify-between">
                   <div>
-                    <p className="dark:text-white/80 text-slate-900/80 text-[9px] font-black uppercase tracking-[0.2em]">Total a pagar</p>
-                    <p className="dark:text-white text-slate-900 font-black leading-none mt-1" style={{ fontSize: 32, letterSpacing: '-1px' }}>
+                    <p className="text-white/80 text-[9px] font-black uppercase tracking-[0.2em]">Total a pagar</p>
+                    <p className="text-white font-black leading-none mt-1" style={{ fontSize: 32, letterSpacing: '-1px' }}>
                       {fmtMoney(subtotalFactura)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="dark:text-white/70 text-slate-900/70 text-[9px] font-bold uppercase">Efectivo / Transf.</p>
-                    <p className="dark:text-white/50 text-slate-900/50 text-[9px] mt-0.5">Sin IVA</p>
+                    <p className="text-white/70 text-[9px] font-bold uppercase">Efectivo / Transf.</p>
+                    <p className="text-white/50 text-[9px] mt-0.5">Sin IVA</p>
                   </div>
                 </div>
               </div>
@@ -635,7 +639,7 @@ export default function InvoicePage() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                  style={{ background: '#10B981', boxShadow: '0 0 16px rgba(16,185,129,0.4)' }}>
-              <CheckCircle size={18} className="dark:text-white text-slate-900" />
+              <CheckCircle size={18} className="text-white" />
             </div>
             <div>
               <p className="text-[11px] font-black text-emerald-800 uppercase tracking-wider">Garantía de servicio</p>
@@ -676,18 +680,18 @@ export default function InvoicePage() {
       <div className="no-print flex justify-center gap-3">
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold dark:text-white text-slate-900"
+          className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-white"
           style={{ background: '#E11428', boxShadow: '0 0 24px rgba(225,20,40,0.3)' }}
         >
           <Printer size={18} /> Imprimir / Guardar PDF
         </button>
-        <Link
-          to="/registros"
+        <button
+          onClick={handleBack}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold"
-          style={{ color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.10)' }}
+          style={{ color: sc.btnBackTxt, border: `1px solid ${sc.btnBackBord}` }}
         >
           <ArrowLeft size={18} /> Volver
-        </Link>
+        </button>
       </div>
 
       <style>{`
