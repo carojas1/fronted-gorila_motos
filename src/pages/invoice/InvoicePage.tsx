@@ -4,7 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Printer, ArrowLeft, AlertCircle, CheckCircle, Clock, Package, FileText } from 'lucide-react';
 import { registrosApi, usuariosApi, productosApi, detallesFacturaApi, facturasApi } from '../../lib/api';
 import { fmtDate, fmtMoney, extractCedula, extractPhone, ordenNumero } from '../../lib/utils';
@@ -39,6 +39,7 @@ const genNumero = ordenNumero;
 export default function InvoicePage() {
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [theme]  = useTheme();
   const isDark   = theme === 'dark';
   const { user } = useAuth();
@@ -49,6 +50,17 @@ export default function InvoicePage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);
+
+  const stateReturnTo = (location.state as { returnTo?: string; from?: string } | null)?.returnTo
+    ?? (location.state as { returnTo?: string; from?: string } | null)?.from;
+  const queryReturnTo = new URLSearchParams(location.search).get('returnTo');
+  const rawReturnTo = queryReturnTo ?? stateReturnTo;
+  const safeReturnTo = rawReturnTo?.startsWith('/') && !rawReturnTo.startsWith('//')
+    ? rawReturnTo
+    : id?.startsWith('f_') ? '/inventario' : '/registros';
+  const handleBack = () => {
+    navigate(safeReturnTo, { replace: true });
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -150,7 +162,7 @@ export default function InvoicePage() {
       <div className="text-center space-y-4">
         <AlertCircle size={40} className="mx-auto text-red-400/50" />
         <p className="dark:text-white/50 text-slate-900/50">{error ?? 'No se pudo cargar el comprobante'}</p>
-        <button onClick={() => navigate(-1)} className="text-gm-red hover:text-gm-red-lt font-bold text-sm">
+        <button onClick={handleBack} className="text-gm-red hover:text-gm-red-lt font-bold text-sm">
           ← Volver
         </button>
       </div>
@@ -174,10 +186,6 @@ export default function InvoicePage() {
     ?? (user?.nombre_usuario ? `@${user.nombre_usuario}` : null)
     ?? WORKSHOP_CONTACT.email;
   const placa = reg.placa?.trim() || '—';
-  const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/dashboard', { replace: true });
-  };
 
   const productoById = (id?: number | null) =>
     id ? productos.find(p => p.id_producto === id) : undefined;

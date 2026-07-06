@@ -278,7 +278,8 @@ export default function PagosPage() {
                       <td>
                         {r.estado === 4 ? (
                           <Link
-                            to={`/invoice/${r.id_registro}`}
+                            to={`/invoice/${r.id_registro}?returnTo=${encodeURIComponent('/pagos')}`}
+                            state={{ returnTo: '/pagos' }}
                             className="flex items-center gap-1 text-[11px] font-bold text-gm-red hover:text-gm-red-lt transition-colors whitespace-nowrap"
                           >
                             <FileText size={11} /> Factura <ChevronRight size={9} />
