@@ -4,7 +4,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft, AlertCircle, CheckCircle, Clock, Package, FileText } from 'lucide-react';
 import { registrosApi, usuariosApi, productosApi, detallesFacturaApi, facturasApi } from '../../lib/api';
 import { fmtDate, fmtMoney, extractCedula, extractPhone, ordenNumero } from '../../lib/utils';
@@ -33,21 +33,16 @@ const ESTADO_LABEL: Record<number, { label: string; color: string }> = {
   4: { label: 'Facturado',  color: '#14B8A6' },
 };
 
-/* Número de orden único: delega en el helper compartido (ordenNumero) */
 const genNumero = ordenNumero;
 
-function internalPath(path?: string | null) {
-  if (!path || !path.startsWith('/') || path.startsWith('//')) return null;
-  return path;
-}
+const REGISTROS_PATH = '/registros';
 
 export default function InvoicePage() {
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const [theme]  = useTheme();
   const isDark   = theme === 'dark';
-  const { user, isCliente } = useAuth();
+  const { user } = useAuth();
 
   const [reg,       setReg]       = useState<RegistroDetalle | null>(null);
   const [cliente,   setCliente]   = useState<Usuario | null>(null);
@@ -56,26 +51,22 @@ export default function InvoicePage() {
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);
 
-  const stateReturnTo = (location.state as { returnTo?: string; from?: string } | null)?.returnTo
-    ?? (location.state as { returnTo?: string; from?: string } | null)?.from;
-  const queryReturnTo = new URLSearchParams(location.search).get('returnTo');
-  const storedReturnTo = sessionStorage.getItem('gm_invoice_return_to');
-  const defaultReturnTo = id?.startsWith('f_') ? '/inventario' : isCliente ? '/portal' : '/registros';
-  const safeReturnTo = internalPath(queryReturnTo)
-    ?? internalPath(stateReturnTo)
-    ?? internalPath(storedReturnTo)
-    ?? defaultReturnTo;
   const handleBack = () => {
     sessionStorage.removeItem('gm_invoice_return_to');
-    navigate(safeReturnTo, { replace: true });
+    navigate(REGISTROS_PATH, { replace: true });
 
     window.setTimeout(() => {
-      const target = new URL(safeReturnTo, window.location.origin);
-      if (window.location.pathname !== target.pathname || window.location.search !== target.search) {
-        window.history.replaceState(null, '', safeReturnTo);
-        window.dispatchEvent(new PopStateEvent('popstate'));
+      if (window.location.pathname !== REGISTROS_PATH) {
+        window.history.replaceState(null, '', REGISTROS_PATH);
+        window.dispatchEvent(new Event('popstate'));
       }
-    }, 80);
+    }, 50);
+
+    window.setTimeout(() => {
+      if (window.location.pathname !== REGISTROS_PATH) {
+        window.location.assign(`${window.location.origin}${REGISTROS_PATH}`);
+      }
+    }, 180);
   };
 
   useEffect(() => {

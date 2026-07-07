@@ -320,9 +320,7 @@ export default function PortalClientePage() {
                       </td>
                       <td>
                         {r.id_factura > 0 && (
-                          <Link to={`/invoice/${r.id_registro}?returnTo=${encodeURIComponent('/portal')}`}
-                                state={{ returnTo: '/portal' }}
-                                onClick={() => sessionStorage.setItem('gm_invoice_return_to', '/portal')}
+                          <Link to={`/invoice/${r.id_registro}`}
                                 className="text-gm-red text-xs font-bold hover:text-gm-red-lt whitespace-nowrap">
                             Ver →
                           </Link>
