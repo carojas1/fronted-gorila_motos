@@ -11,6 +11,7 @@ import { fmtDate, fmtMoney, extractCedula, extractPhone, ordenNumero } from '../
 import { WORKSHOP_CONTACT, whatsappCitaLink } from '../../lib/constants';
 import { useTheme } from '../../lib/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import RecordsPage from '../records/RecordsPage';
 import {
   detalleKind, cleanDescripcion, detalleCategoria, categoriaLabel, splitTotales,
 } from '../../lib/detalles';
@@ -55,14 +56,18 @@ export default function InvoicePage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);
+  const [showRecords, setShowRecords] = useState(false);
 
   const handleBack = (event?: SyntheticEvent<HTMLElement>) => {
     event?.preventDefault();
     event?.stopPropagation();
+    setShowRecords(true);
     navigate(REGISTROS_PATH, { replace: true });
     window.setTimeout(goRegistrosHard, 0);
     window.setTimeout(goRegistrosHard, 80);
   };
+
+  if (showRecords) return <RecordsPage />;
 
   useEffect(() => {
     if (!id) return;
