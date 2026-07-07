@@ -1442,7 +1442,9 @@ html[data-theme="light"] .stat-trend-down { color: #C60015 !important; backgroun
   background: rgba(12, 12, 16, 0.96);
   color: #fff !important;
   border: 1px solid rgba(255,255,255,0.12);
+  appearance: none;
   box-shadow: 0 14px 32px rgba(0,0,0,0.35);
+  cursor: pointer;
   font-size: 15px;
   font-weight: 900;
   line-height: 1;

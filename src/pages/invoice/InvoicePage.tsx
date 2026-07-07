@@ -3,7 +3,7 @@
    Diseño premium · datos del técnico · logo
    ───────────────────────────────────────────── */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type SyntheticEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft, AlertCircle, CheckCircle, Clock, Package, FileText } from 'lucide-react';
 import { registrosApi, usuariosApi, productosApi, detallesFacturaApi, facturasApi } from '../../lib/api';
@@ -40,12 +40,6 @@ const goRegistrosHard = () => {
   sessionStorage.removeItem('gm_invoice_return_to');
   window.history.replaceState(null, '', REGISTROS_PATH);
   window.dispatchEvent(new Event('popstate'));
-
-  window.setTimeout(() => {
-    if (window.location.pathname !== REGISTROS_PATH) {
-      window.location.replace(REGISTROS_PATH);
-    }
-  }, 90);
 };
 
 export default function InvoicePage() {
@@ -62,9 +56,12 @@ export default function InvoicePage() {
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);
 
-  const handleBack = () => {
+  const handleBack = (event?: SyntheticEvent<HTMLElement>) => {
+    event?.preventDefault();
+    event?.stopPropagation();
     navigate(REGISTROS_PATH, { replace: true });
-    goRegistrosHard();
+    window.setTimeout(goRegistrosHard, 0);
+    window.setTimeout(goRegistrosHard, 80);
   };
 
   useEffect(() => {
@@ -213,8 +210,8 @@ export default function InvoicePage() {
 
   return (
     <div className="space-y-6 pb-8" style={{ background: sc.pageBg }}>
-      <a
-        href={REGISTROS_PATH}
+      <button
+        type="button"
         aria-label="Volver a registros"
         className="invoice-apk-back no-print"
         onPointerDown={handleBack}
@@ -222,19 +219,19 @@ export default function InvoicePage() {
         onClick={handleBack}
       >
         <ArrowLeft size={18} /> Volver
-      </a>
+      </button>
 
       {/* ── Barra de acciones (solo pantalla) ── */}
       <div className="no-print invoice-actions flex items-center justify-between flex-wrap gap-3 px-2">
         <div className="flex items-center gap-3">
-          <a href={REGISTROS_PATH}
+          <button type="button"
                 onPointerDown={handleBack}
                 onTouchStart={handleBack}
                 onClick={handleBack}
                 className="flex items-center gap-2 text-sm font-semibold transition-colors"
                 style={{ color: sc.btnBackTxt }}>
             <ArrowLeft size={15} /> Volver
-          </a>
+          </button>
           <span style={{ color: sc.btnBackBord }}>·</span>
           <span className="text-sm font-mono" style={{ color: sc.btnBackTxt, opacity: 0.7 }}>{numComp}</span>
         </div>
