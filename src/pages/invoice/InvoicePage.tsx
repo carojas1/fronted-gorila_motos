@@ -36,6 +36,17 @@ const ESTADO_LABEL: Record<number, { label: string; color: string }> = {
 const genNumero = ordenNumero;
 
 const REGISTROS_PATH = '/registros';
+const goRegistrosHard = () => {
+  sessionStorage.removeItem('gm_invoice_return_to');
+  window.history.replaceState(null, '', REGISTROS_PATH);
+  window.dispatchEvent(new Event('popstate'));
+
+  window.setTimeout(() => {
+    if (window.location.pathname !== REGISTROS_PATH) {
+      window.location.replace(REGISTROS_PATH);
+    }
+  }, 90);
+};
 
 export default function InvoicePage() {
   const { id }   = useParams<{ id: string }>();
@@ -52,21 +63,8 @@ export default function InvoicePage() {
   const [error,     setError]     = useState<string | null>(null);
 
   const handleBack = () => {
-    sessionStorage.removeItem('gm_invoice_return_to');
     navigate(REGISTROS_PATH, { replace: true });
-
-    window.setTimeout(() => {
-      if (window.location.pathname !== REGISTROS_PATH) {
-        window.history.replaceState(null, '', REGISTROS_PATH);
-        window.dispatchEvent(new Event('popstate'));
-      }
-    }, 50);
-
-    window.setTimeout(() => {
-      if (window.location.pathname !== REGISTROS_PATH) {
-        window.location.assign(`${window.location.origin}${REGISTROS_PATH}`);
-      }
-    }, 180);
+    goRegistrosHard();
   };
 
   useEffect(() => {
@@ -215,15 +213,28 @@ export default function InvoicePage() {
 
   return (
     <div className="space-y-6 pb-8" style={{ background: sc.pageBg }}>
+      <a
+        href={REGISTROS_PATH}
+        aria-label="Volver a registros"
+        className="invoice-apk-back no-print"
+        onPointerDown={handleBack}
+        onTouchStart={handleBack}
+        onClick={handleBack}
+      >
+        <ArrowLeft size={18} /> Volver
+      </a>
 
       {/* ── Barra de acciones (solo pantalla) ── */}
-      <div className="no-print flex items-center justify-between flex-wrap gap-3 px-2">
+      <div className="no-print invoice-actions flex items-center justify-between flex-wrap gap-3 px-2">
         <div className="flex items-center gap-3">
-          <button onClick={handleBack}
+          <a href={REGISTROS_PATH}
+                onPointerDown={handleBack}
+                onTouchStart={handleBack}
+                onClick={handleBack}
                 className="flex items-center gap-2 text-sm font-semibold transition-colors"
                 style={{ color: sc.btnBackTxt }}>
             <ArrowLeft size={15} /> Volver
-          </button>
+          </a>
           <span style={{ color: sc.btnBackBord }}>·</span>
           <span className="text-sm font-mono" style={{ color: sc.btnBackTxt, opacity: 0.7 }}>{numComp}</span>
         </div>

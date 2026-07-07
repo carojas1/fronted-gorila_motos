@@ -1426,6 +1426,39 @@ html[data-theme="light"] .stat-trend-down { color: #C60015 !important; backgroun
   color: #111;
 }
 .no-print { /* visible en pantalla */ }
+.invoice-apk-back {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: 14px;
+  z-index: 2147483647;
+  min-width: 116px;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: 18px;
+  background: rgba(12, 12, 16, 0.96);
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.35);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  text-decoration: none !important;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+}
+.invoice-apk-back * {
+  color: #fff !important;
+  pointer-events: none;
+}
+.invoice-actions {
+  padding-top: 58px;
+}
 
 @media print {
   body { background: #fff !important; }
