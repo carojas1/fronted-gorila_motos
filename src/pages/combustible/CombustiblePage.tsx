@@ -358,28 +358,44 @@ export default function CombustiblePage() {
                 {editPrecios ? 'Cerrar precios' : 'Modificar precios'}
               </button>
               {editPrecios && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
-                  {COMBUSTIBLES.map(c => (
-                    <div key={c.tipo} className="flex gap-1">
-                      <input
-                        className="gm-input-d"
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={precios[c.tipo] ?? c.precio}
-                        onChange={e => setPrecios(prev => ({ ...prev, [c.tipo]: Number(e.target.value) }))}
-                        aria-label={`Precio ${c.label}`}
-                      />
-                      <button
-                        className="px-2 rounded-lg text-xs font-bold"
-                        style={{ background: c.color, color: '#fff' }}
-                        disabled={savingPrecio === c.tipo}
-                        onClick={() => guardarPrecio(c.tipo)}
-                      >
-                        OK
-                      </button>
+                <div className="mt-4 p-4 rounded-xl border" style={{ background: 'rgba(225,20,40,0.05)', borderColor: 'rgba(225,20,40,0.15)' }}>
+                  <div className="flex items-start gap-2 mb-4">
+                    <AlertTriangle size={16} className="text-gm-red mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-gm-red">Aviso importante</p>
+                      <p className="text-[11px] dark:text-white/60 text-slate-900/60 mt-0.5">
+                        Al modificar estos precios, el cálculo de costo se actualizará automáticamente para todos los usuarios y en toda la app.
+                      </p>
                     </div>
-                  ))}
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {COMBUSTIBLES.map(c => (
+                      <div key={c.tipo} className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold dark:text-white/70 text-slate-900/70 uppercase tracking-wider pl-1">
+                          {c.label}
+                        </label>
+                        <div className="flex gap-1">
+                          <input
+                            className="gm-input-d"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={precios[c.tipo] ?? c.precio}
+                            onChange={e => setPrecios(prev => ({ ...prev, [c.tipo]: Number(e.target.value) }))}
+                            aria-label={`Precio ${c.label}`}
+                          />
+                          <button
+                            className="px-2 rounded-lg text-xs font-bold transition-all hover:scale-105 active:scale-95"
+                            style={{ background: c.color, color: '#fff' }}
+                            disabled={savingPrecio === c.tipo}
+                            onClick={() => guardarPrecio(c.tipo)}
+                          >
+                            OK
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

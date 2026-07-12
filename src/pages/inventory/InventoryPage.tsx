@@ -822,9 +822,16 @@ export default function InventoryPage() {
                         </div>
                       </td>
                       <td>
-                        <span className="font-mono text-[11px] text-white/45 bg-white/[0.04] px-2 py-1 rounded-md border border-white/[0.06]">
-                          {p.codigo_personal}
-                        </span>
+                        <div className="flex flex-col gap-1.5">
+                          <span className="font-mono text-[11px] dark:text-white/45 text-slate-900/45 dark:bg-white/[0.04] bg-slate-900/[0.04] px-2 py-1 rounded-md border dark:border-white/[0.06] border-slate-900/[0.06] w-max">
+                            {p.codigo_personal}
+                          </span>
+                          {p.codigo_distribuidor && (
+                            <span className="text-[9.5px] dark:text-white/35 text-slate-900/35 font-mono">
+                              Dist: {p.codigo_distribuidor}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         {p.codigo_proveedor ? (

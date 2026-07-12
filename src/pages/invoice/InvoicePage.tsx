@@ -11,7 +11,6 @@ import { fmtDate, fmtMoney, extractCedula, extractPhone, ordenNumero } from '../
 import { WORKSHOP_CONTACT, whatsappCitaLink } from '../../lib/constants';
 import { useTheme } from '../../lib/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import RecordsPage from '../records/RecordsPage';
 import {
   detalleKind, cleanDescripcion, detalleCategoria, categoriaLabel, splitTotales,
 } from '../../lib/detalles';
@@ -56,18 +55,12 @@ export default function InvoicePage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);
-  const [showRecords, setShowRecords] = useState(false);
 
   const handleBack = (event?: SyntheticEvent<HTMLElement>) => {
     event?.preventDefault();
     event?.stopPropagation();
-    setShowRecords(true);
     navigate(REGISTROS_PATH, { replace: true });
-    window.setTimeout(goRegistrosHard, 0);
-    window.setTimeout(goRegistrosHard, 80);
   };
-
-  if (showRecords) return <RecordsPage />;
 
   useEffect(() => {
     if (!id) return;
@@ -141,7 +134,9 @@ export default function InvoicePage() {
             }
           } catch { /* fallback */ }
 
-          const cli = usuarios.find(u => u.nombre_completo === found.nombre_cliente) ?? null;
+          const cli = usuarios.find(u => u.id_usuario === found.id_cliente)
+            ?? usuarios.find(u => u.nombre_completo === found.nombre_cliente)
+            ?? null;
           setReg(found);
           setCliente(cli);
 
@@ -182,8 +177,8 @@ export default function InvoicePage() {
 
   const numComp  = genNumero(reg.id_registro);
   const regAny = reg as Record<string, unknown>;
-  const cedula   = (regAny.cliente_cedula as string | undefined) || extractCedula(cliente?.descripcion ?? '');
-  const telefono = (regAny.cliente_telefono as string | undefined) || extractPhone(cliente?.descripcion ?? '');
+  const cedula   = (regAny.cliente_cedula as string | undefined) || cliente?.cedula || extractCedula(cliente?.descripcion ?? '');
+  const telefono = (regAny.cliente_telefono as string | undefined) || cliente?.telefono || extractPhone(cliente?.descripcion ?? '');
   const correoCliente = (regAny.cliente_correo as string | undefined) || cliente?.correo || '';
   const direccionCliente = (regAny.cliente_direccion as string | undefined) || cliente?.direccion || cliente?.ciudad || '';
   const estInfo  = ESTADO_LABEL[reg.estado] ?? ESTADO_LABEL[0];
@@ -321,10 +316,11 @@ export default function InvoicePage() {
 
           {/* Cliente */}
           <div className="p-6 border-r border-gray-200">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-3">
+            <div className="rounded-xl p-4" style={{ border: '1px solid #E5E7EB', background: '#F9FAFB' }}>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-400 mb-3">
               Datos del Cliente
             </h2>
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {([
                 ['Nombre',   reg.nombre_cliente || '—'],
                 ['C.I.',     cedula   ?? 'S/D'],
@@ -332,11 +328,12 @@ export default function InvoicePage() {
                 ['Correo',   correoCliente || 'S/D'],
                 ['Dirección', direccionCliente || 'S/D'],
               ] as [string,string][]).map(([k,v]) => (
-                <div key={k} className="flex gap-2 items-baseline">
-                  <span className="text-[12px] text-gray-400 font-semibold min-w-[78px]">{k}:</span>
-                  <span className={`font-bold text-gray-900 ${k==='Nombre' ? 'text-[16px]' : 'text-[14px]'}`}>{v}</span>
+                <div key={k} className="flex gap-2 items-start">
+                  <span className="text-[13px] text-gray-700 font-black min-w-[78px]">{k}:</span>
+                  <span className={`font-semibold text-gray-900 break-words min-w-0 ${k==='Nombre' ? 'text-[16px]' : 'text-[14px]'}`}>{v}</span>
                 </div>
               ))}
+            </div>
             </div>
           </div>
 
@@ -436,127 +433,35 @@ export default function InvoicePage() {
             </thead>
             <tbody>
               {!hayDetalles && (
-                <tr style={{ borderBottom: '1px solid #F0F1F3' }}>
-                  <td style={{ width: 4, background: '#0C0C10', padding: 0 }} />
+                <tr style={{ borderBottom: "1px solid #F0F1F3" }}>
+                  <td style={{ width: 4, background: "#0C0C10", padding: 0 }} />
                   <td className="px-3 py-3.5 text-sm text-gray-600">1</td>
                   <td className="px-3 py-3.5">
-                    <p className="text-sm font-bold text-gray-800">{reg.tipo_servicio || 'Servicio de mantenimiento'}</p>
+                    <p className="text-sm font-bold text-gray-800">{reg.tipo_servicio || "Servicio"}</p>
                     {reg.descripcion && (
                       <p className="text-xs text-gray-500 mt-0.5 font-normal leading-relaxed">{reg.descripcion}</p>
                     )}
                   </td>
-                  <td className="px-3 py-3.5 text-sm text-gray-600 text-right">{fmtMoney(reg.costo_total)}</td>
-                  <td className="px-3 py-3.5 text-sm font-black text-gray-900 text-right">{fmtMoney(reg.costo_total)}</td>
+                  <td className="px-3 py-3.5 text-sm text-gray-600 text-right">{fmtMoney(reg.costo_total || 0)}</td>
+                  <td className="px-3 py-3.5 text-sm font-black text-gray-900 text-right">{fmtMoney(reg.costo_total || 0)}</td>
                 </tr>
               )}
-
-              {/* ── Mano de obra ── */}
-              {manoItems.length > 0 && (
-                <tr>
-                  <td colSpan={5} style={{ padding: 0 }}>
-                    <div className="flex items-center gap-3 px-4 py-2"
-                         style={{ background: 'linear-gradient(90deg,#FEF2F2,#FFF5F5)', borderLeft: '3px solid #EF4444' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                      </svg>
-                      <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#B91C1C' }}>
-                        Mano de obra — {manoItems.length} ítem{manoItems.length !== 1 ? 's' : ''}
-                      </span>
-                      <span className="ml-auto text-[11px] font-bold" style={{ color: '#B91C1C' }}>{fmtMoney(totalMano)}</span>
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {manoItems.map((d, i) => (
-                <tr key={`m${i}`} style={{ borderBottom: '1px solid #F0F1F3', background: i % 2 === 0 ? '#FFFDFD' : '#FFFFFF' }}>
-                  <td style={{ width: 4, background: '#EF4444', padding: 0 }} />
-                  <td className="px-3 py-3 text-sm text-gray-500 font-mono text-center">{d.cantidad ?? 1}</td>
-                  <td className="px-3 py-3">
-                    <p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Mano de obra'}</p>
-                    <p className="text-[10px] text-red-400 mt-0.5 font-semibold">MO-{String(i + 1).padStart(2, '0')}</p>
-                  </td>
-                  <td className="px-3 py-3 text-sm text-gray-500 text-right">{fmtMoney(Number(d.precioUnitario ?? 0))}</td>
-                  <td className="px-3 py-3 text-sm font-black text-gray-800 text-right">{fmtMoney(Number(d.subtotal ?? 0))}</td>
-                </tr>
-              ))}
-
-              {/* ── Repuestos ── */}
-              {repItems.length > 0 && (
-                <tr>
-                  <td colSpan={5} style={{ padding: 0 }}>
-                    <div className="flex items-center gap-3 px-4 py-2"
-                         style={{ background: 'linear-gradient(90deg,#FFF1F2,#FFF7F8)', borderLeft: '3px solid #F43F5E' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#BE123C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                      </svg>
-                      <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#BE123C' }}>
-                        Repuestos — {repItems.length} ítem{repItems.length !== 1 ? 's' : ''}
-                      </span>
-                      <span className="ml-auto text-[11px] font-bold" style={{ color: '#BE123C' }}>{fmtMoney(totalRep)}</span>
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {repItems.map((d, i) => {
-                const prod = productoById(d.idProducto);
-                const cat = d.idProducto != null ? 'inventario' : (detalleCategoria(d.descripcion) ?? '');
-                const catLbl = d.idProducto != null ? 'Inventario' : categoriaLabel(cat);
+              {detalles.map((d, i) => {
+                const kind = detalleKind(d);
+                const isDesc = kind === "descuento";
                 return (
-                  <tr key={`r${i}`} style={{ borderBottom: '1px solid #F0F1F3', background: i % 2 === 0 ? '#FFFCFC' : '#FFFFFF' }}>
-                    <td style={{ width: 4, background: '#F43F5E', padding: 0 }} />
+                  <tr key={i} style={{ borderBottom: "1px solid #F0F1F3", background: i % 2 === 0 ? "#FFFCFC" : "#FFFFFF" }}>
+                    <td style={{ width: 4, background: isDesc ? "#10B981" : "#0C0C10", padding: 0 }} />
                     <td className="px-3 py-3 text-sm text-gray-500 font-mono text-center">{d.cantidad ?? 1}</td>
                     <td className="px-3 py-3">
-                      <div className="flex items-center gap-3">
-                        {prod?.ruta_imagenproductos ? (
-                          <img src={prod.ruta_imagenproductos} alt={prod.nombre}
-                            className="rounded-lg object-cover shrink-0"
-                            style={{ width: 40, height: 40, border: '1px solid #E5E7EB' }}
-                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        ) : null}
-                        <div>
-                          <p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Repuesto'}</p>
-                          {catLbl && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5"
-                              style={{ background: '#FFE4E6', color: '#BE123C' }}>
-                              {catLbl}
-                            </span>
-                          )}
-                          <p className="text-[10px] text-rose-400 mt-0.5 font-semibold">RP-{String(i + 1).padStart(2, '0')}</p>
-                        </div>
-                      </div>
+                      <p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || "Detalle"}</p>
+                      {isDesc && <p className="text-[10px] text-emerald-500 mt-0.5 font-semibold">Descuento por puntos</p>}
                     </td>
                     <td className="px-3 py-3 text-sm text-gray-500 text-right">{fmtMoney(Number(d.precioUnitario ?? 0))}</td>
-                    <td className="px-3 py-3 text-sm font-black text-gray-800 text-right">{fmtMoney(Number(d.subtotal ?? 0))}</td>
+                    <td className={`px-3 py-3 text-sm font-black text-right ${isDesc ? "text-emerald-700" : "text-gray-800"}`}>{fmtMoney(Number(d.subtotal ?? 0))}</td>
                   </tr>
                 );
               })}
-
-              {descItems.length > 0 && (
-                <tr>
-                  <td colSpan={5} style={{ padding: 0 }}>
-                    <div className="flex items-center gap-3 px-4 py-2"
-                         style={{ background: 'linear-gradient(90deg,#ECFDF5,#F7FEFA)', borderLeft: '3px solid #10B981' }}>
-                      <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: '#047857' }}>
-                        Descuento por puntos
-                      </span>
-                      <span className="ml-auto text-[11px] font-bold" style={{ color: '#047857' }}>{fmtMoney(totalDesc)}</span>
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {descItems.map((d, i) => (
-                <tr key={`d${i}`} style={{ borderBottom: '1px solid #F0F1F3', background: '#F7FEFA' }}>
-                  <td style={{ width: 4, background: '#10B981', padding: 0 }} />
-                  <td className="px-3 py-3 text-sm text-gray-500 font-mono text-center">{d.cantidad ?? 1}</td>
-                  <td className="px-3 py-3">
-                    <p className="text-sm font-bold text-gray-800">{cleanDescripcion(d.descripcion) || 'Descuento por puntos'}</p>
-                    <p className="text-[10px] text-emerald-500 mt-0.5 font-semibold">CP-{String(i + 1).padStart(2, '0')}</p>
-                  </td>
-                  <td className="px-3 py-3 text-sm text-gray-500 text-right">{fmtMoney(Number(d.precioUnitario ?? 0))}</td>
-                  <td className="px-3 py-3 text-sm font-black text-emerald-700 text-right">{fmtMoney(Number(d.subtotal ?? 0))}</td>
-                </tr>
-              ))}
             </tbody>
           </table>
         </div>
@@ -586,12 +491,7 @@ export default function InvoicePage() {
                 </p>
               </div>
             </div>
-            <div className="mt-3 p-2.5 rounded-lg"
-                 style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-              <p className="text-[10px] text-blue-700 font-semibold leading-relaxed">
-                Este comprobante es un registro interno. No tiene validez tributaria. Guárdalo para reclamar garantía.
-              </p>
-            </div>
+            
           </div>
 
           {/* Total */}
