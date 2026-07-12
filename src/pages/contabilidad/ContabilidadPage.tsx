@@ -362,9 +362,10 @@ function buildReportSheet(
     for (const r of ingresos) {
       const items = detallesMap.get(r.id_registro) ?? [];
       for (const d of items) {
+        const kind = detalleKind(d);
+        if (kind !== 'repuesto') continue; // Solo mostrar repuestos (inventario o manuales) en esta tabla
         const idProd = detalleIdProducto(d);
-        if (idProd == null) continue;
-        const prod = productos.find(p => p.id_producto === idProd);
+        const prod = idProd != null ? productos.find(p => p.id_producto === idProd) : undefined;
         const cantidad = Number(d.cantidad ?? 1);
         const venta = num(d.subtotal);
         const costo = (prod?.costo ?? 0) * cantidad;
@@ -373,8 +374,8 @@ function buildReportSheet(
           toIsoStr(r.fecha),
           r.placa || 'Venta directa',
           info.producto,
-          info.codigoProducto || '',
-          info.proveedor,
+          info.codigoProducto || (idProd == null ? '[Manual]' : ''),
+          info.proveedor || (idProd == null ? '(Repuesto externo)' : ''),
           cantidad,
           +venta.toFixed(2),
           +costo.toFixed(2),
