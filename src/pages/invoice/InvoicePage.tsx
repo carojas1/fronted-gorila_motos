@@ -102,7 +102,11 @@ export default function InvoicePage() {
               fecha: factura.fecha_emision || factura.fecha,
               estado: 4, // Facturado
               costo_total: factura.costo_total,
-              nombre_cliente: cli?.nombre_completo || 'Cliente',
+              nombre_cliente: factura.cliente_nombre || cli?.nombre_completo || 'Cliente',
+              cliente_cedula: factura.cliente_cedula,
+              cliente_telefono: factura.cliente_telefono,
+              cliente_correo: factura.cliente_correo,
+              cliente_direccion: factura.cliente_direccion,
               placa: 'VENTA DIRECTA',
               marca: 'Gorila Motos',
               modelo: 'Inventario',
@@ -177,8 +181,11 @@ export default function InvoicePage() {
   );
 
   const numComp  = genNumero(reg.id_registro);
-  const cedula   = extractCedula(cliente?.descripcion ?? '');
-  const telefono = extractPhone(cliente?.descripcion ?? '');
+  const regAny = reg as Record<string, unknown>;
+  const cedula   = (regAny.cliente_cedula as string | undefined) || extractCedula(cliente?.descripcion ?? '');
+  const telefono = (regAny.cliente_telefono as string | undefined) || extractPhone(cliente?.descripcion ?? '');
+  const correoCliente = (regAny.cliente_correo as string | undefined) || cliente?.correo || '';
+  const direccionCliente = (regAny.cliente_direccion as string | undefined) || cliente?.direccion || cliente?.ciudad || '';
   const estInfo  = ESTADO_LABEL[reg.estado] ?? ESTADO_LABEL[0];
   const mecanico = reg.nombre_encargado ?? 'Técnico Gorila Motos';
 
@@ -322,6 +329,8 @@ export default function InvoicePage() {
                 ['Nombre',   reg.nombre_cliente || '—'],
                 ['C.I.',     cedula   ?? 'S/D'],
                 ['Teléfono', telefono ?? 'S/D'],
+                ['Correo',   correoCliente || 'S/D'],
+                ['Dirección', direccionCliente || 'S/D'],
               ] as [string,string][]).map(([k,v]) => (
                 <div key={k} className="flex gap-2 items-baseline">
                   <span className="text-[12px] text-gray-400 font-semibold min-w-[78px]">{k}:</span>

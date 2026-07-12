@@ -10,6 +10,7 @@ import ProtectedRoute             from './components/layout/ProtectedRoute';
 import AppLayout                  from './components/layout/AppLayout';
 import { useEffect }              from 'react';
 import { useIntervalosStore }     from './lib/intervalosStore';
+import { canAccessModulo }        from './lib/utils';
 
 /* Auth pages */
 import LoginPage               from './pages/auth/LoginPage';
@@ -57,6 +58,13 @@ function RequireRole({ roles }: { roles: Array<'admin' | 'mecanico' | 'cliente'>
   return allowed ? <Outlet /> : <Navigate to="/dashboard" replace />;
 }
 
+function RequireModule({ modulo }: { modulo: string }) {
+  const { user, isAdmin, isMecanico } = useAuth();
+  return canAccessModulo(user?.descripcion, modulo, isAdmin, isMecanico)
+    ? <Outlet />
+    : <Navigate to="/dashboard" replace />;
+}
+
 export default function App() {
   const fetchParametros = useIntervalosStore(s => s.fetchParametros);
 
@@ -84,32 +92,50 @@ export default function App() {
 
                 {/* Accesibles para TODOS los roles autenticados */}
                 <Route path="/dashboard"   element={<DashboardPage />}    />
-                <Route path="/motos"       element={<MotosPage />}         />
-                <Route path="/motos/:id"   element={<MotoPerfilPage />}    />
                 <Route path="/puntos"      element={<PuntosPage />}        />
                 <Route path="/combustible" element={<CombustiblePage />}   />
                 <Route path="/invoice/:id" element={<InvoicePage />}       />
                 <Route path="/portal"      element={<PortalClientePage />} />
                 <Route path="/mi-moto"    element={<MiMotoPage />}        />
-                <Route path="/metodologia" element={<MetodologiaPage />}  />
                 <Route path="/ajustes"     element={<AjustesPage />}       />
 
                 {/* Todos los autenticados: ver clientes */}
-                <Route path="/clientes"     element={<ClientesPage />}     />
 
                 {/* Solo ADMIN + MECÁNICO */}
                 <Route element={<RequireRole roles={['admin', 'mecanico']} />}>
-                  <Route path="/registros"    element={<RecordsPage />}      />
-                  <Route path="/inventario"   element={<InventoryPage />}    />
-                  <Route path="/alertas"      element={<AlertasPage />}      />
-                  <Route path="/diagnostico"  element={<DiagnosticoPage />}  />
-                  <Route path="/proveedores"  element={<ProveedoresPage />}  />
+                  <Route element={<RequireModule modulo="motos" />}>
+                    <Route path="/motos"       element={<MotosPage />}         />
+                    <Route path="/motos/:id"   element={<MotoPerfilPage />}    />
+                  </Route>
+                  <Route element={<RequireModule modulo="registros" />}>
+                    <Route path="/registros"    element={<RecordsPage />}      />
+                  </Route>
+                  <Route element={<RequireModule modulo="inventario" />}>
+                    <Route path="/inventario"   element={<InventoryPage />}    />
+                  </Route>
+                  <Route element={<RequireModule modulo="alertas" />}>
+                    <Route path="/alertas"      element={<AlertasPage />}      />
+                  </Route>
+                  <Route element={<RequireModule modulo="diagnostico" />}>
+                    <Route path="/diagnostico"  element={<DiagnosticoPage />}  />
+                  </Route>
+                  <Route element={<RequireModule modulo="proveedores" />}>
+                    <Route path="/proveedores"  element={<ProveedoresPage />}  />
+                  </Route>
+                  <Route element={<RequireModule modulo="clientes" />}>
+                    <Route path="/clientes"     element={<ClientesPage />}     />
+                  </Route>
+                  <Route element={<RequireModule modulo="metodologia" />}>
+                    <Route path="/metodologia" element={<MetodologiaPage />}  />
+                  </Route>
                   <Route path="/ajustes/intervalos" element={<IntervalosMantenimientoPage />} />
                 </Route>
 
                 {/* ADMIN + MECÁNICO: contabilidad (mecánico ve solo sus datos) */}
                 <Route element={<RequireRole roles={['admin', 'mecanico']} />}>
-                  <Route path="/contabilidad" element={<ContabilidadPage />}    />
+                  <Route element={<RequireModule modulo="contabilidad" />}>
+                    <Route path="/contabilidad" element={<ContabilidadPage />}    />
+                  </Route>
                 </Route>
 
                 {/* Solo ADMIN */}

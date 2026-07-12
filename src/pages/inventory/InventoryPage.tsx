@@ -3,7 +3,7 @@
    Dark redesign, tabla completa, GSAP entrance
    ───────────────────────────────────────────── */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import { Plus, Search, Pencil, Trash2, Package, AlertTriangle, ShoppingCart, Tags, FolderPlus, Minus, UserCheck, Mail, Camera, ImagePlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, type Resolver } from 'react-hook-form';
@@ -15,7 +15,7 @@ import { isNativeApp } from '../../lib/platform';
 import { useTheme } from '../../lib/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/Toast';
-import { fmtMoney, getErrorMsg, nextProductCode } from '../../lib/utils';
+import { extractCedula, extractPhone, fmtMoney, getErrorMsg, nextProductCode } from '../../lib/utils';
 import { comprimirImagen } from '../../lib/fotos';
 import type { Producto, Categoria, Usuario, Moto } from '../../types';
 import Button from '../../components/ui/Button';
@@ -27,6 +27,7 @@ const schema = z.object({
   nombre:            z.string().min(1, 'Requerido'),
   descripcion:       z.string().nullish().transform(v => v || ''),
   codigo_proveedor:  z.string().nullish().transform(v => v || ''),
+  codigo_distribuidor: z.string().nullish().transform(v => v || ''),
   codigo_personal:   z.string().nullish().transform(v => v || ''),
   costo:             z.coerce.number({ invalid_type_error: 'El costo debe ser un número válido' }).min(0, 'Inválido'),
   pvp:               z.coerce.number({ invalid_type_error: 'El PVP debe ser un número válido' }).min(0, 'Inválido'),
@@ -44,6 +45,20 @@ const schema = z.object({
   }),
 });
 type Form = z.infer<typeof schema>;
+
+interface VentaExtra {
+  producto: Producto;
+  cantidad: number;
+}
+
+interface ClienteVenta {
+  tipo: 'consumidor_final' | 'puntual' | 'registrado';
+  nombre: string;
+  cedula: string;
+  telefono: string;
+  correo: string;
+  direccion: string;
+}
 
 function SkeletonRow() {
   return (
@@ -94,6 +109,15 @@ export default function InventoryPage() {
   const [sellTarget,    setSellTarget]    = useState<Producto | null>(null);
   const [sellQty,       setSellQty]       = useState('1');
   const [selling,       setSelling]       = useState(false);
+  const [sellExtras,    setSellExtras]    = useState<VentaExtra[]>([]);
+  const [sellCliente,   setSellCliente]   = useState<ClienteVenta>({
+    tipo: 'consumidor_final',
+    nombre: 'Consumidor final',
+    cedula: '9999999999',
+    telefono: '',
+    correo: '',
+    direccion: '',
+  });
 
   /* Fotos de producto */
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -108,12 +132,13 @@ export default function InventoryPage() {
   const [vnMode]                          = useState<'email' | 'placa'>('email');
   const [vnQuery,       setVnQuery]       = useState('');
   const [, setVnSearching]                = useState(false);
-  const [vnCliente,     setVnCliente]     = useState<{ nombre: string; correo: string; id_usuario: number } | null>(null);
+  const [vnCliente,     setVnCliente]     = useState<{ nombre: string; correo: string; id_usuario: number; cedula?: string | null; telefono?: string | null; direccion?: string | null } | null>(null);
   const [, setVnNotFound]                 = useState(false);
   const [vnQty,         setVnQty]         = useState('1');
   const [vnSending,     setVnSending]     = useState(false);
   const [sellEmail,     setSellEmail]     = useState('');
   const [vnUsuarios,    setVnUsuarios]    = useState<Usuario[]>([]);
+  const [vnExtras,      setVnExtras]      = useState<VentaExtra[]>([]);
 
   const [addStockOpen,  setAddStockOpen]  = useState(false);
   const [addStockVals,  setAddStockVals]  = useState({ cant: 1, costo: 0, pvp: 0 });
@@ -182,6 +207,7 @@ export default function InventoryPage() {
       fecha_registro:     new Date().toISOString().slice(0, 10),
       fecha_modificacion: new Date().toISOString().slice(0, 10),
       codigo_personal:    nextProductCode(productos.map((p) => p.codigo_personal)),
+      codigo_distribuidor: '',
     });
     setModalOpen(true);
   };
@@ -193,6 +219,7 @@ export default function InventoryPage() {
     reset({
       nombre: p.nombre || '', descripcion: p.descripcion || '',
       codigo_proveedor: p.codigo_proveedor || '', codigo_personal: p.codigo_personal || '',
+      codigo_distribuidor: p.codigo_distribuidor || '',
       costo: p.costo || 0, pvp: p.pvp || 0, stock: p.stock || 0, id_categoria: p.id_categoria,
       fecha_registro: p.fecha_registro || new Date().toISOString().slice(0, 10),
       fecha_modificacion: new Date().toISOString().slice(0, 10),
@@ -297,38 +324,90 @@ export default function InventoryPage() {
     finally { setSavingProv(false); }
   };
 
+  const mergeVentaItems = (base: Producto, qty: number, extras: VentaExtra[]) => {
+    const map = new Map<number, { producto: Producto; cantidad: number }>();
+    map.set(base.id_producto, { producto: base, cantidad: qty });
+    extras.forEach(({ producto, cantidad }) => {
+      const prev = map.get(producto.id_producto);
+      map.set(producto.id_producto, {
+        producto,
+        cantidad: (prev?.cantidad ?? 0) + Math.max(0, Number(cantidad) || 0),
+      });
+    });
+    return Array.from(map.values()).filter(i => i.cantidad > 0);
+  };
+
+  const validarItemsVenta = (items: { producto: Producto; cantidad: number }[]) => {
+    if (items.length === 0) return 'Agrega al menos un producto';
+    for (const item of items) {
+      if (!Number.isInteger(item.cantidad) || item.cantidad <= 0) return `Cantidad invalida: ${item.producto.nombre}`;
+      if (item.cantidad > item.producto.stock) return `Solo hay ${item.producto.stock} unidades de ${item.producto.nombre}`;
+    }
+    return null;
+  };
+
+  const itemsParaApi = (items: { producto: Producto; cantidad: number }[]) =>
+    items.map(({ producto, cantidad }) => ({
+      idProducto: producto.id_producto,
+      cantidad,
+      nombreProducto: producto.nombre,
+      codigoProducto: producto.codigo_personal,
+      codigoDistribuidor: producto.codigo_distribuidor,
+      pvp: producto.pvp,
+      subtotal: cantidad * producto.pvp,
+    }));
+
+  const totalItems = (items: { producto: Producto; cantidad: number }[]) =>
+    items.reduce((sum, item) => sum + item.cantidad * item.producto.pvp, 0);
+
+  const addExtra = (
+    idProducto: number,
+    setter: Dispatch<SetStateAction<VentaExtra[]>>,
+    excludedId?: number,
+  ) => {
+    const producto = productos.find(p => p.id_producto === idProducto);
+    if (!producto || producto.id_producto === excludedId || producto.stock <= 0) return;
+    setter(prev => prev.some(x => x.producto.id_producto === producto.id_producto)
+      ? prev
+      : [...prev, { producto, cantidad: 1 }]);
+  };
+
   /* ─── Venta directa: baja stock sin crear orden ─── */
   const confirmSell = async () => {
     if (!sellTarget) return;
     const qty = parseInt(sellQty, 10);
-    if (isNaN(qty) || qty <= 0) { toast.error('Cantidad inválida'); return; }
-    if (qty > sellTarget.stock) { toast.error(`Solo hay ${sellTarget.stock} unidades en stock`); return; }
+    const items = mergeVentaItems(sellTarget, qty, sellExtras);
+    const itemError = validarItemsVenta(items);
+    if (itemError) { toast.error(itemError); return; }
     if (!user?.id_usuario) { toast.error('No se pudo identificar el usuario que registra la venta'); return; }
     setSelling(true);
     try {
-      const total = qty * sellTarget.pvp;
+      const total = totalItems(items);
+      const cliente = {
+        ...sellCliente,
+        correo: sellEmail.trim() || sellCliente.correo,
+        nombre: sellCliente.tipo === 'consumidor_final' ? 'Consumidor final' : sellCliente.nombre,
+      };
       const ventaRes = await productosApi.ventaDirecta({
-        idProducto: sellTarget.id_producto,
-        cantidad:   qty,
+        items:      itemsParaApi(items),
         idUsuario:  user.id_usuario,
+        cliente,
       });
-      const venta = ventaRes.data as { idFactura?: number; id_factura?: number; stockRestante?: number | null };
+      const venta = ventaRes.data as { idFactura?: number; id_factura?: number };
       const facturaId = venta.idFactura ?? venta.id_factura ?? null;
-      const stockRestante = typeof venta.stockRestante === 'number' ? venta.stockRestante : sellTarget.stock - qty;
+      const stockRestante = sellTarget.stock - qty;
       let emailOk: boolean | null = null;
-      if (sellEmail.trim()) {
+      if ((cliente.correo ?? '').trim()) {
         const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
         try {
           const comprobante = await productosApi.enviarComprobante({
-            correo:         sellEmail.trim(),
-            nombreCliente:  'Cliente',
-            nombreProducto: sellTarget.nombre,
-            codigoProducto: sellTarget.codigo_personal,
-            cantidad:       qty,
-            pvp:            sellTarget.pvp,
+            correo:         cliente.correo,
+            nombreCliente:  cliente.nombre || 'Consumidor final',
+            items:          itemsParaApi(items),
             total,
             fecha,
             referencia:     facturaId ? `FAC-${String(facturaId).padStart(5, '0')}` : undefined,
+            cliente,
           });
           emailOk = Boolean((comprobante.data as { sent?: boolean })?.sent);
         } catch {
@@ -345,7 +424,7 @@ export default function InventoryPage() {
       if (!facturaId) {
         toast.warning('La venta se registro, pero no llego el numero de factura para referencia.');
       }
-      setSellTarget(null); setSellQty('1'); setSellEmail('');
+      setSellTarget(null); setSellQty('1'); setSellEmail(''); setSellExtras([]);
       fetchData();
     } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setSelling(false); }
@@ -366,7 +445,14 @@ export default function InventoryPage() {
           (u) => u.correo.toLowerCase() === q.toLowerCase()
         );
         if (found) {
-          setVnCliente({ nombre: found.nombre_completo, correo: found.correo, id_usuario: found.id_usuario });
+          setVnCliente({
+            nombre: found.nombre_completo,
+            correo: found.correo,
+            id_usuario: found.id_usuario,
+            cedula: found.cedula ?? extractCedula(found.descripcion),
+            telefono: found.telefono ?? extractPhone(found.descripcion),
+            direccion: found.direccion ?? found.ciudad ?? '',
+          });
           setVnStep('confirm');
         } else {
           setVnNotFound(true);
@@ -382,7 +468,14 @@ export default function InventoryPage() {
         if (!moto) { setVnNotFound(true); return; }
         const usuario = (usuarios as Usuario[]).find((u) => u.id_usuario === moto.id_usuario);
         if (usuario) {
-          setVnCliente({ nombre: usuario.nombre_completo, correo: usuario.correo, id_usuario: usuario.id_usuario });
+          setVnCliente({
+            nombre: usuario.nombre_completo,
+            correo: usuario.correo,
+            id_usuario: usuario.id_usuario,
+            cedula: usuario.cedula ?? extractCedula(usuario.descripcion),
+            telefono: usuario.telefono ?? extractPhone(usuario.descripcion),
+            direccion: usuario.direccion ?? usuario.ciudad ?? '',
+          });
           setVnStep('confirm');
         } else {
           setVnNotFound(true);
@@ -393,7 +486,14 @@ export default function InventoryPage() {
   };
 
   const seleccionarCliente = (usuario: Usuario) => {
-    setVnCliente({ nombre: usuario.nombre_completo, correo: usuario.correo, id_usuario: usuario.id_usuario });
+    setVnCliente({
+      nombre: usuario.nombre_completo,
+      correo: usuario.correo,
+      id_usuario: usuario.id_usuario,
+      cedula: usuario.cedula ?? extractCedula(usuario.descripcion),
+      telefono: usuario.telefono ?? extractPhone(usuario.descripcion),
+      direccion: usuario.direccion ?? usuario.ciudad ?? '',
+    });
     setVnStep('confirm');
     setVnQuery('');
   };
@@ -402,6 +502,62 @@ export default function InventoryPage() {
   const confirmVentaNormal = async () => {
     if (!vnTarget || !vnCliente) return;
     const qty = parseInt(vnQty, 10);
+    const items = mergeVentaItems(vnTarget, qty, vnExtras);
+    const itemError = validarItemsVenta(items);
+    if (itemError) { toast.error(itemError); return; }
+    const cliente = {
+      tipo: 'registrado',
+      nombre: vnCliente.nombre,
+      cedula: vnCliente.cedula ?? '',
+      telefono: vnCliente.telefono ?? '',
+      correo: vnCliente.correo,
+      direccion: vnCliente.direccion ?? '',
+    };
+    setVnSending(true);
+    try {
+      const total = totalItems(items);
+      const ventaRes = await productosApi.ventaDirecta({
+        items: itemsParaApi(items),
+        idUsuario: vnCliente.id_usuario,
+        cliente,
+      });
+      const venta = ventaRes.data as { idFactura?: number; id_factura?: number };
+      const facturaId = venta.idFactura ?? venta.id_factura ?? null;
+      let emailOk: boolean | null = null;
+      if (vnCliente.correo) {
+        const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        try {
+          const comprobante = await productosApi.enviarComprobante({
+            correo: vnCliente.correo,
+            nombreCliente: vnCliente.nombre,
+            items: itemsParaApi(items),
+            total,
+            fecha,
+            referencia: facturaId ? `FAC-${String(facturaId).padStart(5, '0')}` : undefined,
+            cliente,
+          });
+          emailOk = Boolean((comprobante.data as { sent?: boolean })?.sent);
+        } catch {
+          emailOk = false;
+        }
+      }
+      toast.success(`Venta registrada · ${items.length} producto${items.length === 1 ? '' : 's'} → ${vnCliente.nombre}`);
+      if (emailOk === false) {
+        toast.warning('La venta quedó registrada, pero el comprobante no se pudo enviar. Revisa la configuración de correo.');
+      }
+      if (!facturaId) {
+        toast.warning('La venta se registró, pero no se pudo abrir el comprobante porque no se creó la factura.');
+      }
+      setVnSending(false);
+      setVnTarget(null); setVnStep('search'); setVnQuery(''); setVnCliente(null); setVnQty('1'); setVnExtras([]);
+      fetchData();
+      if (facturaId) navigate(`/invoice/f_${facturaId}`);
+      return;
+    } catch (err) {
+      toast.error(getErrorMsg(err));
+      setVnSending(false);
+      return;
+    }
     if (isNaN(qty) || qty <= 0) { toast.error('Cantidad inválida'); return; }
     if (qty > vnTarget.stock) { toast.error(`Solo hay ${vnTarget.stock} unidades en stock`); return; }
     setVnSending(true);
@@ -515,6 +671,7 @@ export default function InventoryPage() {
     const provName = proveedores.find(pr => pr.codigo === p.codigo_proveedor)?.nombre || '';
     const matchQ   = p.nombre.toLowerCase().includes(q) || 
                      p.codigo_personal.toLowerCase().includes(q) || 
+                     (p.codigo_distribuidor || '').toLowerCase().includes(q) ||
                      (p.codigo_proveedor || '').toLowerCase().includes(q) || 
                      provName.toLowerCase().includes(q);
     const matchCat = catFilter === 0 || p.id_categoria === catFilter;
@@ -766,6 +923,7 @@ export default function InventoryPage() {
             <Input label="Nombre" placeholder="Nombre del producto" error={errors.nombre?.message} {...register('nombre')} />
             <Input label="Código personal" placeholder="COD-001" error={errors.codigo_personal?.message} {...register('codigo_personal')} />
           </div>
+          <Input label="Código del distribuidor" placeholder="Ej. MT09 / código de compra IMMER" error={errors.codigo_distribuidor?.message} {...register('codigo_distribuidor')} />
           <div>
             <label className="text-sm font-medium dark:text-white/70 text-slate-900/70 block mb-1.5 flex justify-between items-center">
               <span>Proveedor</span>
@@ -1004,6 +1162,29 @@ export default function InventoryPage() {
               </p>
             </div>
             <div>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <select
+                  className="gm-select-d col-span-2"
+                  value={sellCliente.tipo}
+                  onChange={e => setSellCliente(v => ({
+                    ...v,
+                    tipo: e.target.value as ClienteVenta['tipo'],
+                    nombre: e.target.value === 'consumidor_final' ? 'Consumidor final' : '',
+                    cedula: e.target.value === 'consumidor_final' ? '9999999999' : '',
+                  }))}
+                >
+                  <option value="consumidor_final">Consumidor final</option>
+                  <option value="puntual">Cliente puntual</option>
+                </select>
+                {sellCliente.tipo === 'puntual' && (
+                  <>
+                    <input className="gm-input-d" placeholder="Nombre cliente" value={sellCliente.nombre} onChange={e => setSellCliente(v => ({ ...v, nombre: e.target.value }))} />
+                    <input className="gm-input-d" placeholder="Cedula / RUC" value={sellCliente.cedula} onChange={e => setSellCliente(v => ({ ...v, cedula: e.target.value }))} />
+                    <input className="gm-input-d" placeholder="Telefono" value={sellCliente.telefono} onChange={e => setSellCliente(v => ({ ...v, telefono: e.target.value }))} />
+                    <input className="gm-input-d" placeholder="Direccion" value={sellCliente.direccion} onChange={e => setSellCliente(v => ({ ...v, direccion: e.target.value }))} />
+                  </>
+                )}
+              </div>
               <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">Cantidad vendida</label>
               <div className="flex items-center gap-2">
                 <button onClick={() => setSellQty(q => String(Math.max(1, parseInt(q || '1', 10) - 1)))} className="icon-btn"><Minus size={14} /></button>
@@ -1011,11 +1192,28 @@ export default function InventoryPage() {
                   className="gm-input-d text-center" style={{ width: 90 }} />
                 <button onClick={() => setSellQty(q => String(Math.min(sellTarget.stock, parseInt(q || '1', 10) + 1)))} className="icon-btn"><Plus size={14} /></button>
                 <span className="text-[13px] dark:text-white/40 text-slate-900/40 ml-2">
-                  Total: <strong className="text-emerald-400">{fmtMoney((parseInt(sellQty || '0', 10)) * sellTarget.pvp)}</strong>
+                  Total: <strong className="text-emerald-400">{fmtMoney(totalItems(mergeVentaItems(sellTarget, parseInt(sellQty || '0', 10), sellExtras)))}</strong>
                 </span>
               </div>
             </div>
             <div>
+              <div className="space-y-2 mb-3">
+                <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block">Agregar otro producto</label>
+                <select className="gm-select-d w-full" defaultValue="" onChange={e => { addExtra(Number(e.target.value), setSellExtras, sellTarget.id_producto); e.currentTarget.value = ''; }}>
+                  <option value="">Seleccionar producto...</option>
+                  {productos.filter(p => p.id_producto !== sellTarget.id_producto && p.stock > 0).map(p => (
+                    <option key={p.id_producto} value={p.id_producto}>{p.nombre} - {p.stock} u. - {fmtMoney(p.pvp)}</option>
+                  ))}
+                </select>
+                {sellExtras.map((it, index) => (
+                  <div key={it.producto.id_producto} className="flex items-center gap-2">
+                    <span className="flex-1 text-[12px] dark:text-white/70 text-slate-900/70 truncate">{it.producto.nombre}</span>
+                    <input className="gm-input-d text-center" style={{ width: 74 }} type="number" min={1} max={it.producto.stock} value={it.cantidad}
+                      onChange={e => setSellExtras(prev => prev.map((x, i) => i === index ? { ...x, cantidad: Number(e.target.value) } : x))} />
+                    <button className="icon-btn danger" onClick={() => setSellExtras(prev => prev.filter((_, i) => i !== index))}><Trash2 size={12} /></button>
+                  </div>
+                ))}
+              </div>
               <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
                 Email del cliente <span className="dark:text-white/25 text-slate-900/25 font-normal normal-case tracking-normal">(opcional — envía comprobante)</span>
               </label>
@@ -1221,10 +1419,27 @@ export default function InventoryPage() {
                   <button onClick={() => setVnQty(q => String(Math.min(vnTarget.stock, parseInt(q || '1', 10) + 1)))} className="icon-btn w-10 h-10"><Plus size={16} /></button>
                 </div>
               </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block">Agregar otro producto</label>
+                <select className="gm-select-d w-full" defaultValue="" onChange={e => { addExtra(Number(e.target.value), setVnExtras, vnTarget.id_producto); e.currentTarget.value = ''; }}>
+                  <option value="">Seleccionar producto...</option>
+                  {productos.filter(p => p.id_producto !== vnTarget.id_producto && p.stock > 0).map(p => (
+                    <option key={p.id_producto} value={p.id_producto}>{p.nombre} - {p.stock} u. - {fmtMoney(p.pvp)}</option>
+                  ))}
+                </select>
+                {vnExtras.map((it, index) => (
+                  <div key={it.producto.id_producto} className="flex items-center gap-2">
+                    <span className="flex-1 text-[12px] dark:text-white/70 text-slate-900/70 truncate">{it.producto.nombre}</span>
+                    <input className="gm-input-d text-center" style={{ width: 74 }} type="number" min={1} max={it.producto.stock} value={it.cantidad}
+                      onChange={e => setVnExtras(prev => prev.map((x, i) => i === index ? { ...x, cantidad: Number(e.target.value) } : x))} />
+                    <button className="icon-btn danger" onClick={() => setVnExtras(prev => prev.filter((_, i) => i !== index))}><Trash2 size={12} /></button>
+                  </div>
+                ))}
+              </div>
               <div className="p-5 rounded-2xl" style={{ background: 'linear-gradient(135deg,rgba(225,20,40,0.15),rgba(185,28,28,0.1))', border: '1px solid rgba(225,20,40,0.3)' }}>
                 <p className="text-[11px] dark:text-white/40 text-slate-900/40 uppercase tracking-widest mb-1">Total de la venta</p>
                 <p className="text-[36px] font-black dark:text-white text-slate-900 leading-none">
-                  {fmtMoney((parseInt(vnQty || '0', 10)) * vnTarget.pvp)}
+                  {fmtMoney(totalItems(mergeVentaItems(vnTarget, parseInt(vnQty || '0', 10), vnExtras)))}
                 </p>
                 <p className="text-[12px] dark:text-white/35 text-slate-900/35 mt-1">
                   {vnQty} u. × {fmtMoney(vnTarget.pvp)}

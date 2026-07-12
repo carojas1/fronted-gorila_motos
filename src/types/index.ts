@@ -61,6 +61,7 @@ export interface Categoria {
 export interface Producto {
   id_producto:         number;
   codigo_proveedor:    string;
+  codigo_distribuidor?: string | null;
   codigo_personal:     string;
   nombre:              string;
   descripcion:         string;
@@ -87,6 +88,13 @@ export interface Factura {
   fecha_emision:string;
   id_usuario:   number;
   costo_total:  number;
+  cliente_nombre?: string | null;
+  cliente_cedula?: string | null;
+  cliente_telefono?: string | null;
+  cliente_correo?: string | null;
+  cliente_direccion?: string | null;
+  cliente_tipo?: string | null;
+  origen_venta?: string | null;
 }
 
 export interface DetalleFactura {

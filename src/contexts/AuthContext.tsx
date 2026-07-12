@@ -38,6 +38,7 @@ const AuthContext = createContext<AuthCtx | null>(null);
 
 const TOKEN_KEY = 'gm_token';
 const USER_KEY  = 'gm_user';
+const PERMISSION_REFRESH_MS = 60_000;
 
 /* Extrae token + usuario de cualquier estructura de respuesta del backend */
 function extractAuth(data: Record<string, unknown>) {
@@ -111,6 +112,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => { cancelled = true; };
   }, []); // solo al montar
+
+  useEffect(() => {
+    let cancelled = false;
+    let lastRefresh = 0;
+
+    const refresh = async (force = false) => {
+      const now = Date.now();
+      if (!force && now - lastRefresh < PERMISSION_REFRESH_MS) return;
+      lastRefresh = now;
+      const token = localStorage.getItem(TOKEN_KEY);
+      const userStr = localStorage.getItem(USER_KEY);
+      if (!token || !userStr) return;
+      let stored: { id_usuario?: number } | null = null;
+      try { stored = JSON.parse(userStr); } catch { return; }
+      if (!stored?.id_usuario) return;
+
+      const API = (import.meta.env.VITE_API_URL as string | undefined)
+        ?? 'https://backend-gorila-motos.onrender.com/api';
+      try {
+        const res = await fetch(`${API}/usuarios/${stored.id_usuario}?_=${Date.now()}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+          },
+        });
+        if (cancelled) return;
+        if (res.status === 404 || (res.status === 401 && tokenVencido(token))) {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
+          setState({ user: null, token: null, loading: false });
+          window.location.href = '/login';
+          return;
+        }
+        if (!res.ok) return;
+        const data = await res.json() as Record<string, unknown>;
+        if (data?.id_usuario !== stored.id_usuario) return;
+        delete data.contrasena;
+        localStorage.setItem(USER_KEY, JSON.stringify(data));
+        setState(s => ({ ...s, user: data as unknown as Usuario }));
+      } catch {
+        /* sin red: se conserva sesion actual */
+      }
+    };
+
+    const onFocus = () => refresh(true);
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(true); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+    const interval = window.setInterval(() => refresh(false), PERMISSION_REFRESH_MS);
+    refresh(true);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(interval);
+    };
+  }, []);
 
   /* ── Login con email + contraseña (backend directo, sin Firebase) ── */
   const login = useCallback(async (correo: string, contrasena: string) => {

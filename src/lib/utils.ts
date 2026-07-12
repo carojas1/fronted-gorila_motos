@@ -68,6 +68,18 @@ export function parsePermisos(descripcion: string | undefined | null): string[] 
   return match[1].trim().split(',').map(m => m.trim()).filter(Boolean);
 }
 
+export function canAccessModulo(
+  descripcion: string | undefined | null,
+  mod: string,
+  isAdmin: boolean,
+  isMecanico: boolean,
+): boolean {
+  if (isAdmin) return true;
+  if (!isMecanico) return false;
+  const permisos = parsePermisos(descripcion);
+  return !permisos || permisos.includes(mod);
+}
+
 /** Construye un nuevo string de descripcion preservando CEDULA/TELEFONO y actualizando PERMISOS */
 export function setPermisos(descripcion: string | undefined | null, modulos: string[]): string {
   const parts = (descripcion ?? '')

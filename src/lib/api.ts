@@ -259,6 +259,9 @@ export const combustibleApi = {
   byMoto: (idMoto: number) => api.get(`/combustible/moto/${idMoto}`),
   create: (data: Record<string, unknown>) => api.post('/combustible', data),
   remove: (id: number)  => api.delete(`/combustible/${id}`),
+  precios: () => api.get('/combustible/precios'),
+  updatePrecio: (tipo: string, precio: number) =>
+    api.put(`/combustible/precios/${encodeURIComponent(tipo)}`, { precio }),
 };
 
 /* ── Pagos de empleados + gastos generales ── */

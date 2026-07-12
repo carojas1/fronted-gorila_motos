@@ -71,6 +71,9 @@ export default function CombustiblePage() {
   const [form,    setForm]    = useState<FormState>(emptyForm());
   const [selMoto, setSelMoto] = useState<number | null>(null);
   const [month,   setMonth]   = useState(() => new Date().toISOString().slice(0, 7));
+  const [precios, setPrecios] = useState<Record<string, number>>(() => Object.fromEntries(COMBUSTIBLES.map(c => [c.tipo, c.precio])));
+  const [editPrecios, setEditPrecios] = useState(false);
+  const [savingPrecio, setSavingPrecio] = useState<string | null>(null);
   /* Admin: buscador global (usuario, correo, placa) y vista de todos los registros */
   const [adminSearch, setAdminSearch] = useState('');
 
@@ -103,6 +106,12 @@ export default function CombustiblePage() {
   }, [user, isAdmin, isMecanico, cargarLogs]);
 
   useEffect(() => { recargar(); }, [recargar]);
+
+  useEffect(() => {
+    combustibleApi.precios()
+      .then(r => setPrecios(prev => ({ ...prev, ...(r.data as Record<string, number>) })))
+      .catch(() => {});
+  }, []);
 
   /* Refresco en tiempo real de cargas de combustible */
   usePolling(recargar, { intervalMs: 30_000 });
@@ -142,7 +151,7 @@ export default function CombustiblePage() {
         const next = { ...prev, [k]: val };
         /* Auto-calcular costo si cambian galones o tipo */
         if ((k === 'litros' || k === 'tipo_combustible') && next.litros) {
-          const est = (Number(next.litros) * precioXTipo(next.tipo_combustible)).toFixed(2);
+          const est = (Number(next.litros) * (precios[next.tipo_combustible] ?? precioXTipo(next.tipo_combustible))).toFixed(2);
           next.costo_total = est;
         }
         return next;
@@ -180,7 +189,7 @@ export default function CombustiblePage() {
     const galones   = Number(form.litros);
     const costoFinal = form.costo_total
       ? Number(form.costo_total)
-      : galones * precioXTipo(form.tipo_combustible);
+      : galones * (precios[form.tipo_combustible] ?? precioXTipo(form.tipo_combustible));
     const kmActual   = form.km_actual   ? Number(form.km_actual)   : undefined;
     const kmAnterior = form.km_anterior ? Number(form.km_anterior) : 0;
 
@@ -297,9 +306,23 @@ export default function CombustiblePage() {
     catch (err) { toast.error(getErrorMsg(err)); }
   };
 
+  const guardarPrecio = async (tipo: string) => {
+    const precio = Number(precios[tipo] ?? 0);
+    if (!precio || precio <= 0) { toast.error('Precio invalido'); return; }
+    setSavingPrecio(tipo);
+    try {
+      await combustibleApi.updatePrecio(tipo, precio);
+      toast.success('Precio de combustible actualizado');
+    } catch (err) {
+      toast.error(getErrorMsg(err));
+    } finally {
+      setSavingPrecio(null);
+    }
+  };
+
   const selectedMoto = motos.find(m => m.id_moto === selMoto);
   const costoEst = form.litros
-    ? (Number(form.litros) * precioXTipo(form.tipo_combustible)).toFixed(2)
+    ? (Number(form.litros) * (precios[form.tipo_combustible] ?? precioXTipo(form.tipo_combustible))).toFixed(2)
     : '0.00';
 
   return (
@@ -320,10 +343,47 @@ export default function CombustiblePage() {
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             {COMBUSTIBLES.map(c => (
               <span key={c.tipo} className="text-[11px] font-bold" style={{ color: c.color }}>
-                {c.label}: ${c.precio}/gal
+                {c.label}: ${Number(precios[c.tipo] ?? c.precio).toFixed(2)}/gal
               </span>
             ))}
           </div>
+          {canManage && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setEditPrecios(v => !v)}
+                className="text-[11px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg"
+                style={{ background: 'rgba(225,20,40,0.12)', color: '#E11428', border: '1px solid rgba(225,20,40,0.25)' }}
+              >
+                {editPrecios ? 'Cerrar precios' : 'Modificar precios'}
+              </button>
+              {editPrecios && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+                  {COMBUSTIBLES.map(c => (
+                    <div key={c.tipo} className="flex gap-1">
+                      <input
+                        className="gm-input-d"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={precios[c.tipo] ?? c.precio}
+                        onChange={e => setPrecios(prev => ({ ...prev, [c.tipo]: Number(e.target.value) }))}
+                        aria-label={`Precio ${c.label}`}
+                      />
+                      <button
+                        className="px-2 rounded-lg text-xs font-bold"
+                        style={{ background: c.color, color: '#fff' }}
+                        disabled={savingPrecio === c.tipo}
+                        onClick={() => guardarPrecio(c.tipo)}
+                      >
+                        OK
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <button
           onClick={abrirModal}

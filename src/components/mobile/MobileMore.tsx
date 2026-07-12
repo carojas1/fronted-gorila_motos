@@ -64,12 +64,12 @@ export default function MobileMore({
 }) {
   const nav = useNavigate();
   const loc = useLocation();
-  const { isAdmin, isMecanico, isCliente } = useAuth();
+  const { isAdmin, isMecanico } = useAuth();
   const [theme, toggleTheme] = useTheme();
   if (!open) return null;
 
   /* Quitar lo que ya aparece en el tab bar inferior (sin redundancia) */
-  const esClientePuro = isCliente && !isAdmin && !isMecanico;
+  const esClientePuro = !isAdmin && !isMecanico;
   const enTab = rutasDelTabBar(esClientePuro);
   const visibles = items.filter(i => !enTab.has(i.to));
   const byLabel = new Map(visibles.map(i => [i.label, i]));

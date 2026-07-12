@@ -317,6 +317,7 @@ export default function ProveedoresPage() {
   const [viewCodigo,  setViewCodigo]  = useState<string | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
   const [search,      setSearch]      = useState('');
+  const [productSearch, setProductSearch] = useState('');
   const [filterAlert, setFilterAlert] = useState(false);
 
   const cargarContactos = () => {
@@ -563,7 +564,7 @@ export default function ProveedoresPage() {
               productos={ps}
               contacto={contactos[codigo] ?? null}
               onEdit={setEditCodigo}
-              onView={setViewCodigo}
+              onView={(codigo) => { setProductSearch(''); setViewCodigo(codigo); }}
             />
           ))}
         </div>
@@ -617,8 +618,27 @@ export default function ProveedoresPage() {
 
             {/* Contenido scrolleable */}
             <div className="p-6 overflow-y-auto flex-1 dark-scroll bg-[#0D0D12]">
+              <div className="search-d mb-4">
+                <Search size={14} />
+                <input
+                  className="gm-input-d"
+                  placeholder="Buscar producto, codigo interno o codigo distribuidor..."
+                  value={productSearch}
+                  onChange={e => setProductSearch(e.target.value)}
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {productos.filter(p => p.codigo_proveedor === viewCodigo).map(p => {
+                {productos.filter(p => {
+                  if (p.codigo_proveedor !== viewCodigo) return false;
+                  const q = productSearch.toLowerCase().trim();
+                  if (!q) return true;
+                  return (
+                    p.nombre.toLowerCase().includes(q) ||
+                    (p.descripcion ?? '').toLowerCase().includes(q) ||
+                    (p.codigo_personal ?? '').toLowerCase().includes(q) ||
+                    (p.codigo_distribuidor ?? '').toLowerCase().includes(q)
+                  );
+                }).map(p => {
                   const lvl = stockLevel(p.stock);
                   const st  = LEVEL_STYLE[lvl];
                   return (
@@ -627,6 +647,7 @@ export default function ProveedoresPage() {
                         <h3 className="text-sm font-bold text-[#F4F4F5] truncate mb-1">{p.nombre}</h3>
                         <div className="flex gap-2 text-[10px] text-white/45 font-mono">
                           <span>{p.codigo_personal || 'SIN CÓD.'}</span>
+                          {p.codigo_distribuidor && <span>Dist: {p.codigo_distribuidor}</span>}
                         </div>
                       </div>
                       <div className="p-4 grid grid-cols-3 gap-2">
@@ -642,6 +663,22 @@ export default function ProveedoresPage() {
                           <p className="text-[10px] mb-0.5 uppercase" style={{ color: `${st.color}80` }}>{st.label}</p>
                           <p className="text-[13px] font-black" style={{ color: st.color }}>{p.stock} u.</p>
                         </div>
+                      </div>
+                      <div className="px-4 pb-4 flex gap-2">
+                        <button
+                          className="flex-1 py-2 rounded-lg text-[11px] font-bold"
+                          style={{ background: 'rgba(59,130,246,0.12)', color: '#60A5FA', border: '1px solid rgba(59,130,246,0.25)' }}
+                          onClick={() => window.alert(`${p.nombre}\n\nCodigo interno: ${p.codigo_personal || '-'}\nCodigo distribuidor: ${p.codigo_distribuidor || '-'}\nProveedor: ${p.codigo_proveedor || '-'}\nStock: ${p.stock} u.\nCosto: ${fmtMoney(p.costo)}\nPVP: ${fmtMoney(p.pvp)}\n\n${p.descripcion || ''}`)}
+                        >
+                          Ver detalle
+                        </button>
+                        <button
+                          className="flex-1 py-2 rounded-lg text-[11px] font-bold"
+                          style={{ background: 'rgba(225,20,40,0.12)', color: '#FF6470', border: '1px solid rgba(225,20,40,0.25)' }}
+                          onClick={() => { window.location.href = '/inventario'; }}
+                        >
+                          Editar
+                        </button>
                       </div>
                     </div>
                   );
