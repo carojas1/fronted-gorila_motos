@@ -312,7 +312,14 @@ export default function CombustiblePage() {
     setSavingPrecio(tipo);
     try {
       await combustibleApi.updatePrecio(tipo, precio);
-      toast.success('Precio de combustible actualizado');
+      // Actualizar también el estado local para que el display se refresque de inmediato
+      setPrecios(prev => ({ ...prev, [tipo]: precio }));
+      // Refrescar desde backend para asegurar sincronía con todos los usuarios
+      try {
+        const r = await combustibleApi.precios();
+        setPrecios(prev => ({ ...prev, ...(r.data as Record<string, number>) }));
+      } catch { /* continúa con el valor local ya actualizado */ }
+      toast.success(`Precio de ${tipo} actualizado: $${precio.toFixed(2)}/gal · visible en toda la app`);
     } catch (err) {
       toast.error(getErrorMsg(err));
     } finally {

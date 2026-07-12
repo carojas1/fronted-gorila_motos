@@ -197,24 +197,32 @@ export default function RecordsPage() {
   /* ─── Expandir info de cliente ─── */
   const [expandedRecords, setExpandedRecords] = useState<number[]>([]);
 
-  /* ─── Carga de datos ─── */
+  /* ─── Carga de datos (con reintento para Render cold start) ─── */
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
-    try {
-      const [rRes, uRes, mRes, tRes, pRes] = await Promise.allSettled([
-        registrosApi.list(),
-        usuariosApi.list(),
-        motosApi.list(),
-        tiposApi.list(),
-        productosApi.list(),
-      ]);
-      if (rRes.status === 'fulfilled') setRegistros(rRes.value.data as RegistroDetalle[]);
-      if (uRes.status === 'fulfilled') setUsuarios(uRes.value.data as Usuario[]);
-      if (mRes.status === 'fulfilled') setTodasMotos(mRes.value.data as Moto[]);
-      if (tRes.status === 'fulfilled') setTipos(tRes.value.data as Tipo[]);
-      if (pRes.status === 'fulfilled') setProductos(pRes.value.data as Producto[]);
-    } catch (err) { if (!silent) toast.error(getErrorMsg(err)); }
-    finally { if (!silent) setLoading(false); }
+    for (let intento = 1; intento <= 3; intento++) {
+      try {
+        const [rRes, uRes, mRes, tRes, pRes] = await Promise.allSettled([
+          registrosApi.list(),
+          usuariosApi.list(),
+          motosApi.list(),
+          tiposApi.list(),
+          productosApi.list(),
+        ]);
+        if (rRes.status === 'fulfilled') setRegistros(rRes.value.data as RegistroDetalle[]);
+        if (uRes.status === 'fulfilled') setUsuarios(uRes.value.data as Usuario[]);
+        if (mRes.status === 'fulfilled') setTodasMotos(mRes.value.data as Moto[]);
+        if (tRes.status === 'fulfilled') setTipos(tRes.value.data as Tipo[]);
+        if (pRes.status === 'fulfilled') setProductos(pRes.value.data as Producto[]);
+        // Si usuarios respondió (aunque sea vacío) → conexión OK, salir
+        if (uRes.status === 'fulfilled' || intento === 3) break;
+      } catch (err) {
+        if (intento === 3 && !silent) toast.error(getErrorMsg(err));
+      }
+      // Esperar antes del siguiente reintento
+      if (intento < 3) await new Promise(r => setTimeout(r, 3000 * intento));
+    }
+    if (!silent) setLoading(false);
   }, [toast]);
 
   useEffect(() => { fetchData(false); }, [fetchData]);

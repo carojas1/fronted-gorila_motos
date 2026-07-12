@@ -823,12 +823,12 @@ export default function InventoryPage() {
                       </td>
                       <td>
                         <div className="flex flex-col gap-1.5">
-                          <span className="font-mono text-[11px] dark:text-white/45 text-slate-900/45 dark:bg-white/[0.04] bg-slate-900/[0.04] px-2 py-1 rounded-md border dark:border-white/[0.06] border-slate-900/[0.06] w-max">
-                            {p.codigo_personal}
+                          <span className="font-mono text-[13px] font-black dark:text-white/85 text-slate-900/85 dark:bg-white/[0.06] bg-slate-900/[0.06] px-2.5 py-1.5 rounded-lg border dark:border-white/[0.1] border-slate-900/[0.1] w-max tracking-wide">
+                            {p.codigo_personal || '—'}
                           </span>
                           {p.codigo_distribuidor && (
-                            <span className="text-[9.5px] dark:text-white/35 text-slate-900/35 font-mono">
-                              Dist: {p.codigo_distribuidor}
+                            <span className="text-[10px] dark:text-white/45 text-slate-900/45 font-mono bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md w-max">
+                              🏭 {p.codigo_distribuidor}
                             </span>
                           )}
                         </div>
