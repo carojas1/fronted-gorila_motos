@@ -395,7 +395,6 @@ export default function InventoryPage() {
       });
       const venta = ventaRes.data as { idFactura?: number; id_factura?: number };
       const facturaId = venta.idFactura ?? venta.id_factura ?? null;
-      const stockRestante = sellTarget.stock - qty;
       let emailOk: boolean | null = null;
       if ((cliente.correo ?? '').trim()) {
         const fecha = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -414,18 +413,16 @@ export default function InventoryPage() {
           emailOk = false;
         }
       }
-      toast.success(`Venta registrada · ${qty} u. de ${sellTarget.nombre} (quedan ${sellTarget.stock - qty})`);
+      toast.success(`Venta registrada · ${qty} u. de ${sellTarget.nombre}`);
       if (emailOk === false) {
-        toast.warning('La venta quedó registrada, pero el comprobante no se pudo enviar. Revisa la configuración de correo.');
-      }
-      if (stockRestante !== sellTarget.stock - qty) {
-        toast.success(`Stock actualizado en servidor: ${stockRestante} u.`);
-      }
-      if (!facturaId) {
-        toast.warning('La venta se registro, pero no llego el numero de factura para referencia.');
+        toast.warning('La venta quedó registrada, pero el comprobante no se pudo enviar.');
       }
       setSellTarget(null); setSellQty('1'); setSellEmail(''); setSellExtras([]);
       fetchData();
+      // Navegar al comprobante de venta para verlo e imprimirlo
+      if (facturaId) {
+        navigate(`/factura/f_${facturaId}`);
+      }
     } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setSelling(false); }
   };
