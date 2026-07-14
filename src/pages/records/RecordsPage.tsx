@@ -231,9 +231,10 @@ export default function RecordsPage() {
   usePolling(() => fetchData(true), { intervalMs: 20_000 });
 
   /* Mantenimientos (nube) de la moto seleccionada → para las recomendaciones por km */
+  const idMotoSeleccionada = nMoto?.id_moto;
   useEffect(() => {
-    if (!nMoto) { setNMotoServicios({}); return; }
-    mantenimientosApi.byMoto(nMoto.id_moto)
+    if (!idMotoSeleccionada) { setNMotoServicios({}); return; }
+    mantenimientosApi.byMoto(idMotoSeleccionada)
       .then(({ data }) => {
         const sm: Record<string, number> = {};
         (data as { tipo: string; kmServicio: number }[]).forEach(x => {
@@ -242,7 +243,7 @@ export default function RecordsPage() {
         setNMotoServicios(sm);
       })
       .catch(() => setNMotoServicios({}));
-  }, [nMoto?.id_moto]);
+  }, [idMotoSeleccionada]);
 
   /* ─── Animación ─── */
   useEffect(() => {
@@ -435,10 +436,13 @@ export default function RecordsPage() {
     if (!w) { toast.error('Activa las ventanas emergentes para imprimir'); setPrintingId(null); return; }
 
     // Datos del cliente
-    const cli  = usuarios.find(u => u.nombre_completo === r.nombre_cliente);
+    const cli  = usuarios.find(u => u.id_usuario === r.id_cliente)
+      ?? usuarios.find(u => u.nombre_completo === r.nombre_cliente);
     const mec  = usuarios.find(u => u.nombre_completo === r.nombre_encargado);
-    const ciCli = cli ? extractCedula(cli.descripcion) : null;
-    const telCli = cli ? extractPhone(cli.descripcion) : null;
+    const ciCli = cli?.cedula || (cli ? extractCedula(cli.descripcion) : null);
+    const telCli = cli?.telefono || (cli ? extractPhone(cli.descripcion) : null);
+    const correoCli = cli?.correo || null;
+    const direccionCli = cli?.direccion || cli?.ciudad || null;
 
     // Cargar detalles para desglose mano/repuesto
     let detalles: Array<{descripcion:string|null;subtotal:number;idProducto?:number|null;cantidad?:number}> = [];
@@ -461,6 +465,9 @@ export default function RecordsPage() {
         manoRows += `<tr><td>${desc}</td><td class="num">${cant}</td><td class="num">${fmtMoney(sub/cant)}</td><td class="num"><b>${fmtMoney(sub)}</b></td></tr>`;
       }
     }
+    const totalImpreso = detalles.length > 0
+      ? manoTotal + repTotal + descTotal
+      : Number(r.costo_total ?? 0);
 
     // Convertir logo a base64 data-URL para que funcione en APK (donde origin = https://localhost
     // y el print window es un WebView separado sin acceso al servidor Capacitor local).
@@ -614,6 +621,8 @@ export default function RecordsPage() {
         <div class="info-field"><label>Vehículo</label><span>${r.marca_moto ?? ''} ${r.modelo_moto ?? ''}</span></div>
         ${ciCli ? `<div class="info-field"><label>Cédula / RUC</label><span>${ciCli}</span></div>` : ''}
         ${telCli ? `<div class="info-field"><label>Teléfono</label><span>${telCli}</span></div>` : ''}
+        ${correoCli ? `<div class="info-field full"><label>Correo</label><span style="font-size:12px;word-break:break-word">${correoCli}</span></div>` : ''}
+        ${direccionCli ? `<div class="info-field full"><label>Dirección</label><span style="font-size:12px;line-height:1.5">${direccionCli}</span></div>` : ''}
         ${r.kilometraje ? `<div class="info-field"><label>Kilometraje</label><span>${r.kilometraje.toLocaleString('es-EC')} km</span></div>` : ''}
         ${r.descripcion ? `<div class="info-field full"><label>Fallas reportadas</label><span style="font-weight:500;font-size:12px;line-height:1.5">${r.descripcion}</span></div>` : ''}
         ${r.observaciones && r.observaciones !== r.descripcion ? `<div class="info-field full"><label>Observaciones generales</label><span style="font-weight:500;font-size:12px;line-height:1.5">${r.observaciones}</span></div>` : ''}
@@ -649,12 +658,12 @@ export default function RecordsPage() {
       <div class="totals-wrap">
         ${manoRows ? `<div class="total-box mo"><div class="tlabel">Mano de obra</div><div class="tval">${fmtMoney(manoTotal)}</div></div>` : '<div></div>'}
         ${repRows  ? `<div class="total-box rep"><div class="tlabel">Repuestos</div><div class="tval">${fmtMoney(repTotal)}</div></div>` : '<div></div>'}
-        <div class="total-box grand"><div class="tlabel">Total del servicio</div><div class="tval">${fmtMoney(r.costo_total ?? 0)}</div></div>
+        <div class="total-box grand"><div class="tlabel">Total del servicio</div><div class="tval">${fmtMoney(totalImpreso)}</div></div>
       </div>
       ` : `
       <div style="margin-top:16px;background:linear-gradient(135deg,#E11428,#B91C1C);border-radius:14px;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;color:#fff">
         <span style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.85">Total del servicio</span>
-        <span style="font-size:32px;font-weight:900;letter-spacing:-1px">${fmtMoney(r.costo_total ?? 0)}</span>
+        <span style="font-size:32px;font-weight:900;letter-spacing:-1px">${fmtMoney(totalImpreso)}</span>
       </div>`}
 
       <!-- MECÁNICO -->

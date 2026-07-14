@@ -129,6 +129,29 @@ export function parametrosDeCC(cc: number): ParametroRef[] {
   return INTERVALOS.find(i => i.rango === rango)?.params ?? [];
 }
 
+/* Detecta todos los mantenimientos mencionados en una orden o factura.
+   Se usa al completar el trabajo para reiniciar sus porcentajes en la nube,
+   incluso cuando el repuesto fue escrito manualmente y no vino del inventario. */
+const MANTENIMIENTO_TEXT_RULES: { tipo: string; pattern: RegExp }[] = [
+  { tipo: 'FILTRO_AIRE',      pattern: /\bfiltro\s+(?:de\s+)?aire\b/ },
+  { tipo: 'ACEITE',           pattern: /\baceite\b/ },
+  { tipo: 'BUJIA',            pattern: /\bbujia(?:s)?\b/ },
+  { tipo: 'CADENA',           pattern: /\b(?:cadena|correa)\b/ },
+  { tipo: 'LLANTA_TRASERA',   pattern: /\b(?:llanta|llantas|neumatico|neumaticos)\b/ },
+  { tipo: 'FRENOS',           pattern: /\b(?:freno|frenos|pastilla|pastillas)\b/ },
+  { tipo: 'REVISION_GENERAL', pattern: /\b(?:revision|mantenimiento)\s+general\b/ },
+];
+
+export function tiposMantenimientoEnTexto(texto: string): string[] {
+  const normalizado = texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  return MANTENIMIENTO_TEXT_RULES
+    .filter(regla => regla.pattern.test(normalizado))
+    .map(regla => regla.tipo);
+}
+
 /* ── Etiqueta del rango "X cc — Categoría" ── */
 export function etiquetaCC(cc: number): string {
   const r = rangoDeCC(cc);

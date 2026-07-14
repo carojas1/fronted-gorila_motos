@@ -19,6 +19,7 @@ import {
   detalleCostoManual, parseDescuentoPuntos,
 } from '../../lib/detalles';
 import { descuentoUsdPorPuntos, puntosCliente, puntosPorDescuentoUsd } from '../../lib/puntos';
+import { tiposMantenimientoEnTexto } from '../../lib/mantenimiento';
 import type { CargaCombustible, Moto, RegistroDetalle, Producto, Usuario } from '../../types';
 
 interface LineItem {
@@ -249,38 +250,36 @@ export default function FacturaEditor({
     setSaving(true);
     try {
       await registrosApi.update(registro.id_registro, dtos as unknown as Record<string, unknown>);
-      if (completarAlGuardar && registro.estado < 2) {
-        await registrosApi.estado(registro.id_registro, 2);
-      }
 
-      /* ── Auto-registro de mantenimiento según categoría del producto ──
-         Si el registro tiene id_moto y kilometraje, detectamos qué tipos de
-         mantenimiento corresponden a los productos de inventario agregados.
-         Se registra en segundo plano sin bloquear el guardado. */
+      /* Auto-registro de mantenimiento al completar el trabajo.
+         Lee inventario, repuestos manuales y la descripción original de la
+         orden. La confirmación se espera para no cerrar con porcentajes viejos. */
       const idMoto = registro.id_moto;
       const km = registro.kilometraje;
-      if (idMoto && km != null) {
-        const MANT_MAP: [RegExp, string][] = [
-          [/aceite/i,                    'ACEITE'],
-          [/filtro\s*(de\s*)?aire/i,     'FILTRO_AIRE'],
-          [/buj[ií]a/i,                  'BUJIA'],
-          [/cadena|correa/i,             'CADENA'],
-          [/llanta|neum[aá]tico|tire/i,  'LLANTA_TRASERA'],
-          [/freno|pastilla|brake/i,       'FRENOS'],
-        ];
-        const tiposARegistrar = new Set<string>();
-        for (const item of limpios) {
-          if (item.idProducto == null) continue;
-          const prod = productos.find(p => p.id_producto === item.idProducto);
-          if (!prod) continue;
-          const texto = `${prod.nombre ?? ''} ${prod.descripcion ?? ''}`;
-          for (const [regex, tipo] of MANT_MAP) {
-            if (regex.test(texto)) { tiposARegistrar.add(tipo); break; }
-          }
-        }
-        tiposARegistrar.forEach(tipo =>
-          mantenimientosApi.registrar({ id_moto: idMoto, tipo, km_servicio: km }).catch(() => {})
-        );
+      const servicioQuedaCompletado = completarAlGuardar || registro.estado >= 2;
+      if (servicioQuedaCompletado && idMoto && km != null) {
+        const textoItems = items.map(item => {
+          const prod = item.idProducto == null
+            ? null
+            : productos.find(p => p.id_producto === item.idProducto);
+          return `${item.nombre} ${prod?.nombre ?? ''} ${prod?.descripcion ?? ''}`;
+        }).join(' ');
+        const textoServicio = [
+          textoItems,
+          registro.descripcion,
+          registro.observaciones,
+          registro.tipo_servicio,
+        ].filter(Boolean).join(' ');
+        const tiposARegistrar = tiposMantenimientoEnTexto(textoServicio);
+        await Promise.all(tiposARegistrar.map(tipo =>
+          mantenimientosApi.registrar({ id_moto: idMoto, tipo, km_servicio: km })
+        ));
+      }
+
+      /* La orden solo cambia a Completada después de confirmar los
+         mantenimientos, para no dejar porcentajes viejos por una falla de red. */
+      if (completarAlGuardar && registro.estado < 2) {
+        await registrosApi.estado(registro.id_registro, 2);
       }
 
       toast.success(
