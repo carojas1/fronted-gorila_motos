@@ -67,7 +67,7 @@ function ProveedorCard({ codigo, productos, contacto, onEdit, onView }: Proveedo
                 {contacto?.nombre || `Proveedor ${codigo}`}
               </p>
               <p className="text-[11px] font-mono mt-0.5" style={{ color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(21,21,27,0.6)' }}>
-                Cód. {codigo}
+                RUC/Prov. {codigo}
               </p>
             </div>
           </div>
@@ -241,7 +241,7 @@ function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose, onDel
         {isNew && (
           <div>
             <label className="text-[10px] font-black dark:text-white/35 text-slate-900/35 uppercase tracking-widest block mb-1">
-              Código del proveedor *
+              RUC / código proveedor *
             </label>
             <input
               className="gm-input-d w-full font-mono uppercase"
@@ -251,7 +251,7 @@ function ContactoModal({ codigo, contacto, isNew = false, onSave, onClose, onDel
               autoFocus
             />
             <p className="text-[10px] dark:text-white/25 text-slate-900/25 mt-1">
-              Úsalo como "Código proveedor" al crear productos para agruparlos aquí.
+              Úsalo como "RUC/código proveedor" al crear productos para agruparlos aquí.
             </p>
           </div>
         )}
@@ -477,7 +477,7 @@ export default function ProveedoresPage() {
         <Info size={14} className="text-blue-400 shrink-0 mt-0.5" />
         <p className="text-[11px] text-blue-300/70 leading-relaxed">
           <span className="font-black text-blue-300">¿Cómo funciona?</span> &nbsp;
-          Al crear un producto en Inventario, asígnale un <span className="font-bold">Código de proveedor</span> (ej. MOTUL, NGK, PROV-001).
+          Al crear un producto en Inventario, asígnale un <span className="font-bold">RUC/código proveedor</span> (ej. RUC, MOTUL, NGK, PROV-001).
           Ese código agrupa los productos en una tarjeta aquí. Luego añade el contacto del proveedor con el botón <span className="font-bold">"Editar"</span>.
         </p>
       </div>

@@ -16,7 +16,7 @@ import { fmtMoney, getErrorMsg } from '../../lib/utils';
 import {
   CATEGORIAS_REPUESTO, buildManoDescripcion, buildRepuestoDescripcion,
   buildDescuentoPuntosDescripcion, cleanDescripcion, detalleCategoria, detalleKind,
-  parseDescuentoPuntos,
+  detalleCostoManual, parseDescuentoPuntos,
 } from '../../lib/detalles';
 import { descuentoUsdPorPuntos, puntosCliente, puntosPorDescuentoUsd } from '../../lib/puntos';
 import type { CargaCombustible, Moto, RegistroDetalle, Producto, Usuario } from '../../types';
@@ -28,6 +28,7 @@ interface LineItem {
   nombre:     string;
   cantidad:   number;
   precio:     number;
+  costo:      number;          // solo repuesto manual/externo: costo real de compra
   categoria:  string;          // solo repuesto manual
   puntos?:    number;          // solo descuento por puntos
   foto?:      string | null;   // foto del producto de inventario
@@ -101,6 +102,7 @@ export default function FacturaEditor({
             nombre: cleanDescripcion(d.descripcion) || (kind === 'descuento' ? 'Descuento por puntos' : kind === 'mano' ? 'Mano de obra' : 'Repuesto'),
             cantidad: d.cantidad ?? 1,
             precio: Number(d.precioUnitario ?? 0),
+            costo: detalleCostoManual(d.descripcion),
             categoria: detalleCategoria(d.descripcion) ?? '',
             puntos,
           };
@@ -155,14 +157,14 @@ export default function FacturaEditor({
 
   /* ── Helpers de edición ── */
   const addMano = () =>
-    setItems(p => [...p, { uid: nextUid(), kind: 'mano', idProducto: null, nombre: '', cantidad: 1, precio: 0, categoria: '' }]);
+    setItems(p => [...p, { uid: nextUid(), kind: 'mano', idProducto: null, nombre: '', cantidad: 1, precio: 0, costo: 0, categoria: '' }]);
   const addManual = () =>
-    setItems(p => [...p, { uid: nextUid(), kind: 'repuesto', idProducto: null, nombre: '', cantidad: 1, precio: 0, categoria: 'nuevo' }]);
+    setItems(p => [...p, { uid: nextUid(), kind: 'repuesto', idProducto: null, nombre: '', cantidad: 1, precio: 0, costo: 0, categoria: 'nuevo' }]);
   const addProducto = (prod: Producto) => {
     setItems(p => [...p, {
       uid: nextUid(), kind: 'repuesto', idProducto: prod.id_producto,
       nombre: prod.nombre || prod.descripcion || 'Repuesto', cantidad: 1,
-      precio: Number(prod.pvp ?? 0), categoria: '',
+      precio: Number(prod.pvp ?? 0), costo: Number(prod.costo ?? 0), categoria: '',
       foto: prod.ruta_imagenproductos ?? null,
     }]);
     setProdOpen(false); setProdQuery('');
@@ -182,7 +184,7 @@ export default function FacturaEditor({
       {
         uid: nextUid(), kind: 'descuento', idProducto: null,
         nombre: 'Descuento por puntos', cantidad: 1, precio: -descuento,
-        categoria: '', puntos: puntosAplicables,
+        costo: 0, categoria: '', puntos: puntosAplicables,
       },
     ]);
     toast.success(`Cupón aplicado: ${puntosAplicables} pts (${fmtMoney(descuento)}).`);
@@ -240,7 +242,7 @@ export default function FacturaEditor({
       }
       const descripcion = i.kind === 'mano'
         ? buildManoDescripcion(i.nombre || 'Mano de obra')
-        : buildRepuestoDescripcion(i.nombre || 'Repuesto', i.categoria);
+        : buildRepuestoDescripcion(i.nombre || 'Repuesto', i.categoria, i.costo);
       return { idProducto: null, cantidad: i.cantidad, precioUnitario: i.precio, descripcion };
     });
 
@@ -380,8 +382,20 @@ export default function FacturaEditor({
               style={{ ...inputStyle, width: 58, opacity: readOnly ? 0.7 : 1 }}
             />
           </div>
+          {i.kind === 'repuesto' && !esInv && !esDesc && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 11, color: muted }}>Costo</span>
+              <input
+                type="number" min={0} step="0.01" value={i.costo}
+                disabled={readOnly}
+                onChange={e => patch(i.uid, { costo: Math.max(0, parseFloat(e.target.value) || 0) })}
+                style={{ ...inputStyle, width: 78, opacity: readOnly ? 0.7 : 1 }}
+                title="Cuanto te cuesta comprar este repuesto"
+              />
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 11, color: muted }}>$ c/u</span>
+            <span style={{ fontSize: 11, color: muted }}>{i.kind === 'repuesto' && !esInv ? 'PVP' : '$ c/u'}</span>
             <input
               type="number" min={0} step="0.01" value={i.precio}
               disabled={esInv || readOnly || esDesc}

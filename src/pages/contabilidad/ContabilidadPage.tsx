@@ -16,7 +16,7 @@ import {
 } from 'recharts';
 import { registrosApi, pagosEmpleadoApi, usuariosApi, productosApi, detallesFacturaApi, facturasApi, proveedorContactosApi, type PagoEmpleadoAPI } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { splitTotales, detalleKind, type DetalleLike } from '../../lib/detalles';
+import { splitTotales, detalleCostoManual, detalleKind, type DetalleLike } from '../../lib/detalles';
 
 type DetalleFila = DetalleLike;
 import { fmtMoney, fmtDate, getErrorMsg, toIsoStr } from '../../lib/utils';
@@ -268,12 +268,12 @@ function buildReportSheet(
   const totalGas = gasEmpl + gasGen;
   const balance  = totalIng - totalGas;
 
-  let manoRev = 0, repInvRev = 0, repInvCost = 0, piezaExtraRev = 0;
+  let manoRev = 0, repInvRev = 0, repInvCost = 0, piezaExtraRev = 0, piezaExtraCost = 0;
   const gananciaRows: (string | number)[][] = [];
   if (detallesMap) {
     for (const r of ingresos) {
       const items = detallesMap.get(r.id_registro) ?? [];
-      let rMano = 0, rInvRev = 0, rInvCost = 0, rExtra = 0;
+      let rMano = 0, rInvRev = 0, rInvCost = 0, rExtra = 0, rExtraCost = 0;
       for (const d of items) {
         const sub = num(d.subtotal);
         const idProd = d.idProducto ?? null;
@@ -286,22 +286,24 @@ function buildReportSheet(
           rInvCost += (c ?? 0) * (d.cantidad ?? 1);
         } else {
           rExtra += sub;
+          rExtraCost += detalleCostoManual(d.descripcion) * (d.cantidad ?? 1);
         }
       }
-      manoRev += rMano; repInvRev += rInvRev; repInvCost += rInvCost; piezaExtraRev += rExtra;
+      manoRev += rMano; repInvRev += rInvRev; repInvCost += rInvCost; piezaExtraRev += rExtra; piezaExtraCost += rExtraCost;
       if (rMano || rInvRev || rExtra) {
         gananciaRows.push([
           toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio',
           +rMano.toFixed(2),
           +rInvRev.toFixed(2), +rInvCost.toFixed(2), +(rInvRev - rInvCost).toFixed(2),
           +rExtra.toFixed(2),
-          +(rMano + (rInvRev - rInvCost) + rExtra).toFixed(2),
+          +(rMano + (rInvRev - rInvCost) + (rExtra - rExtraCost)).toFixed(2),
         ]);
       }
     }
   }
   const repInvProfit  = repInvRev - repInvCost;
-  const gananciaBruta = manoRev + repInvProfit + piezaExtraRev;
+  const piezaExtraProfit = piezaExtraRev - piezaExtraCost;
+  const gananciaBruta = manoRev + repInvProfit + piezaExtraProfit;
   const gananciaNeta  = gananciaBruta - totalGas;
   const margenPct     = totalIng > 0 ? ((gananciaBruta / totalIng) * 100).toFixed(1) : '0';
 
@@ -337,8 +339,8 @@ function buildReportSheet(
     R.push({ cells: ['Fuente', 'Venta ($)', 'Costo ($)', 'Ganancia ($)'], kind: 'header', headerStyles: [XS.headerGray, XS.headerGreen, XS.headerRed, XS.headerGreen] });
     R.push({ cells: ['Mano de obra', +manoRev.toFixed(2), 0, +manoRev.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
     R.push({ cells: ['Repuestos inventario', +repInvRev.toFixed(2), +repInvCost.toFixed(2), +repInvProfit.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
-    R.push({ cells: ['Piezas extras (manual)', +piezaExtraRev.toFixed(2), 0, +piezaExtraRev.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
-    R.push({ cells: ['GANANCIA BRUTA', +(manoRev + repInvRev + piezaExtraRev).toFixed(2), +repInvCost.toFixed(2), +gananciaBruta.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [1, 2, 3] });
+    R.push({ cells: ['Piezas extras (manual)', +piezaExtraRev.toFixed(2), +piezaExtraCost.toFixed(2), +piezaExtraProfit.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
+    R.push({ cells: ['GANANCIA BRUTA', +(manoRev + repInvRev + piezaExtraRev).toFixed(2), +(repInvCost + piezaExtraCost).toFixed(2), +gananciaBruta.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [1, 2, 3] });
     blank();
   }
 
@@ -368,7 +370,9 @@ function buildReportSheet(
         const prod = idProd != null ? productos.find(p => p.id_producto === idProd) : undefined;
         const cantidad = Number(d.cantidad ?? 1);
         const venta = num(d.subtotal);
-        const costo = (prod?.costo ?? 0) * cantidad;
+        const costo = idProd == null
+          ? detalleCostoManual(d.descripcion) * cantidad
+          : (prod?.costo ?? 0) * cantidad;
         const info = ventaDirectaInfo(r.id_factura, [d], productos, proveedores);
         productosVendidos.push([
           toIsoStr(r.fecha),

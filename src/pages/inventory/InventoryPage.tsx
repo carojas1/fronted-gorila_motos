@@ -836,7 +836,7 @@ export default function InventoryPage() {
                             <span className="text-[11.5px] font-semibold dark:text-white/75 text-slate-900/75">
                               {proveedores.find(pr => pr.codigo === p.codigo_proveedor)?.nombre || p.codigo_proveedor}
                             </span>
-                            <span className="text-[9px] dark:text-white/30 text-slate-900/30 font-mono">Cód: {p.codigo_proveedor}</span>
+                            <span className="text-[9px] dark:text-white/30 text-slate-900/30 font-mono">RUC/Prov: {p.codigo_proveedor}</span>
                           </div>
                         ) : (
                           <span className="text-[11px] dark:text-white/20 text-slate-900/20">—</span>
@@ -942,7 +942,7 @@ export default function InventoryPage() {
               <option value="" className="dark:bg-[#131318] dark:text-white bg-white text-black">-- Sin proveedor --</option>
               {proveedores.map(pr => (
                 <option key={pr.codigo} value={pr.codigo} className="dark:bg-[#131318] dark:text-white bg-white text-black">
-                  {pr.nombre} (Cód. {pr.codigo})
+                  {pr.nombre} (RUC/Prov. {pr.codigo})
                 </option>
               ))}
             </select>
@@ -1297,7 +1297,7 @@ export default function InventoryPage() {
               <div className="p-4 rounded-xl h-full" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
                 <p className="text-[10px] dark:text-white/30 text-slate-900/30 uppercase tracking-widest font-bold mb-2">Producto</p>
                 <p className="text-[15px] font-black dark:text-white/90 text-slate-900/90 leading-tight">{vnTarget.nombre}</p>
-                <p className="text-[11px] dark:text-white/40 text-slate-900/40 mt-1">Código: {vnTarget.codigo_personal}</p>
+                <p className="text-[11px] dark:text-white/40 text-slate-900/40 mt-1">Código interno: {vnTarget.codigo_personal}</p>
                 <div className="mt-3 pt-3" style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E4E7EC' }}>
                   <p className="text-[11px] dark:text-white/35 text-slate-900/35">Stock disponible</p>
                   <p className="text-[22px] font-black" style={{ color: '#10B981' }}>{vnTarget.stock} u.</p>
@@ -1535,7 +1535,7 @@ export default function InventoryPage() {
       >
         <div className="space-y-4">
           <Input 
-            label="Código (Único)" 
+            label="RUC / código proveedor (único)" 
             placeholder="Ej. IMMER, MOTUL" 
             value={newProvCodigo} 
             onChange={e => setNewProvCodigo(e.target.value.toUpperCase())} 

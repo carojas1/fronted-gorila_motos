@@ -34,8 +34,9 @@ export function categoriaLabel(key?: string | null): string {
 export function buildManoDescripcion(desc: string): string {
   return `${MANO_TAG} ${desc.trim()}`.trim();
 }
-export function buildRepuestoDescripcion(desc: string, cat?: string | null): string {
-  return `[REP${cat ? '|' + cat : ''}] ${desc.trim()}`.trim();
+export function buildRepuestoDescripcion(desc: string, cat?: string | null, costo?: number | null): string {
+  const costoTag = costo != null && Number.isFinite(costo) && costo > 0 ? `|COSTO:${Number(costo).toFixed(2)}` : '';
+  return `[REP${cat ? '|' + cat : ''}${costoTag}] ${desc.trim()}`.trim();
 }
 export function buildDescuentoPuntosDescripcion(puntos: number): string {
   return `[DESC|PUNTOS:${Math.max(0, Math.floor(puntos))}] Descuento por puntos`;
@@ -82,7 +83,16 @@ export function cleanDescripcion(desc?: string | null): string {
 /* Extraer la categoría de un repuesto manual ([REP|economica] → "economica") */
 export function detalleCategoria(desc?: string | null): string | null {
   const m = (desc ?? '').match(/^\s*\[REP\|([^\]]+)\]/i);
-  return m ? m[1].toLowerCase() : null;
+  if (!m) return null;
+  const part = m[1].split('|').find(x => x && !x.toUpperCase().startsWith('COSTO:'));
+  return part ? part.toLowerCase() : null;
+}
+
+export function detalleCostoManual(desc?: string | null): number {
+  const m = (desc ?? '').match(/(?:^|\|)COSTO:([0-9]+(?:[.,][0-9]+)?)/i);
+  if (!m) return 0;
+  const n = Number(m[1].replace(',', '.'));
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 function num(v: number | string | null | undefined): number {

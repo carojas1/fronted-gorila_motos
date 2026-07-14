@@ -826,7 +826,7 @@ export default function CombustiblePage() {
                       }
                     >
                       {c.label.split(' ')[0]}<br/>
-                      <span className="text-[10px] opacity-75">${c.precio}/gal</span>
+                      <span className="text-[10px] opacity-75">${Number(precios[c.tipo] ?? c.precio).toFixed(2)}/gal</span>
                     </button>
                   ))}
                 </div>
