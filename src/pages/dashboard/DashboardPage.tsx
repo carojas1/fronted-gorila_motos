@@ -13,7 +13,6 @@ import {
 import {
   AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, CartesianGrid,
-  ComposedChart, Bar, Line, ReferenceLine,
 } from 'recharts';
 import ContabilidadChart from '../../components/charts/ContabilidadChart';
 import { useAuth } from '../../contexts/AuthContext';
@@ -22,7 +21,7 @@ import { motosApi, registrosApi, productosApi, usuariosApi, combustibleApi, pago
 import { fmtDate, fmtMoney, parsePermisos } from '../../lib/utils';
 import { usePolling } from '../../hooks/usePolling';
 import { useCountUp } from '../../hooks/useGsap';
-import type { RegistroDetalle, Moto, Producto } from '../../types';
+import type { Factura, RegistroDetalle, Moto, Producto } from '../../types';
 import { isNativeApp } from '../../lib/platform';
 import MobileDashboard from '../../components/mobile/MobileDashboard';
 import TermsModal from '../../components/ui/TermsModal';
@@ -196,7 +195,7 @@ export default function DashboardPage() {
 function WebDashboard() {
   const [theme] = useTheme();
   const isDark = theme === 'dark';
-  const { user, isAdmin, isMecanico, isCliente } = useAuth();
+  const { user, isAdmin, isMecanico } = useAuth();
 
   const [motos,       setMotos]       = useState<Moto[]>([]);
   const [registros,   setRegistros]   = useState<RegistroDetalle[]>([]);
@@ -204,7 +203,7 @@ function WebDashboard() {
   const [usuarios,    setUsuarios]    = useState<unknown[]>([]);
   const [combustible, setCombustible] = useState<{ id_carga:number; fecha:string; costo_total:number }[]>([]);
   const [gastos,      setGastos]      = useState<PagoEmpleadoAPI[]>([]);
-  const [facturas,    setFacturas]    = useState<any[]>([]);
+  const [facturas,    setFacturas]    = useState<Factura[]>([]);
   const [loading,     setLoading]     = useState(true);
 
   const hour     = new Date().getHours();
@@ -514,9 +513,6 @@ function WebDashboard() {
 
       {/* ── Panel general de módulos (SOLO admin/mecánico · sin Contabilidad) ── */}
       {(isAdmin || isMecanico) && !loading && (() => {
-        const hoyStr  = new Date().toISOString().slice(0, 7); // yyyy-MM
-        const combMes = combustible.filter(c => String(c.fecha ?? '').slice(0, 7) === hoyStr).length;
-        
         // Comparativa semanal combustible
         const now = new Date();
         const startOfThisWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());

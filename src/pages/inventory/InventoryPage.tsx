@@ -29,10 +29,10 @@ const schema = z.object({
   codigo_proveedor:  z.string().nullish().transform(v => v || ''),
   codigo_distribuidor: z.string().nullish().transform(v => v || ''),
   codigo_personal:   z.string().nullish().transform(v => v || ''),
-  costo:             z.coerce.number({ invalid_type_error: 'El costo debe ser un número válido' }).min(0, 'Inválido'),
-  pvp:               z.coerce.number({ invalid_type_error: 'El PVP debe ser un número válido' }).min(0, 'Inválido'),
-  stock:             z.coerce.number({ invalid_type_error: 'El stock debe ser un número válido' }).int('El stock debe ser entero').min(0, 'Inválido'),
-  id_categoria:      z.coerce.number({ invalid_type_error: 'Selecciona una categoría válida' }).min(1, 'Selecciona categoría'),
+  costo:             z.coerce.number({ error: 'El costo debe ser un número válido' }).min(0, 'Inválido'),
+  pvp:               z.coerce.number({ error: 'El PVP debe ser un número válido' }).min(0, 'Inválido'),
+  stock:             z.coerce.number({ error: 'El stock debe ser un número válido' }).int('El stock debe ser entero').min(0, 'Inválido'),
+  id_categoria:      z.coerce.number({ error: 'Selecciona una categoría válida' }).min(1, 'Selecciona categoría'),
   fecha_registro:    z.any().transform(v => {
     if (typeof v === 'string' && v.length >= 10) return v.slice(0, 10);
     if (Array.isArray(v) && v.length >= 3) return `${v[0]}-${String(v[1]).padStart(2, '0')}-${String(v[2]).padStart(2, '0')}`;
@@ -141,7 +141,7 @@ export default function InventoryPage() {
   const [vnExtras,      setVnExtras]      = useState<VentaExtra[]>([]);
 
   const [addStockOpen,  setAddStockOpen]  = useState(false);
-  const [addStockVals,  setAddStockVals]  = useState({ cant: 1, costo: 0, pvp: 0 });
+  const [addStockVals,  setAddStockVals]  = useState<{ cant: number; costo: number; pvp: number; id_proveedor?: string }>({ cant: 1, costo: 0, pvp: 0 });
 
   const { register, handleSubmit, reset, getValues, setValue, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as Resolver<Form>,
@@ -424,7 +424,7 @@ export default function InventoryPage() {
       fetchData();
       // Navegar al comprobante de venta para verlo e imprimirlo
       if (facturaId) {
-        navigate(`/factura/f_${facturaId}`);
+        navigate(`/invoice/f_${facturaId}`);
       }
     } catch (err) { toast.error(getErrorMsg(err)); }
     finally { setSelling(false); }

@@ -20,7 +20,7 @@ import { esNativo, tomarFotoNativa } from '../../lib/camara';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../lib/theme';
 import { useToast } from '../../components/ui/Toast';
-import { getErrorMsg, extractPhone, extractCedula } from '../../lib/utils';
+import { getErrorMsg } from '../../lib/utils';
 import Input from '../../components/ui/Input';
 import type { Moto } from '../../types';
 import { EstadoMotoLive } from '../../components/mantenimiento/EstadoMantenimiento';
@@ -112,7 +112,6 @@ export default function MiMotoPage() {
   const {
     register: regPerfil,
     handleSubmit: handlePerfil,
-    reset: resetPerfil,
     formState: { errors: errPerfil },
   } = useForm<PerfilForm>({
     resolver: zodResolver(perfilSchema),
@@ -215,7 +214,7 @@ export default function MiMotoPage() {
     try {
       let fotoBase64: string | null = photoDataUrl;
       if (!fotoBase64 && photoFile) {
-        try { fotoBase64 = await comprimirImagen(photoFile); } catch { }
+        try { fotoBase64 = await comprimirImagen(photoFile); } catch { /* usa la imagen original */ }
       }
       const { data: nuevaMoto } = await motosApi.create({
         ...data,
@@ -271,8 +270,9 @@ export default function MiMotoPage() {
       storedUser.telefono        = data.telefono.trim();
       if (data.direccion && data.direccion.trim()) storedUser.direccion = data.direccion.trim();
       localStorage.setItem('gm_user', JSON.stringify(storedUser));
-    } catch (err: any) {
-      if (err?.response?.status === 404) {
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
         toast.error('Sesión inválida o usuario eliminado. Por favor inicia sesión nuevamente.', 'Error de sesión');
         localStorage.removeItem('gm_token');
         localStorage.removeItem('gm_user');
@@ -583,7 +583,7 @@ export default function MiMotoPage() {
             {!perfilOk && (
               <button
                 type="button"
-                onClick={() => { setEditingPerfil(true); setAddingMoto(false); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { } }}
+                onClick={() => { setEditingPerfil(true); setAddingMoto(false); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { /* WebView antiguo */ } }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
                   background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.28)',

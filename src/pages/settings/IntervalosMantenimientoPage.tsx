@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Edit2, Check, X, Save } from 'lucide-react';
+import { ChevronLeft, Edit2, Check, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useIntervalosStore, type ParametroMantenimiento } from '../../lib/intervalosStore';
 import { useTheme } from '../../lib/theme';
@@ -45,7 +45,7 @@ export default function IntervalosMantenimientoPage() {
       await updateIntervalo(id, val);
       toast.success('Intervalo actualizado con éxito');
       setEditingId(null);
-    } catch (err) {
+    } catch {
       toast.error('Error al actualizar el intervalo');
     } finally {
       setSaving(false);

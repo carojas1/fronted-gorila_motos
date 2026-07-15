@@ -5,7 +5,7 @@
    ───────────────────────────────────────────── */
 
 import { useEffect, useState, useMemo } from 'react';
-import { Star, Gift, Trophy, Zap, TrendingUp, Award, Users, Fuel } from 'lucide-react';
+import { Star, Gift, Trophy, Zap, Award, Users, Fuel } from 'lucide-react';
 import { registrosApi, motosApi, usuariosApi, combustibleApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import type { RegistroDetalle, Moto, Usuario } from '../../types';

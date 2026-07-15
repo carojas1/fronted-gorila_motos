@@ -213,7 +213,7 @@ function BusinessChart({ ingresos, gastos, labels, isDark }: {
             width={44}
           />
           <Tooltip
-            content={(props) => <ChartTip {...(props as { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string })} isDark={isDark}/>}
+            content={(props) => <ChartTip {...(props as unknown as { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string })} isDark={isDark}/>}
             cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
           />
           <ReferenceLine y={0} stroke={zeroColor} strokeWidth={1}/>
@@ -247,7 +247,7 @@ const XS = {
   numCellGreen: { alignment:{horizontal:'right'}, numFmt:'"$"#,##0.00', font:{bold:true,color:{rgb:'FF065F46'},sz:9}, fill:{patternType:'solid',fgColor:{rgb:'FFF0FDF4'}} },
   numCellRed:   { alignment:{horizontal:'right'}, numFmt:'"$"#,##0.00', font:{bold:true,color:{rgb:'FF7F1D1D'},sz:9}, fill:{patternType:'solid',fgColor:{rgb:'FFFEF2F2'}} },
 };
-type CellStyle = typeof XS.headerGreen;
+type CellStyle = Record<string, unknown>;
 
 /* ─── Helper: construye una WorkSheet para un sub-período de datos ─── */
 function buildReportSheet(
@@ -459,7 +459,7 @@ function buildReportSheet(
   }
 
   const aoa = R.map(m => { const p = [...m.cells]; while (p.length < COLS) p.push(''); return p; });
-  const ws = XLSX.utils.aoa_to_sheet(aoa) as Record<string, { v: unknown; t: string; s?: CellStyle }>;
+  const ws = XLSX.utils.aoa_to_sheet(aoa) as unknown as Record<string, { v: unknown; t: string; s?: CellStyle }>;
   const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
   R.forEach((m, r) => {
     if (m.kind === 'title' || m.kind === 'subtitle' || m.kind === 'banner') {
@@ -480,8 +480,8 @@ function buildReportSheet(
       }
     }
   });
-  ws['!merges'] = merges;
-  ws['!cols'] = [{ wch: 13 }, { wch: 13 }, { wch: 24 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 15 }, { wch: 15 }, { wch: 16 }];
+  (ws as unknown as { ['!merges']: typeof merges })['!merges'] = merges;
+  (ws as unknown as { ['!cols']: { wch: number }[] })['!cols'] = [{ wch: 13 }, { wch: 13 }, { wch: 24 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 15 }, { wch: 15 }, { wch: 16 }];
   return ws;
 }
 
@@ -973,6 +973,11 @@ export default function ContabilidadPage() {
                     costo_total: f.costo_total,
                     placa: 'Venta directa',
                     tipo_servicio: info.detalle
+                    ,nombre_cliente: f.cliente_nombre || 'Consumidor final'
+                    ,marca_moto: 'Gorila Motos'
+                    ,modelo_moto: 'Inventario'
+                    ,ruta_imagen_moto: null
+                    ,descripcion: info.detalle
                   } as RegistroDetalle;
                 });
 

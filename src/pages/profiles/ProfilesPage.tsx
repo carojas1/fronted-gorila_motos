@@ -29,7 +29,12 @@ import { z } from "zod";
 /* ── Helpers ── */
 function getRolName(roles: unknown[]): string {
   if (!roles || roles.length === 0) return "";
-  const activeRoles = roles.filter((r: any) => r.estado === 1 || r.estado === undefined);
+  const activeRoles = roles.filter(r => {
+    if (typeof r === 'string') return true;
+    if (typeof r !== 'object' || r === null) return false;
+    const role = r as { estado?: number };
+    return role.estado === 1 || role.estado === undefined;
+  });
   if (activeRoles.length === 0) return "";
   const r = activeRoles[0];
   const raw = typeof r === "string"

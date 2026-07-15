@@ -6,15 +6,15 @@
 import { useEffect, useState, type SyntheticEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Printer, ArrowLeft, AlertCircle, CheckCircle, Clock, Package, FileText } from 'lucide-react';
-import { registrosApi, usuariosApi, productosApi, detallesFacturaApi, facturasApi } from '../../lib/api';
+import { registrosApi, detallesFacturaApi, facturasApi } from '../../lib/api';
 import { fmtDate, fmtMoney, extractCedula, extractPhone, ordenNumero } from '../../lib/utils';
 import { WORKSHOP_CONTACT, whatsappCitaLink } from '../../lib/constants';
 import { useTheme } from '../../lib/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  detalleKind, cleanDescripcion, detalleCategoria, categoriaLabel, splitTotales,
+  detalleKind, cleanDescripcion, splitTotales,
 } from '../../lib/detalles';
-import type { RegistroDetalle, Usuario, Producto } from '../../types';
+import type { Factura, RegistroDetalle } from '../../types';
 
 interface DetalleFila {
   idDetalleFactura?: number;
@@ -36,12 +36,6 @@ const ESTADO_LABEL: Record<number, { label: string; color: string }> = {
 const genNumero = ordenNumero;
 
 const REGISTROS_PATH = '/registros';
-const goRegistrosHard = () => {
-  sessionStorage.removeItem('gm_invoice_return_to');
-  window.history.replaceState(null, '', REGISTROS_PATH);
-  window.dispatchEvent(new Event('popstate'));
-};
-
 export default function InvoicePage() {
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -50,16 +44,15 @@ export default function InvoicePage() {
   const { user } = useAuth();
 
   const [reg,       setReg]       = useState<RegistroDetalle | null>(null);
-  const [cliente,   setCliente]   = useState<Usuario | null>(null);
   const [detalles,  setDetalles]  = useState<DetalleFila[]>([]);
-  const [productos, setProductos] = useState<Producto[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);
+  const returnPath = id?.startsWith('f_') ? '/inventario' : REGISTROS_PATH;
 
   const handleBack = (event?: SyntheticEvent<HTMLElement>) => {
     event?.preventDefault();
     event?.stopPropagation();
-    navigate(REGISTROS_PATH, { replace: true });
+    navigate(returnPath, { replace: true });
   };
 
   useEffect(() => {
@@ -69,44 +62,34 @@ export default function InvoicePage() {
         const isDirectSale = id.startsWith('f_');
         const realId = isDirectSale ? id.replace('f_', '') : id;
 
-        const [rr, ur, pr] = await Promise.allSettled([
-          registrosApi.list(),
-          usuariosApi.list(),
-          productosApi.list(),
-        ]);
-
-        const registros: RegistroDetalle[] = rr.status === 'fulfilled' ? rr.value.data : [];
-        const usuarios:  Usuario[]         = ur.status === 'fulfilled' ? ur.value.data : [];
-        if (pr.status === 'fulfilled') setProductos(pr.value.data as Producto[]);
-
         if (isDirectSale) {
           // VENTA DIRECTA (Sin registro)
           try {
             const facReq = await facturasApi.get(Number(realId));
-            const factura = facReq.data as any;
-            const cli = usuarios.find(u => u.id_usuario === factura.id_usuario) ?? null;
+            const factura = facReq.data as Factura;
             
             // Creamos un "pseudo-registro" para que la UI no se rompa
             setReg({
               id_registro: 0,
-              id_usuario: factura.id_usuario,
               id_moto: 0,
               id_factura: factura.id_factura,
               fecha: factura.fecha_emision || factura.fecha,
               estado: 4, // Facturado
               costo_total: factura.costo_total,
-              nombre_cliente: factura.cliente_nombre || cli?.nombre_completo || 'Cliente',
+              nombre_cliente: factura.cliente_nombre || 'Consumidor final',
               cliente_cedula: factura.cliente_cedula,
               cliente_telefono: factura.cliente_telefono,
               cliente_correo: factura.cliente_correo,
               cliente_direccion: factura.cliente_direccion,
               placa: 'VENTA DIRECTA',
-              marca: 'Gorila Motos',
-              modelo: 'Inventario',
-              sintomas: 'Venta de mostrador',
+              marca_moto: 'Gorila Motos',
+              modelo_moto: 'Inventario',
+              ruta_imagen_moto: null,
+              descripcion: 'Venta de mostrador',
+              tipo_servicio: 'Venta de inventario',
+              kilometraje: null,
               nombre_encargado: 'Administración'
-            } as any);
-            setCliente(cli);
+            });
             
             const { data } = await detallesFacturaApi.byFactura(factura.id_factura);
             setDetalles((data as DetalleFila[]) ?? []);
@@ -122,28 +105,18 @@ export default function InvoicePage() {
           }
         } else {
           // NOTA DE SERVICIO (Con registro)
-          const found = registros.find(r => r.id_registro === Number(realId));
-          if (!found) { setError('Registro no encontrado'); setLoading(false); return; }
-
-          try {
-            const det = await registrosApi.get(Number(realId));
-            const d = det.data as Record<string, unknown>;
-            if (d.nombreEncargado || d.nombre_encargado) {
-              (found as Record<string, unknown>).nombre_encargado =
-                (d.nombreEncargado ?? d.nombre_encargado) as string;
-            }
-          } catch { /* fallback */ }
-
-          const cli = usuarios.find(u => u.id_usuario === found.id_cliente)
-            ?? usuarios.find(u => u.nombre_completo === found.nombre_cliente)
-            ?? null;
+          const det = await registrosApi.get(Number(realId));
+          const found = det.data as RegistroDetalle;
+          if (!found?.id_registro) { setError('Registro no encontrado'); setLoading(false); return; }
           setReg(found);
-          setCliente(cli);
-
-          try {
-            const { data } = await detallesFacturaApi.byFactura(found.id_factura);
-            setDetalles((data as DetalleFila[]) ?? []);
-          } catch { setDetalles([]); }
+          if (found.detalles?.length) {
+            setDetalles(found.detalles as DetalleFila[]);
+          } else {
+            try {
+              const { data } = await detallesFacturaApi.byFactura(found.id_factura);
+              setDetalles((data as DetalleFila[]) ?? []);
+            } catch { setDetalles([]); }
+          }
         }
       } catch {
         setError('Error al cargar el comprobante');
@@ -176,11 +149,10 @@ export default function InvoicePage() {
   );
 
   const numComp  = genNumero(reg.id_registro);
-  const regAny = reg as Record<string, unknown>;
-  const cedula   = (regAny.cliente_cedula as string | undefined) || cliente?.cedula || extractCedula(cliente?.descripcion ?? '');
-  const telefono = (regAny.cliente_telefono as string | undefined) || cliente?.telefono || extractPhone(cliente?.descripcion ?? '');
-  const correoCliente = (regAny.cliente_correo as string | undefined) || cliente?.correo || '';
-  const direccionCliente = (regAny.cliente_direccion as string | undefined) || cliente?.direccion || cliente?.ciudad || '';
+  const cedula   = reg.cliente_cedula || extractCedula('');
+  const telefono = reg.cliente_telefono || extractPhone('');
+  const correoCliente = reg.cliente_correo || '';
+  const direccionCliente = reg.cliente_direccion || '';
   const estInfo  = ESTADO_LABEL[reg.estado] ?? ESTADO_LABEL[0];
   const mecanico = reg.nombre_encargado ?? 'Técnico Gorila Motos';
 
@@ -196,13 +168,7 @@ export default function InvoicePage() {
     ?? WORKSHOP_CONTACT.email;
   const placa = reg.placa?.trim() || '—';
 
-  const productoById = (id?: number | null) =>
-    id ? productos.find(p => p.id_producto === id) : undefined;
-
   /* Separar los detalles en mano de obra y repuestos para la factura */
-  const manoItems = detalles.filter(d => detalleKind(d) === 'mano');
-  const repItems  = detalles.filter(d => detalleKind(d) === 'repuesto');
-  const descItems = detalles.filter(d => detalleKind(d) === 'descuento');
   const { mano: totalMano, repuestos: totalRep, descuentos: totalDesc, total: totalDetalles } = splitTotales(detalles);
   /* Si no hay detalles cargados (orden vieja), usar el costo_total como mano de obra */
   const hayDetalles = detalles.length > 0;
@@ -221,8 +187,6 @@ export default function InvoicePage() {
         type="button"
         aria-label="Volver a registros"
         className="invoice-apk-back no-print"
-        onPointerDown={handleBack}
-        onTouchStart={handleBack}
         onClick={handleBack}
       >
         <ArrowLeft size={18} /> Volver
@@ -232,8 +196,6 @@ export default function InvoicePage() {
       <div className="no-print invoice-actions flex items-center justify-between flex-wrap gap-3 px-2">
         <div className="flex items-center gap-3">
           <button type="button"
-                onPointerDown={handleBack}
-                onTouchStart={handleBack}
                 onClick={handleBack}
                 className="flex items-center gap-2 text-sm font-semibold transition-colors"
                 style={{ color: sc.btnBackTxt }}>
@@ -301,8 +263,11 @@ export default function InvoicePage() {
         <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100"
              style={{ background: '#F9FAFB' }}>
           <div className="flex items-center gap-6 text-xs text-gray-500">
-            <span><strong className="text-gray-700">Fecha:</strong> {fmtDate(reg.fecha)}</span>
-            <span><strong className="text-gray-700">Generado:</strong> {fmtDate(new Date().toISOString().slice(0,10))}</span>
+            <span><strong className="text-gray-700">Ingreso:</strong> {fmtDate(reg.fecha)}</span>
+            {reg.fecha_entrega_estimada && (
+              <span><strong className="text-gray-700">Entrega estimada:</strong> {fmtDate(reg.fecha_entrega_estimada)}</span>
+            )}
+            <span><strong className="text-gray-700">Emision:</strong> {fmtDate(reg.fecha_facturado || reg.fecha)}</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold"
                style={{ background: `${estInfo.color}14`, color: estInfo.color, border: `1px solid ${estInfo.color}30` }}>

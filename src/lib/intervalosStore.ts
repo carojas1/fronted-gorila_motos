@@ -18,7 +18,7 @@ interface IntervalosState {
   updateIntervalo: (id: number, intervaloKm: number) => Promise<void>;
 }
 
-export const useIntervalosStore = create<IntervalosState>((set, get) => ({
+export const useIntervalosStore = create<IntervalosState>((set) => ({
   parametros: [],
   loading: false,
   fetchParametros: async () => {

@@ -50,6 +50,12 @@ const PARTES_FALLA = [
   'Luces', 'Batería', 'Escape',
 ];
 
+const isoDateOffset = (days = 0) => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
 function SkeletonRow() {
   return (
     <tr>
@@ -165,6 +171,8 @@ export default function RecordsPage() {
   const [nObs,           setNObs]           = useState('');
   const [nManCustom,     setNManCustom]     = useState('');
   const [nPartes,        setNPartes]        = useState<string[]>([]);
+  const [nFecha,         setNFecha]         = useState(isoDateOffset());
+  const [nFechaEntrega,  setNFechaEntrega]  = useState(isoDateOffset(1));
   const [creatingOrder,  setCreatingOrder]  = useState(false);
 
   /* ─── Búsqueda por placa + creación rápida ─── */
@@ -199,6 +207,17 @@ export default function RecordsPage() {
 
   /* ─── Carga de datos (con reintento para Render cold start) ─── */
   const fetchData = useCallback(async (silent = false) => {
+    if (silent) {
+      try {
+        const { data } = await registrosApi.summary();
+        const resumen = data as RegistroDetalle[];
+        setRegistros(prev => resumen.map(actual => ({
+          ...prev.find(old => old.id_registro === actual.id_registro),
+          ...actual,
+        })));
+      } catch { /* conserva los datos visibles si la red esta temporalmente lenta */ }
+      return;
+    }
     if (!silent) setLoading(true);
     for (let intento = 1; intento <= 3; intento++) {
       try {
@@ -228,7 +247,7 @@ export default function RecordsPage() {
   useEffect(() => { fetchData(false); }, [fetchData]);
 
   /* Refresco silencioso: actualiza datos sin re-animar la UI */
-  usePolling(() => fetchData(true), { intervalMs: 20_000 });
+  usePolling(() => fetchData(true), { intervalMs: 120_000 });
 
   /* Mantenimientos (nube) de la moto seleccionada → para las recomendaciones por km */
   const idMotoSeleccionada = nMoto?.id_moto;
@@ -297,6 +316,7 @@ export default function RecordsPage() {
   const resetNewOrder = () => {
     setNCliente(null); setNMoto(null); setNTipo(null);
     setNKm(''); setNObs(''); setNManCustom(''); setNPartes([]);
+    setNFecha(isoDateOffset()); setNFechaEntrega(isoDateOffset(1));
     setPlateQuery(''); setShowQuick(false);
     setQNombre(''); setQCorreo(''); setQTelefono(''); setQCedula(''); setQDireccion('');
     setQMarca(''); setQModelo(''); setQCc(''); setQTipoMoto('Otro');
@@ -390,6 +410,10 @@ export default function RecordsPage() {
       toast.error('Selecciona una moto (por placa) e ingresa el kilometraje');
       return;
     }
+    if (!nFecha || (nFechaEntrega && nFechaEntrega < nFecha)) {
+      toast.error('La entrega estimada no puede ser anterior a la fecha de ingreso');
+      return;
+    }
     const cliente = nCliente ?? usuarios.find(u => u.id_usuario === nMoto.id_usuario);
     const tipo    = nTipo ?? tipoPorDefecto();
     if (!cliente || !tipo) {
@@ -411,6 +435,8 @@ export default function RecordsPage() {
         idMoto:      nMoto.id_moto,
         idTipo:      tipo.id_tipo,
         estado:      1, // arranca En proceso — el precio se agrega después
+        fecha:        nFecha,
+        fechaEntregaEstimada: nFechaEntrega || null,
         observaciones: obsFinal,
         kilometraje: parseInt(nKm, 10),
         detalles: [{
@@ -439,10 +465,10 @@ export default function RecordsPage() {
     const cli  = usuarios.find(u => u.id_usuario === r.id_cliente)
       ?? usuarios.find(u => u.nombre_completo === r.nombre_cliente);
     const mec  = usuarios.find(u => u.nombre_completo === r.nombre_encargado);
-    const ciCli = cli?.cedula || (cli ? extractCedula(cli.descripcion) : null);
-    const telCli = cli?.telefono || (cli ? extractPhone(cli.descripcion) : null);
-    const correoCli = cli?.correo || null;
-    const direccionCli = cli?.direccion || cli?.ciudad || null;
+    const ciCli = r.cliente_cedula || cli?.cedula || (cli ? extractCedula(cli.descripcion) : null);
+    const telCli = r.cliente_telefono || cli?.telefono || (cli ? extractPhone(cli.descripcion) : null);
+    const correoCli = r.cliente_correo || cli?.correo || null;
+    const direccionCli = r.cliente_direccion || cli?.direccion || cli?.ciudad || null;
 
     // Cargar detalles para desglose mano/repuesto
     let detalles: Array<{descripcion:string|null;subtotal:number;idProducto?:number|null;cantidad?:number}> = [];
@@ -624,6 +650,11 @@ export default function RecordsPage() {
         ${correoCli ? `<div class="info-field full"><label>Correo</label><span style="font-size:12px;word-break:break-word">${correoCli}</span></div>` : ''}
         ${direccionCli ? `<div class="info-field full"><label>Dirección</label><span style="font-size:12px;line-height:1.5">${direccionCli}</span></div>` : ''}
         ${r.kilometraje ? `<div class="info-field"><label>Kilometraje</label><span>${r.kilometraje.toLocaleString('es-EC')} km</span></div>` : ''}
+        <div class="info-field"><label>Fecha de ingreso</label><span>${fmtDate(r.fecha)}</span></div>
+        ${r.fecha_entrega_estimada ? `<div class="info-field"><label>Entrega estimada</label><span>${fmtDate(r.fecha_entrega_estimada)}</span></div>` : ''}
+        ${r.fecha_completado ? `<div class="info-field"><label>Completado</label><span>${fmtDate(r.fecha_completado)}</span></div>` : ''}
+        ${r.fecha_entregado ? `<div class="info-field"><label>Entregado</label><span>${fmtDate(r.fecha_entregado)}</span></div>` : ''}
+        ${r.fecha_facturado ? `<div class="info-field"><label>Facturado</label><span>${fmtDate(r.fecha_facturado)}</span></div>` : ''}
         ${r.descripcion ? `<div class="info-field full"><label>Fallas reportadas</label><span style="font-weight:500;font-size:12px;line-height:1.5">${r.descripcion}</span></div>` : ''}
         ${r.observaciones && r.observaciones !== r.descripcion ? `<div class="info-field full"><label>Observaciones generales</label><span style="font-weight:500;font-size:12px;line-height:1.5">${r.observaciones}</span></div>` : ''}
       </div>
@@ -700,6 +731,49 @@ export default function RecordsPage() {
     setHistoryName(nombre);
     setClientHistory(hist);
     setHistoryOpen(true);
+  };
+
+  const printClientHistory = () => {
+    if (!clientHistory.length) return;
+    const cli = usuarios.find(u => u.nombre_completo === historyName);
+    const first = clientHistory[0];
+    const cedula = first.cliente_cedula || cli?.cedula || extractCedula(cli?.descripcion ?? '') || 'No registrada';
+    const telefono = first.cliente_telefono || cli?.telefono || extractPhone(cli?.descripcion ?? '') || 'No registrado';
+    const correo = first.cliente_correo || cli?.correo || 'No registrado';
+    const direccion = first.cliente_direccion || cli?.direccion || cli?.ciudad || 'No registrada';
+    const total = clientHistory.reduce((sum, item) => sum + Number(item.costo_total || 0), 0);
+    const rows = [...clientHistory]
+      .sort((a, b) => toIsoStr(b.fecha).localeCompare(toIsoStr(a.fecha)))
+      .map(item => {
+        const detail = (item.detalles ?? []).map(d =>
+          `<li>${cleanDescripcion(d.descripcion) || 'Detalle'} (${fmtMoney(Number(d.subtotal || 0))})</li>`
+        ).join('');
+        return `<section>
+          <div class="service-head"><strong>${fmtDate(item.fecha)} · ${item.placa}</strong><strong>${fmtMoney(item.costo_total || 0)}</strong></div>
+          <div class="meta">${item.marca_moto || ''} ${item.modelo_moto || ''} · ${item.kilometraje?.toLocaleString('es-EC') || 'S/D'} km · ${ESTADO_REGISTRO[item.estado]?.label || 'Registrado'}</div>
+          <p><b>${item.tipo_servicio || 'Servicio'}:</b> ${item.observaciones || item.descripcion || 'Sin observaciones'}</p>
+          ${item.fecha_entrega_estimada ? `<p><b>Entrega estimada:</b> ${fmtDate(item.fecha_entrega_estimada)}</p>` : ''}
+          ${detail ? `<ul>${detail}</ul>` : ''}
+        </section>`;
+      }).join('');
+    const latestKm = Math.max(...clientHistory.map(item => Number(item.kilometraje || 0)));
+    const w = window.open('', '_blank', 'width=900,height=760');
+    if (!w) { toast.error('Activa las ventanas emergentes para imprimir'); return; }
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Historial ${historyName}</title><style>
+      *{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#172033;margin:0;padding:28px;background:#eef1f5}
+      main{max-width:820px;margin:auto;background:white;padding:34px;border-top:6px solid #e11428}
+      h1{margin:0;font-size:28px}.sub{color:#64748b;margin:6px 0 24px}.client{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0}
+      section{margin-top:16px;padding:16px;border:1px solid #e2e8f0;page-break-inside:avoid}.service-head{display:flex;justify-content:space-between;color:#b91c1c}.meta{font-size:12px;color:#64748b;margin:5px 0 12px}p,li{font-size:13px;line-height:1.5}ul{margin:8px 0 0;padding-left:20px}
+      .summary{display:flex;justify-content:space-between;margin-top:22px;padding:18px;background:#172033;color:#fff}.summary b{font-size:24px}.recommend{margin-top:14px;padding:14px;border-left:4px solid #f59e0b;background:#fffbeb;font-size:13px}
+      @media print{body{background:#fff;padding:0}main{max-width:none;padding:18px}.no-print{display:none}}
+    </style></head><body><main>
+      <h1>Historial general de motocicletas</h1><p class="sub">Gorila Motos · Emitido ${fmtDate(isoDateOffset())}</p>
+      <div class="client"><span><b>Cliente:</b> ${historyName}</span><span><b>CI/RUC:</b> ${cedula}</span><span><b>Telefono:</b> ${telefono}</span><span><b>Correo:</b> ${correo}</span><span style="grid-column:1/-1"><b>Direccion:</b> ${direccion}</span></div>
+      ${rows}
+      <div class="summary"><span>${clientHistory.length} servicios registrados</span><b>${fmtMoney(total)}</b></div>
+      ${latestKm > 0 ? `<div class="recommend"><b>Seguimiento recomendado:</b> revisar el plan de mantenimiento al llegar aproximadamente a ${(latestKm + 1000).toLocaleString('es-EC')} km, ajustandolo segun el manual de la motocicleta.</div>` : ''}
+    </main></body></html>`);
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 500);
   };
 
   /* ─── Filtro de fecha rápido ─── */
@@ -1159,6 +1233,23 @@ export default function RecordsPage() {
             </div>
           )}
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
+                Fecha de ingreso <span className="text-gm-red">*</span>
+              </label>
+              <input type="date" className="gm-input-d w-full" value={nFecha}
+                onChange={e => setNFecha(e.target.value)} required />
+            </div>
+            <div>
+              <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
+                Entrega estimada
+              </label>
+              <input type="date" className="gm-input-d w-full" value={nFechaEntrega}
+                min={nFecha} onChange={e => setNFechaEntrega(e.target.value)} />
+            </div>
+          </div>
+
           {/* Partes con falla reportada */}
           <div>
             <label className="text-xs font-semibold dark:text-white/50 text-slate-900/50 uppercase tracking-wider block mb-1.5">
@@ -1269,14 +1360,18 @@ export default function RecordsPage() {
         onClose={() => setHistoryOpen(false)}
         title={`Historial: ${historyName}`}
         size="xl"
-        footer={<Button variant="secondary" onClick={() => setHistoryOpen(false)}>Cerrar</Button>}
+        footer={<>
+          <Button variant="secondary" onClick={() => setHistoryOpen(false)}>Cerrar</Button>
+          <Button onClick={printClientHistory}><Printer size={14} /> Imprimir historial completo</Button>
+        </>}
       >
         {/* Tarjeta de datos del cliente */}
         {(() => {
           const cli = usuarios.find(u => u.nombre_completo === historyName);
           if (!cli) return null;
-          const tel = extractPhone(cli.descripcion);
-          const ced = extractCedula(cli.descripcion);
+          const first = clientHistory[0];
+          const tel = first?.cliente_telefono || cli.telefono || extractPhone(cli.descripcion);
+          const ced = first?.cliente_cedula || cli.cedula || extractCedula(cli.descripcion);
           const totalGastado = clientHistory.reduce((s, r) => s + (r.costo_total ?? 0), 0);
           return (
             <div className="mb-4 p-4 rounded-2xl flex flex-wrap gap-4 items-center"
@@ -1336,6 +1431,11 @@ export default function RecordsPage() {
                     {r.observaciones && r.observaciones !== r.descripcion && (
                       <p className="text-[11px] dark:text-white/35 text-slate-900/35 mt-1 leading-relaxed">{r.observaciones}</p>
                     )}
+                    <div className="flex flex-wrap gap-3 mt-1 text-[10px] dark:text-white/30 text-slate-900/35">
+                      {r.kilometraje != null && <span>{r.kilometraje.toLocaleString('es-EC')} km</span>}
+                      {r.fecha_entrega_estimada && <span>Entrega: {fmtDate(r.fecha_entrega_estimada)}</span>}
+                      {r.fecha_completado && <span>Completado: {fmtDate(r.fecha_completado)}</span>}
+                    </div>
                     {r.detalles && r.detalles.length > 0 && (
                       <div className="mt-2 space-y-1">
                         {r.detalles.map((d, idx) => {

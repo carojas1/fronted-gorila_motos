@@ -13,7 +13,6 @@ import {
   ChevronDown, ChevronUp, Fuel, Gift,
   Gauge, Zap, Send,
 } from 'lucide-react';
-import gsap from 'gsap';
 import { safeFromTo } from '../../hooks/useGsap';
 import {
   usuariosApi, registrosApi, motosApi,
@@ -29,7 +28,6 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
-import { useTheme } from '../../lib/theme';
 
 /* ═══ PUNTOS (misma lógica que PuntosPage) ═══ */
 const POINTS_TABLE = [
@@ -145,8 +143,6 @@ function HistoryPanel({ client, regs, motos, combustible, facturas, unlocked, on
   onBack: ()=>void;
   onUnlock: (e:React.MouseEvent)=>void;
 }) {
-  const [theme] = useTheme();
-  const isDark = theme === 'dark';
   const [tab, setTab]               = useState<DetailTab>('servicios');
   const [expandedFac, setExpandedFac] = useState<number | null>(null);
   const [facDetalles, setFacDetalles] = useState<Record<number, DetalleFactura[]>>({});
@@ -848,7 +844,6 @@ export default function ClientesPage() {
   const [reAuthOpen,    setReAuthOpen]    = useState(false);
   const [reAuthPwd,     setReAuthPwd]     = useState('');
   const [reAuthLoading, setReAuthLoading] = useState(false);
-  const [reAuthTarget,  setReAuthTarget]  = useState<Usuario | null>(null);
 
   /* Ofertas / email masivo */
   const [ofertaOpen,    setOfertaOpen]    = useState(false);
@@ -1005,10 +1000,8 @@ export default function ClientesPage() {
     setSelected(client);
   };
 
-  const openReAuth = (client: Usuario | null, e?: React.MouseEvent) => {
+  const openReAuth = (_client: Usuario | null, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (client) setReAuthTarget(client);
-    else setReAuthTarget(null);
     setReAuthPwd('');
     setReAuthOpen(true);
   };

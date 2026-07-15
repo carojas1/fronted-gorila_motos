@@ -147,10 +147,14 @@ export const motosApi = {
 /* ── Registros ── */
 export const registrosApi = {
   list:    ()            => api.get('/registros'),
+  summary: ()            => api.get('/registros/resumen'),
   get:     (id: number)  => api.get(`/registros/${id}`),
+  byClient:(id: number)  => api.get(`/registros/cliente/${id}`),
+  byMechanic:(id: number)=> api.get(`/registros/encargado/${id}`),
   create:  (data: Record<string, unknown>) => api.post('/registros', data),
   update:  (id: number, data: Record<string, unknown>) => api.put(`/registros/${id}/factura`, data),
-  estado:  (id: number, estado: number) => api.patch(`/registros/${id}/estado`, { estado }),
+  estado:  (id: number, estado: number, extra: Record<string, unknown> = {}) =>
+    api.patch(`/registros/${id}/estado`, { estado, ...extra }),
   remove:  (id: number)  => api.delete(`/registros/${id}`),
   /** Detalles de la factura asociada a un registro (mano de obra + repuestos). */
   detalles: (idFactura: number) => api.get(`/registros/${idFactura}/detalles-factura`),

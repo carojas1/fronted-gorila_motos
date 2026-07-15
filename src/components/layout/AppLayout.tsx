@@ -39,12 +39,15 @@ export default function AppLayout() {
   const [pw2,       setPw2]       = useState('');
   const [pwSaving,  setPwSaving]  = useState(false);
 
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<{
+    prompt: () => Promise<void>;
+    userChoice: Promise<unknown>;
+  } | null>(null);
 
   useEffect(() => {
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as Event & { prompt: () => Promise<void>; userChoice: Promise<unknown> });
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);

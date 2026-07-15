@@ -124,8 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem(TOKEN_KEY);
       const userStr = localStorage.getItem(USER_KEY);
       if (!token || !userStr) return;
-      let stored: { id_usuario?: number } | null = null;
-      try { stored = JSON.parse(userStr); } catch { return; }
+      let stored: { id_usuario?: number } | null;
+      try { stored = JSON.parse(userStr) as { id_usuario?: number }; } catch { return; }
       if (!stored?.id_usuario) return;
 
       const API = (import.meta.env.VITE_API_URL as string | undefined)
@@ -270,14 +270,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (firebaseEnabled) firebaseSignOut().catch(() => {});
   }, []);
 
+  type StoredRole = { estado?: number; nombre?: string; rol?: { nombre?: string } };
+  const storedRoles = (state.user?.roles ?? []) as unknown[];
   const roleNames = new Set<string>(
-    (state.user?.roles ?? [])
-      .filter((r: any) => typeof r === 'string' || r.estado === 1 || r.estado === undefined)
-      .map((r: any) => {
-        if (typeof r === 'string') return r;
-        const obj = r as { nombre?: string; rol?: { nombre?: string } };
-        return obj.rol?.nombre ?? obj.nombre ?? '';
-      })
+    storedRoles
+      .filter((r): r is string | StoredRole =>
+        typeof r === 'string' || (typeof r === 'object' && r !== null))
+      .filter(r => typeof r === 'string' || r.estado === 1 || r.estado === undefined)
+      .map(r => typeof r === 'string' ? r : (r.rol?.nombre ?? r.nombre ?? ''))
       .filter((n) => typeof n === 'string' && n.trim().length > 0)
       .map((n) => String(n).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, ''))
   );

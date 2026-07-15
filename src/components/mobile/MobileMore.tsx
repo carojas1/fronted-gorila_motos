@@ -7,7 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Wrench, Bike, Package, Truck, UserCheck, CreditCard,
   Users, Star, Bell, ClipboardList, Fuel, Wallet, BookOpen, Globe,
-  LogOut, X, ChevronRight, type LucideIcon,
+  LogOut, X, type LucideIcon,
 } from 'lucide-react';
 import { Sun, Moon } from 'lucide-react';
 import { initials } from '../../lib/utils';
@@ -51,7 +51,7 @@ const GROUPS: { title: string; labels: string[] }[] = [
 ];
 
 export default function MobileMore({
-  open, onClose, items, nombre, roleLabel, roleColor, onChangePassword, onLogout,
+  open, onClose, items, nombre, roleLabel, roleColor, onChangePassword: _onChangePassword, onLogout,
 }: {
   open: boolean;
   onClose: () => void;

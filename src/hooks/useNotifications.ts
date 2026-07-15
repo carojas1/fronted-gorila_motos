@@ -100,10 +100,15 @@ export function useNotifications() {
       const motosReq = !canManage
         ? motosApi.byUser(user.id_usuario)
         : motosApi.list();
+      const registrosReq = isAdmin
+        ? registrosApi.summary()
+        : isMecanico
+          ? registrosApi.byMechanic(user.id_usuario)
+          : registrosApi.byClient(user.id_usuario);
       const [mr, pr, rr] = await Promise.allSettled([
         motosReq,
         canManage ? productosApi.list() : Promise.reject(),
-        registrosApi.list(),
+        registrosReq,
       ]);
       const motos:    Moto[]            = mr.status === 'fulfilled' ? mr.value.data : [];
       const productos:Producto[]        = pr.status === 'fulfilled' ? pr.value.data : [];
@@ -180,6 +185,21 @@ export function useNotifications() {
               link: '/registros',
             });
           });
+
+        const todayIso = new Date().toISOString().slice(0, 10);
+        registros
+          .filter(r => r.fecha_entrega_estimada && r.estado < 3 && r.fecha_entrega_estimada <= todayIso)
+          .slice(0, 8)
+          .forEach(r => {
+            const vencida = (r.fecha_entrega_estimada ?? '') < todayIso;
+            add({
+              id: genId('delivery', r.id_registro), type: 'pending_order',
+              priority: vencida ? 'high' : 'medium', read: false, createdAt: today,
+              title: vencida ? 'Entrega estimada vencida' : 'Entrega programada para hoy',
+              message: `${r.placa} - ${r.nombre_cliente} - ${r.tipo_servicio || 'Servicio'}`,
+              link: '/registros',
+            });
+          });
       }
 
       /* ── 4. Moto lista para retirar (cliente: sus órdenes completadas/entregadas) ── */
@@ -208,7 +228,7 @@ export function useNotifications() {
         .slice(0, 60);
 
       // Capacitor: Notificaciones Locales
-      if (isNativeApp()) {
+      if (isNativeApp) {
         const storedIds = new Set(stored.map(n => n.id));
         const newNotifs = finalNotifs.filter(n => !storedIds.has(n.id) && !n.read);
         if (newNotifs.length > 0) {
@@ -238,7 +258,7 @@ export function useNotifications() {
     } catch { /* silent */ }
     finally { setLoading(false); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id_usuario, canManage]);
+  }, [user?.id_usuario, canManage, isAdmin, isMecanico]);
 
   useEffect(() => {
     if (uid > 0) setNotifications(loadStored(uid));
@@ -246,8 +266,13 @@ export function useNotifications() {
 
   useEffect(() => {
     refresh();
-    const tick = () => { if (document.visibilityState === 'visible') refresh(); };
-    const id = setInterval(tick, 30_000);
+    let lastRefresh = Date.now();
+    const tick = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - lastRefresh < 60_000) return;
+      lastRefresh = Date.now();
+      refresh();
+    };
+    const id = setInterval(tick, 300_000);
     document.addEventListener('visibilitychange', tick);
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
   }, [refresh]);

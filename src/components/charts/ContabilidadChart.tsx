@@ -3,11 +3,16 @@ import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Referen
 import { BarChart2 } from 'lucide-react';
 import { fmtMoney } from '../../lib/utils';
 
-function ChartTip({ active, payload, label, isDark }: any) {
+type ChartPoint = { name: string; value: number; color?: string };
+type ChartRow = { name: string; Ingresos: number; Gastos: number; Balance: number };
+
+function ChartTip({ active, payload, label, isDark }: {
+  active?: boolean; payload?: ChartPoint[]; label?: string; isDark?: boolean;
+}) {
   if (!active || !payload?.length) return null;
-  const ing = payload.find((p: any) => p.name === 'Ingresos');
-  const gas = payload.find((p: any) => p.name === 'Gastos');
-  const bal = payload.find((p: any) => p.name === 'Balance');
+  const ing = payload.find(p => p.name === 'Ingresos');
+  const gas = payload.find(p => p.name === 'Gastos');
+  const bal = payload.find(p => p.name === 'Balance');
   const dark = isDark !== false;
   return (
     <div className="rounded-xl px-4 py-3 text-xs font-semibold"
@@ -33,7 +38,7 @@ function ChartTip({ active, payload, label, isDark }: any) {
   );
 }
 
-export default function ContabilidadChart({ data, isDark }: { data: any[]; isDark: boolean }) {
+export default function ContabilidadChart({ data, isDark }: { data: ChartRow[]; isDark: boolean }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [cw, setCw] = useState(0);
 
@@ -84,7 +89,7 @@ export default function ContabilidadChart({ data, isDark }: { data: any[]; isDar
             width={44}
           />
           <Tooltip
-            content={(props) => <ChartTip {...props} isDark={isDark}/>}
+            content={(props) => <ChartTip {...(props as unknown as Parameters<typeof ChartTip>[0])} isDark={isDark}/>}
             cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
           />
           <ReferenceLine y={0} stroke={zeroColor} strokeWidth={1}/>

@@ -86,6 +86,7 @@ export interface Tipo {
 export interface Factura {
   id_factura:   number;
   fecha_emision:string;
+  fecha?:       string;
   id_usuario:   number;
   costo_total:  number;
   cliente_nombre?: string | null;
@@ -128,12 +129,20 @@ export interface RegistroDetalle {
   id_cliente?:      number;
   id_encargado?:    number;
   nombre_cliente:   string;
+  cliente_cedula?:  string | null;
+  cliente_telefono?: string | null;
+  cliente_correo?:  string | null;
+  cliente_direccion?: string | null;
   nombre_encargado?: string;
   marca_moto:       string;
   modelo_moto:      string;
   placa:            string;
   ruta_imagen_moto: string | null;
   fecha:            string;
+  fecha_entrega_estimada?: string | null;
+  fecha_completado?: string | null;
+  fecha_entregado?: string | null;
+  fecha_facturado?: string | null;
   descripcion:      string;
   tipo_servicio:    string;
   costo_total:      number;

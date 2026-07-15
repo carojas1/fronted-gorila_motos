@@ -32,7 +32,12 @@ export function usePolling(fetchFn: () => void | Promise<void>, options: Options
   } = options;
   const fnRef    = useRef(fetchFn);
   const running  = useRef(false); // evita llamadas solapadas
+  const lastRun  = useRef(0);
   fnRef.current  = fetchFn;
+
+  // El plan gratuito mide toda la salida. Este minimo evita descargas
+  // repetidas de las mismas tablas desde varias pantallas a la vez.
+  const effectiveInterval = Math.max(intervalMs, isNativeApp ? 180_000 : 120_000);
 
   useEffect(() => {
     if (!enabled) return;
@@ -40,13 +45,16 @@ export function usePolling(fetchFn: () => void | Promise<void>, options: Options
     const run = () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       if (running.current) return; // no solapar
+      const now = Date.now();
+      if (now - lastRun.current < 30_000) return;
       running.current = true;
+      lastRun.current = now;
       Promise.resolve(fnRef.current())
         .catch(() => {})
         .finally(() => { running.current = false; });
     };
 
-    const id = window.setInterval(run, intervalMs);
+    const id = window.setInterval(run, effectiveInterval);
 
     const onVisible = () => {
       if (document.visibilityState === 'visible') run();
@@ -63,5 +71,5 @@ export function usePolling(fetchFn: () => void | Promise<void>, options: Options
         window.removeEventListener('focus', onVisible);
       }
     };
-  }, [intervalMs, enabled, refetchOnFocus]);
+  }, [effectiveInterval, enabled, refetchOnFocus]);
 }

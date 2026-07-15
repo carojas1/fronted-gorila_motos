@@ -6,7 +6,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Wrench, Package, Bike, Users, Activity, Bell, Star, Zap,
+  Wrench, Package, Bike, Users, Activity, Star, Zap,
   AlertTriangle, ChevronRight, TrendingUp, DollarSign,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, Tooltip } from 'recharts';
@@ -15,7 +15,7 @@ import { motosApi, registrosApi, productosApi, usuariosApi, facturasApi } from '
 import { fmtMoney, fmtDate, toIsoStr } from '../../lib/utils';
 import { usePolling } from '../../hooks/usePolling';
 import { useTheme } from '../../lib/theme';
-import type { RegistroDetalle, Moto, Producto } from '../../types';
+import type { Factura, RegistroDetalle, Moto, Producto } from '../../types';
 
 const ESTADO_COLORS: Record<number, string> = {
   0: '#F59E0B', 1: '#3B82F6', 2: '#10B981', 3: '#8B5CF6', 4: '#14B8A6',
@@ -94,13 +94,13 @@ function ActivityChart({ areaData }: {
 }
 
 export default function MobileDashboard() {
-  const { user, isAdmin, isMecanico, isCliente } = useAuth();
+  const { user, isAdmin, isMecanico } = useAuth();
 
   const [motos,     setMotos]     = useState<Moto[]>([]);
   const [registros, setRegistros] = useState<RegistroDetalle[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [usuarios,  setUsuarios]  = useState<unknown[]>([]);
-  const [facturas,  setFacturas]  = useState<any[]>([]);
+  const [facturas,  setFacturas]  = useState<Factura[]>([]);
   const [loading,   setLoading]   = useState(true);
 
   const hour      = new Date().getHours();

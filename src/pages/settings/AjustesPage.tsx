@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import {
-  User, Phone, Sun, Moon, Bell, BellOff, MessageCircle,
+  Phone, Sun, Moon, Bell, BellOff, MessageCircle,
   Lock, Shield, Info, ChevronRight, Check, Save,
   ExternalLink, RefreshCw, LogOut, HelpCircle, Wrench
 } from 'lucide-react';
@@ -18,6 +18,7 @@ import { WORKSHOP_CONTACT } from '../../lib/constants';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
 
 const APP_VERSION = '1.0.0';
 
