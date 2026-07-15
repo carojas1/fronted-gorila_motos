@@ -40,6 +40,17 @@ function detalleIdProducto(d: DetalleFila): number | null {
   return id == null ? null : Number(id);
 }
 
+function redondearDinero(valor: number): number {
+  return Math.round((valor + Number.EPSILON) * 100) / 100;
+}
+
+function totalCanonico(detalles: DetalleFila[] | undefined, respaldo: number | null | undefined): number {
+  if (detalles?.length) {
+    return redondearDinero(detalles.reduce((s, d) => s + Number(d.subtotal ?? 0), 0));
+  }
+  return redondearDinero(Number(respaldo ?? 0));
+}
+
 function productoVentaLabel(p?: Producto | null, fallback?: string | null): string {
   return (p?.nombre || fallback || 'Producto sin nombre').trim();
 }
@@ -261,25 +272,29 @@ function buildReportSheet(
     return p ? Number(p.costo ?? 0) : null;
   };
   const num = (v: unknown) => { const n = typeof v === 'string' ? parseFloat(v) : Number(v ?? 0); return isNaN(n) ? 0 : n; };
+  const montoIngreso = (r: RegistroDetalle) => totalCanonico(
+    detallesMap?.get(r.id_registro) ?? (r.detalles as DetalleFila[] | undefined),
+    r.costo_total
+  );
 
-  const totalIng = ingresos.reduce((s, r) => s + (r.costo_total ?? 0), 0);
+  const totalIng = redondearDinero(ingresos.reduce((s, r) => s + montoIngreso(r), 0));
   const gasEmpl  = gastos.filter(g => g.id_empleado > 0).reduce((s, g) => s + Number(g.monto), 0);
   const gasGen   = gastos.filter(g => g.id_empleado === 0).reduce((s, g) => s + Number(g.monto), 0);
   const totalGas = gasEmpl + gasGen;
   const balance  = totalIng - totalGas;
 
-  let manoRev = 0, repInvRev = 0, repInvCost = 0, piezaExtraRev = 0, piezaExtraCost = 0;
+  let manoRev = 0, repInvRev = 0, repInvCost = 0, piezaExtraRev = 0, piezaExtraCost = 0, descuentosRev = 0;
   const gananciaRows: (string | number)[][] = [];
   if (detallesMap) {
     for (const r of ingresos) {
       const items = detallesMap.get(r.id_registro) ?? [];
-      let rMano = 0, rInvRev = 0, rInvCost = 0, rExtra = 0, rExtraCost = 0;
+      let rMano = 0, rInvRev = 0, rInvCost = 0, rExtra = 0, rExtraCost = 0, rDescuento = 0;
       for (const d of items) {
         const sub = num(d.subtotal);
         const idProd = d.idProducto ?? null;
         const kind = detalleKind(d);
         if (kind === 'mano') { rMano += sub; continue; }
-        if (kind === 'descuento') { continue; }
+        if (kind === 'descuento') { rDescuento += sub; continue; }
         if (idProd != null) {
           const c = costoProducto(idProd);
           rInvRev += sub;
@@ -289,25 +304,26 @@ function buildReportSheet(
           rExtraCost += detalleCostoManual(d.descripcion) * (d.cantidad ?? 1);
         }
       }
-      manoRev += rMano; repInvRev += rInvRev; repInvCost += rInvCost; piezaExtraRev += rExtra; piezaExtraCost += rExtraCost;
-      if (rMano || rInvRev || rExtra) {
+      manoRev += rMano; repInvRev += rInvRev; repInvCost += rInvCost; piezaExtraRev += rExtra; piezaExtraCost += rExtraCost; descuentosRev += rDescuento;
+      if (rMano || rInvRev || rExtra || rDescuento) {
         gananciaRows.push([
           toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio',
           +rMano.toFixed(2),
           +rInvRev.toFixed(2), +rInvCost.toFixed(2), +(rInvRev - rInvCost).toFixed(2),
           +rExtra.toFixed(2),
-          +(rMano + (rInvRev - rInvCost) + (rExtra - rExtraCost)).toFixed(2),
+          +rDescuento.toFixed(2),
+          +(rMano + (rInvRev - rInvCost) + (rExtra - rExtraCost) + rDescuento).toFixed(2),
         ]);
       }
     }
   }
   const repInvProfit  = repInvRev - repInvCost;
   const piezaExtraProfit = piezaExtraRev - piezaExtraCost;
-  const gananciaBruta = manoRev + repInvProfit + piezaExtraProfit;
+  const gananciaBruta = manoRev + repInvProfit + piezaExtraProfit + descuentosRev;
   const gananciaNeta  = gananciaBruta - totalGas;
   const margenPct     = totalIng > 0 ? ((gananciaBruta / totalIng) * 100).toFixed(1) : '0';
 
-  const COLS = 9;
+  const COLS = 10;
   const sub  = { font: { sz: 10, italic: true, color: { rgb: 'FF6B7280' } } };
   type RowMeta = {
     cells: (string | number)[];
@@ -340,21 +356,22 @@ function buildReportSheet(
     R.push({ cells: ['Mano de obra', +manoRev.toFixed(2), 0, +manoRev.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
     R.push({ cells: ['Repuestos inventario', +repInvRev.toFixed(2), +repInvCost.toFixed(2), +repInvProfit.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
     R.push({ cells: ['Piezas extras (manual)', +piezaExtraRev.toFixed(2), +piezaExtraCost.toFixed(2), +piezaExtraProfit.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
-    R.push({ cells: ['GANANCIA BRUTA', +(manoRev + repInvRev + piezaExtraRev).toFixed(2), +(repInvCost + piezaExtraCost).toFixed(2), +gananciaBruta.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [1, 2, 3] });
+    if (descuentosRev !== 0) R.push({ cells: ['Descuentos', +descuentosRev.toFixed(2), 0, +descuentosRev.toFixed(2)], kind: 'data', numCols: [1, 2, 3] });
+    R.push({ cells: ['GANANCIA BRUTA', +(manoRev + repInvRev + piezaExtraRev + descuentosRev).toFixed(2), +(repInvCost + piezaExtraCost).toFixed(2), +gananciaBruta.toFixed(2)], kind: 'total', totStyle: XS.totRowGreen, numCols: [1, 2, 3] });
     blank();
   }
 
   if ((mode === 'all' || mode === 'inventario') && gananciaRows.length > 0) {
     R.push({ cells: ['DETALLE POR SERVICIO'], kind: 'banner' });
     R.push({
-      cells: ['Fecha', 'Placa', 'Servicio', 'Mano obra ($)', 'Rep. venta ($)', 'Rep. costo ($)', 'Rep. ganancia ($)', 'Piezas extras ($)', 'Ganancia total ($)'],
+      cells: ['Fecha', 'Placa', 'Servicio', 'Mano obra ($)', 'Rep. venta ($)', 'Rep. costo ($)', 'Rep. ganancia ($)', 'Piezas extras ($)', 'Descuentos ($)', 'Ganancia total ($)'],
       kind: 'header',
-      headerStyles: [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerAmber, XS.headerGreen, XS.headerRed, XS.headerGreen, XS.headerGreen, XS.headerGreen],
+      headerStyles: [XS.headerGray, XS.headerGray, XS.headerGray, XS.headerAmber, XS.headerGreen, XS.headerRed, XS.headerGreen, XS.headerGreen, XS.headerRed, XS.headerGreen],
     });
-    gananciaRows.forEach(row => R.push({ cells: row, kind: 'data', numCols: [3, 4, 5, 6, 7, 8] }));
+    gananciaRows.forEach(row => R.push({ cells: row, kind: 'data', numCols: [3, 4, 5, 6, 7, 8, 9] }));
     R.push({
-      cells: ['', '', 'TOTALES', +manoRev.toFixed(2), +repInvRev.toFixed(2), +repInvCost.toFixed(2), +repInvProfit.toFixed(2), +piezaExtraRev.toFixed(2), +gananciaBruta.toFixed(2)],
-      kind: 'total', totStyle: XS.totRow, numCols: [3, 4, 5, 6, 7, 8],
+      cells: ['', '', 'TOTALES', +manoRev.toFixed(2), +repInvRev.toFixed(2), +repInvCost.toFixed(2), +repInvProfit.toFixed(2), +piezaExtraRev.toFixed(2), +descuentosRev.toFixed(2), +gananciaBruta.toFixed(2)],
+      kind: 'total', totStyle: XS.totRow, numCols: [3, 4, 5, 6, 7, 8, 9],
     });
     blank();
   }
@@ -411,7 +428,7 @@ function buildReportSheet(
     let subTotal = 0;
     ingresos.forEach(r => {
       const estStr = ['Pendiente','En proceso','Completado','Entregado','Cobrado'][r.estado] ?? 'Desconocido';
-      const monto = +(r.costo_total ?? 0).toFixed(2);
+      const monto = montoIngreso(r);
       subTotal += monto;
       R.push({
         cells: [toIsoStr(r.fecha), r.placa ?? '', r.tipo_servicio ?? 'Servicio general', estStr, monto],
@@ -464,7 +481,7 @@ function buildReportSheet(
     }
   });
   ws['!merges'] = merges;
-  ws['!cols'] = [{ wch: 13 }, { wch: 13 }, { wch: 24 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 15 }, { wch: 15 }];
+  ws['!cols'] = [{ wch: 13 }, { wch: 13 }, { wch: 24 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 15 }, { wch: 15 }, { wch: 16 }];
   return ws;
 }
 
@@ -619,20 +636,28 @@ export default function ContabilidadPage() {
       const detallesResults = await Promise.allSettled(
         directas.map(f => detallesFacturaApi.byFactura(f.id_factura).then(res => ({ id: f.id_factura, d: res.data as DetalleFila[] })))
       );
+      const directDetailsMap = new Map(
+        detallesResults.flatMap(res => res.status === 'fulfilled' ? [[res.value.id, res.value.d] as [number, DetalleFila[]]] : [])
+      );
+      const registrosNormalizados = allRegistros.map(r => ({
+        ...r,
+        costo_total: totalCanonico(r.detalles as DetalleFila[] | undefined, r.costo_total),
+      }));
+      const facturasNormalizadas = allFacturas.map(f => ({
+        ...f,
+        costo_total: totalCanonico(directDetailsMap.get(f.id_factura), f.costo_total),
+      }));
       /* Mecánico ve solo sus propias órdenes */
       const myId = user?.id_usuario;
-      setRegistros(isAdmin || !myId ? allRegistros : allRegistros.filter(r => r.id_encargado === myId));
-      setFacturas(allFacturas);
+      setRegistros(isAdmin || !myId ? registrosNormalizados : registrosNormalizados.filter(r => r.id_encargado === myId));
+      setFacturas(facturasNormalizadas);
       setGastos(Array.isArray(gRes.data) ? gRes.data : []);
       setEmpleados(Array.isArray(uRes.data) ? uRes.data : []);
       setProductos(Array.isArray(pRes.data) ? pRes.data : []);
       setProveedores(new Map((Array.isArray(provRes.data) ? provRes.data : []).map((p: ProveedorContacto) => [p.codigo, p])));
-      setDetallesDirectos(new Map(
-        detallesResults.flatMap(res => res.status === 'fulfilled' ? [[res.value.id, res.value.d] as [number, DetalleFila[]]] : [])
-      ));
+      setDetallesDirectos(directDetailsMap);
     } catch { /* silencioso */ }
     finally { setLoading(false); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, user?.id_usuario]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -852,16 +877,17 @@ export default function ContabilidadPage() {
         for (const d of res.value) {
           const sub = Number(d.subtotal ?? 0);
           const cant = Number(d.cantidad ?? 1);
-          const idProd = d.idProducto ?? (d as { id_producto?: number }).id_producto ?? null;
-          const kind = (idProd != null || (d.descripcion ?? '').toUpperCase().startsWith('[REP'))
-            ? 'repuesto' : 'mano';
-          if (kind === 'mano') {
+          const idProd = detalleIdProducto(d);
+          const kind = detalleKind(d);
+          if (kind === 'mano' || kind === 'descuento') {
             manoRevenue += sub;
           } else {
             repRevenue += sub;
             if (idProd != null) {
               const prod = prodMap.get(Number(idProd));
               if (prod) repCosto += (prod.costo ?? 0) * cant;
+            } else {
+              repCosto += detalleCostoManual(d.descripcion) * cant;
             }
           }
         }
@@ -880,7 +906,7 @@ export default function ContabilidadPage() {
         label: filtroLabel(filtroTipo, filtroFecha, filtroMes, filtroAnio),
       });
     } catch { /* ignorar */ } finally { setCierreLoading(false); }
-  }, [filtrar, registros, productos, filtroTipo, filtroFecha, filtroMes, filtroAnio]);
+  }, [filtrar, registros, facturas, productos, filtroTipo, filtroFecha, filtroMes, filtroAnio]);
 
   /* Recalcular el cierre automáticamente al cambiar el filtro (si ya estaba activo). */
   useEffect(() => {

@@ -83,7 +83,7 @@ export default function InventoryPage() {
   // Estados principales
   const [productos,    setProductos]    = useState<Producto[]>([]);
   const [categorias,   setCategorias]   = useState<Categoria[]>([]);
-  const [proveedores,  setProveedores]  = useState<{codigo: string, nombre: string}[]>([]);
+  const [proveedores,  setProveedores]  = useState<{id?: string | number, codigo: string, nombre: string}[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [saving,       setSaving]       = useState(false);
   const [search,       setSearch]       = useState('');
@@ -156,7 +156,9 @@ export default function InventoryPage() {
     ]);
     
     const fetchedProds = p.status === 'fulfilled' ? (p.value.data as Producto[]) : [];
-    const fetchedContactos = pr.status === 'fulfilled' ? (pr.value.data as any[]) : [];
+    const fetchedContactos = pr.status === 'fulfilled'
+      ? (pr.value.data as {id?: string | number, codigo: string, nombre: string}[])
+      : [];
     
     if (p.status === 'fulfilled') setProductos(fetchedProds);
     if (c.status === 'fulfilled') setCategorias(c.value.data as Categoria[]);
@@ -405,6 +407,7 @@ export default function InventoryPage() {
             items:          itemsParaApi(items),
             total,
             fecha,
+            idFactura:      facturaId,
             referencia:     facturaId ? `FAC-${String(facturaId).padStart(5, '0')}` : undefined,
             cliente,
           });
@@ -530,6 +533,7 @@ export default function InventoryPage() {
             items: itemsParaApi(items),
             total,
             fecha,
+            idFactura: facturaId,
             referencia: facturaId ? `FAC-${String(facturaId).padStart(5, '0')}` : undefined,
             cliente,
           });
@@ -603,6 +607,7 @@ export default function InventoryPage() {
             pvp:            vnTarget.pvp,
             total,
             fecha,
+            idFactura:      facturaId,
             referencia:     facturaId ? `FAC-${String(facturaId).padStart(5, '0')}` : undefined,
           });
           emailOk = Boolean((comprobante.data as { sent?: boolean })?.sent);
